@@ -226,36 +226,73 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* SECTION 3: Short-Form News Feed */}
+            {/* SECTION 3: Short-Form News Feed - Snap Scroll */}
             <section className="py-6 border-t border-gray-100">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Latest News</h2>
+                <h2 className="text-lg font-semibold">Briefing Feed</h2>
                 <span className="text-xs text-gray-400 flex items-center gap-1">
                   <Clock size={12} />
                   Updated just now
                 </span>
               </div>
-              <div className="space-y-3">
-                {shortNewsItems.map((news, index) => (
-                  <motion.div
-                    key={news.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.05 }}
-                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-gray-400">{news.time}</span>
+              
+              {/* Snap Scroll Container - Mobile Full Width */}
+              <div className="relative -mx-4 lg:mx-0 px-4 lg:px-0">
+                <div className="flex lg:block overflow-x-auto lg:overflow-visible snap-x snap-mandatory scrollbar-hide gap-4 lg:gap-0">
+                  {shortNewsItems.map((news, index) => (
+                    <div 
+                      key={news.id}
+                      className="flex-shrink-0 w-full lg:w-[calc(100%-2rem)] mx-auto snap-center"
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-2xl p-5 lg:p-6 shadow-sm"
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-xs text-gray-400">{news.time}</span>
+                          <span className="px-2 py-1 bg-black text-white text-xs font-medium rounded-full">
+                            Brief
+                          </span>
+                        </div>
+
+                        {/* Headline */}
+                        <h3 className="font-semibold text-xl lg:text-2xl mb-3 leading-tight">
+                          {news.headline}
+                        </h3>
+
+                        {/* Summary - Only Highlights */}
+                        <p className="text-gray-600 text-base leading-relaxed mb-6">
+                          {news.summary}
+                        </p>
+
+                        {/* CTA Button */}
+                        <button 
+                          onClick={() => selectTopic(topics[0])}
+                          className="w-full py-3 bg-black text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
+                        >
+                          Open Full AI Brief
+                          <ArrowRight size={18} />
+                        </button>
+                      </motion.div>
                     </div>
-                    <h3 className="font-medium text-base mb-1">{news.headline}</h3>
-                    <p className="text-gray-500 text-sm line-clamp-2 mb-3">{news.summary}</p>
-                    <button className="flex items-center gap-1 text-sm font-medium text-black hover:underline">
-                      View Intelligence
-                      <ArrowRight size={14} />
-                    </button>
-                  </motion.div>
-                ))}
+                  ))}
+                </div>
+
+                {/* Scroll Indicators - Only on Desktop */}
+                <div className="hidden lg:flex justify-center gap-2 mt-4">
+                  {shortNewsItems.map((_, i) => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-gray-300" />
+                  ))}
+                </div>
               </div>
+
+              {/* Mobile: Tap to read more hint */}
+              <p className="lg:hidden text-center text-xs text-gray-400 mt-4">
+                Swipe up for more
+              </p>
             </section>
           </div>
         </div>

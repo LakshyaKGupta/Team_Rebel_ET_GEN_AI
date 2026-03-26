@@ -151,3 +151,26 @@ html {
 .space-y-4 { margin-top: var(--space-4); }
 .space-y-6 { margin-top: var(--space-6); }
 .space-y-8 { margin-top: var(--space-8); }
+
+/* Snap Scroll Utilities */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+.snap-mandatory {
+  scroll-snap-type: both mandatory;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
