@@ -43,6 +43,7 @@ export default function Dashboard() {
   const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse, setError } = useBriefing();
   const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
   const [interactionContent, setInteractionContent] = useState<string | null>(null);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
 
   const selectedTopic = briefingState.selectedTopic;
   const isLoading = briefingState.isLoading;
@@ -83,10 +84,18 @@ export default function Dashboard() {
   };
 
   const getBriefingSections = (): BriefingSectionType[] => [
-    { title: "What happened", content: "The Reserve Bank of India kept the repo rate unchanged at 6.5%." },
-    { title: "Why it matters", content: "For investors, loan EMIs remain stable. Fixed deposits continue offering decent returns." },
-    { title: "Impact", content: userType === "investor" ? "Portfolio exposure to rate-sensitive sectors may benefit." : "Cost of capital remains stable." },
-    { title: "What next", content: "Watch RBI's next meeting in April. Track inflation and global commodity prices." },
+    { title: "What happened", content: "The Reserve Bank of India (RBI) kept the repo rate unchanged at 6.5% in its latest monetary policy meeting. This decision comes amid ongoing inflation concerns and global economic uncertainty." },
+    { title: "Why it matters", content: "For investors, this means your existing loan EMIs will remain stable. However, the persistent inflation outlook suggests rates may not be cut soon. Fixed deposits continue to offer decent returns around 6.5-7%." },
+    { title: "Impact on you", content: userType === "investor" 
+      ? "Your portfolio exposure to rate-sensitive sectors (banking, real estate) may benefit from rate stability. Consider reviewing your bond allocations and FD maturities." 
+      : userType === "student" 
+      ? "Understanding how RBI decisions affect everyday finances - from loan interest rates to inflation - helps build financial literacy."
+      : userType === "founder"
+      ? "Cost of capital remains stable for now. Plan your fundraising timeline considering the interest rate environment."
+      : "These decisions affect everything from loan EMIs to inflation - understanding them helps you make better financial decisions."
+    },
+    { title: "What you should do", content: "Review your investment portfolio for rate-sensitive assets. If you have floating-rate loans, your EMIs remain unchanged. Consider locking in FDs before any potential rate cuts." },
+    { title: "What might happen next", content: "Watch for RBI's next policy meeting in April. Key indicators to track: inflation trajectory, global commodity prices, and US Fed decisions. Markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%." },
   ];
 
   if (selectedTopic) {
@@ -137,9 +146,32 @@ export default function Dashboard() {
                   </motion.div>
                 )}
                 <BriefSection sections={getBriefingSections()} />
-                <div className="space-y-3 pt-6 border-t border-gray-100">
-                  <h3 className="font-semibold text-lg">Sources</h3>
-                  <SourceList sources={sources} columns={2} />
+                
+                {/* Mobile: Collapsible Sources */}
+                <div className="lg:hidden pt-6 border-t border-gray-100">
+                  <button 
+                    onClick={() => setSourcesExpanded(!sourcesExpanded)}
+                    className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                  >
+                    <h3 className="font-semibold text-lg">Sources</h3>
+                    <span className="text-gray-400">{sourcesExpanded ? '−' : '+'}</span>
+                  </button>
+                  {sourcesExpanded && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        {sources.map((source, i) => (
+                          <div key={i} className="p-3 border border-gray-100 rounded-xl">
+                            <p className="font-medium text-sm">{source.name}</p>
+                            <p className="text-gray-500 text-xs">{source.url}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             </div>
