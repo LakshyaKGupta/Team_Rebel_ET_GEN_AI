@@ -26,18 +26,18 @@ const heroTopics = [
 ];
 
 const steps = [
-  { number: "01", title: "Choose Your Profile", description: "Tell us who you are", icon: Brain },
-  { number: "02", title: "AI Analyzes News", description: "Our AI scans thousands of sources", icon: Sparkles },
-  { number: "03", title: "Get Personalized Insights", description: "Receive briefings tailored to you", icon: Target }
+  { number: "01", title: "Choose Your Profile", description: "Tell us who you are — investor, student, founder, or explorer", icon: Brain },
+  { number: "02", title: "AI Analyzes News", description: "Our AI scans thousands of sources to find what matters to you", icon: Sparkles },
+  { number: "03", title: "Get Personalized Insights", description: "Receive briefings tailored to your interests and goals", icon: Target }
 ];
 
 const features = [
-  { icon: Sparkles, title: "AI-Powered Briefings", description: "Understand complex topics in minutes" },
+  { icon: Sparkles, title: "AI-Powered Briefings", description: "Understand complex topics in minutes, not hours" },
   { icon: Zap, title: "Instant Analysis", description: "Get impact analysis specific to your profile" },
   { icon: Clock, title: "Save Time", description: "Stay informed with 5-minute daily briefings" }
 ];
 
-export default function Page() {
+export default function RootPage() {
   const { preferences } = useUser();
   const [showOnboarding, setShowOnboarding] = useState(false);
 

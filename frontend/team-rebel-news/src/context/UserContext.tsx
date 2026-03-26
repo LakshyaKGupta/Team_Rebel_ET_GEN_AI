@@ -17,6 +17,7 @@ interface UserPreferences {
 
 interface UserContextType {
   preferences: UserPreferences;
+  isLoading: boolean;
   setUserType: (type: UserType) => void;
   setSelectedInterests: (interests: Interest[]) => void;
   setGoal: (goal: Goal) => void;
@@ -89,6 +90,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     <UserContext.Provider
       value={{
         preferences,
+        isLoading: !isHydrated,
         setUserType,
         setSelectedInterests,
         setGoal,
