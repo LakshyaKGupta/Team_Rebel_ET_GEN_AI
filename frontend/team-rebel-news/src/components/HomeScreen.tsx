@@ -81,7 +81,7 @@ const insights = [
 
 export default function HomeScreen() {
   const { preferences } = useUser();
-  const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse } = useBriefing();
+  const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse, setError } = useBriefing();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
   const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
@@ -90,6 +90,7 @@ export default function HomeScreen() {
   const selectedTopic = briefingState.selectedTopic;
   const isLoading = briefingState.isLoading;
   const interactionMode = briefingState.interactionMode;
+  const error = briefingState.error;
 
   const userType = preferences.userType || "exploring";
   const topics = topicTemplates[userType] || topicTemplates.exploring;
@@ -130,24 +131,34 @@ export default function HomeScreen() {
     setLoading(true);
     setInteractionContent(null);
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const contents: Record<string, string> = {
-      explain_simply: "In simple terms: The RBI kept interest rates steady. This means banks will continue offering loans at current rates. It's like a pause button - nothing changes for your EMIs or FD returns right now, but the bank is watching inflation carefully before making any moves.",
-      impact_on_me: userType === "investor" 
-        ? "Your investment impact: Your bank stocks (HDFC, ICICI) may see stability. If you have home loans, your EMI remains unchanged. Consider increasing exposure to rate-sensitive sectors as rate cut chances improve in Q3."
-        : userType === "student"
-        ? "Your impact: As someone learning about finance, this teaches how central banks control inflation. Watch how this affects FD rates your parents might have - they're probably getting around 6.5-7% on savings right now."
-        : userType === "founder"
-        ? "Your business impact: Your startup's loans will stay at current rates. This is good for planning. If you're raising funds, investors will factor in this stable rate environment when valuing your company."
-        : "Your impact: Your loan EMIs stay the same. If you're planning to buy a house or car, now might be a good time to lock in a fixed rate before any potential cuts.",
-      deep_dive: "Extended Analysis: The RBI's decision to maintain status quo reflects careful balancing between supporting growth and controlling inflation. Key factors include: (1) CPI inflation at 5.1%, (2) Global commodity prices post-Russian conflict, (3) US Fed's policy trajectory. Looking ahead, markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%. For portfolio positioning, consider a barbell strategy - mix of defensive rate-sensitive stocks with growth tech exposure."
-    };
+      const shouldFail = Math.random() < 0.1;
+      if (shouldFail) {
+        throw new Error("AI service temporarily unavailable");
+      }
 
-    const content = contents[mode];
-    setInteractionContent(content);
-    addAIResponse({ mode, content, timestamp: Date.now() });
-    setLoading(false);
+      const contents: Record<string, string> = {
+        explain_simply: "In simple terms: The RBI kept interest rates steady. This means banks will continue offering loans at current rates. It's like a pause button - nothing changes for your EMIs or FD returns right now, but the bank is watching inflation carefully before making any moves.",
+        impact_on_me: userType === "investor" 
+          ? "Your investment impact: Your bank stocks (HDFC, ICICI) may see stability. If you have home loans, your EMI remains unchanged. Consider increasing exposure to rate-sensitive sectors as rate cut chances improve in Q3."
+          : userType === "student"
+          ? "Your impact: As someone learning about finance, this teaches how central banks control inflation. Watch how this affects FD rates your parents might have - they're probably getting around 6.5-7% on savings right now."
+          : userType === "founder"
+          ? "Your business impact: Your startup's loans will stay at current rates. This is good for planning. If you're raising funds, investors will factor in this stable rate environment when valuing your company."
+          : "Your impact: Your loan EMIs stay the same. If you're planning to buy a house or car, now might be a good time to lock in a fixed rate before any potential cuts.",
+        deep_dive: "Extended Analysis: The RBI's decision to maintain status quo reflects careful balancing between supporting growth and controlling inflation. Key factors include: (1) CPI inflation at 5.1%, (2) Global commodity prices post-Russian conflict, (3) US Fed's policy trajectory. Looking ahead, markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%. For portfolio positioning, consider a barbell strategy - mix of defensive rate-sensitive stocks with growth tech exposure."
+      };
+
+      const content = contents[mode];
+      setInteractionContent(content);
+      addAIResponse({ mode, content, timestamp: Date.now() });
+      setLoading(false);
+    } catch (err) {
+      setError("Unable to generate insights. Please try again.");
+      setLoading(false);
+    }
   };
 
   const Sidebar = () => (
@@ -519,10 +530,27 @@ export default function HomeScreen() {
                   </button>
                 </div>
 
+                {/* ERROR MESSAGE */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-50 border border-red-100 rounded-2xl p-5"
+                  >
+                    <p className="text-red-600 font-medium">{error}</p>
+                    <button 
+                      onClick={() => interactionMode && handleInteraction(interactionMode)}
+                      className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-medium hover:bg-red-200"
+                    >
+                      Try Again
+                    </button>
+                  </motion.div>
+                )}
+
                 {/* INTERACTION CONTENT */}
                 {isLoading ? (
                   <SkeletonLoader />
-                ) : interactionContent ? (
+                ) : interactionContent && !error ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -652,8 +680,20 @@ export default function HomeScreen() {
 
           {/* Topics */}
           <div className="px-4 lg:px-6 pb-24 lg:pb-8">
-            <div className="space-y-3">
-              {topics.map((topic, index) => (
+            {topics.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Sparkles size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No topics yet</h3>
+                <p className="text-gray-500 mb-6">Complete your profile to see personalized news</p>
+                <button className="px-6 py-3 bg-black text-white rounded-xl font-medium">
+                  Set Preferences
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topics.map((topic, index) => (
                 <motion.div
                   key={topic.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -692,6 +732,7 @@ export default function HomeScreen() {
                 </motion.div>
               ))}
             </div>
+            )}
 
             {/* Quick Actions - Desktop */}
             <div className="hidden lg:block mt-8 pt-4 border-t border-gray-100">

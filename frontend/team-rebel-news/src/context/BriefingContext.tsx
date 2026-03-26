@@ -17,6 +17,7 @@ interface AIResponse {
   mode: string;
   content: string;
   timestamp: number;
+  error?: string;
 }
 
 interface BriefingState {
@@ -25,6 +26,7 @@ interface BriefingState {
   interactionMode: string | null;
   aiResponses: AIResponse[];
   lastUpdated: number | null;
+  error: string | null;
 }
 
 interface BriefingContextType {
@@ -33,6 +35,8 @@ interface BriefingContextType {
   setLoading: (loading: boolean) => void;
   setInteractionMode: (mode: string | null) => void;
   addAIResponse: (response: AIResponse) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
   clearResponses: () => void;
   reset: () => void;
 }
@@ -43,6 +47,7 @@ const initialState: BriefingState = {
   interactionMode: null,
   aiResponses: [],
   lastUpdated: null,
+  error: null,
 };
 
 const BriefingContext = createContext<BriefingContextType | undefined>(undefined);
@@ -56,11 +61,12 @@ export function BriefingProvider({ children }: { children: ReactNode }) {
       selectedTopic: topic,
       interactionMode: null,
       lastUpdated: topic ? Date.now() : prev.lastUpdated,
+      error: null,
     }));
   };
 
   const setLoading = (isLoading: boolean) => {
-    setState((prev) => ({ ...prev, isLoading }));
+    setState((prev) => ({ ...prev, isLoading, error: null }));
   };
 
   const setInteractionMode = (interactionMode: string | null) => {
@@ -75,8 +81,16 @@ export function BriefingProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const setError = (error: string | null) => {
+    setState((prev) => ({ ...prev, error, isLoading: false }));
+  };
+
+  const clearError = () => {
+    setState((prev) => ({ ...prev, error: null }));
+  };
+
   const clearResponses = () => {
-    setState((prev) => ({ ...prev, aiResponses: [], interactionMode: null }));
+    setState((prev) => ({ ...prev, aiResponses: [], interactionMode: null, error: null }));
   };
 
   const reset = () => {
@@ -91,6 +105,8 @@ export function BriefingProvider({ children }: { children: ReactNode }) {
         setLoading,
         setInteractionMode,
         addAIResponse,
+        setError,
+        clearError,
         clearResponses,
         reset,
       }}
