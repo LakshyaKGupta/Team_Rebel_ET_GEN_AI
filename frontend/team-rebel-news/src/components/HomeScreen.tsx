@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   TrendingUp, 
@@ -83,6 +83,10 @@ export default function HomeScreen() {
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
+  
+  const [interactionMode, setInteractionMode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [interactionContent, setInteractionContent] = useState<string | null>(null);
 
   const userType = preferences.userType || "exploring";
   const topics = topicTemplates[userType] || topicTemplates.exploring;
@@ -101,6 +105,44 @@ export default function HomeScreen() {
     if (hour < 12) return "Good morning";
     if (hour < 17) return "Good afternoon";
     return "Good evening";
+  };
+
+  const SkeletonLoader = () => (
+    <div className="space-y-4">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="bg-gray-100 rounded-2xl p-5 lg:p-6 animate-pulse">
+          <div className="h-5 bg-gray-200 rounded w-1/3 mb-3"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const handleInteraction = async (mode: string) => {
+    setInteractionMode(mode);
+    setIsLoading(true);
+    setInteractionContent(null);
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const contents: Record<string, string> = {
+      explain_simply: "In simple terms: The RBI kept interest rates steady. This means banks will continue offering loans at current rates. It's like a pause button - nothing changes for your EMIs or FD returns right now, but the bank is watching inflation carefully before making any moves.",
+      impact_on_me: userType === "investor" 
+        ? "Your investment impact: Your bank stocks (HDFC, ICICI) may see stability. If you have home loans, your EMI remains unchanged. Consider increasing exposure to rate-sensitive sectors as rate cut chances improve in Q3."
+        : userType === "student"
+        ? "Your impact: As someone learning about finance, this teaches how central banks control inflation. Watch how this affects FD rates your parents might have - they're probably getting around 6.5-7% on savings right now."
+        : userType === "founder"
+        ? "Your business impact: Your startup's loans will stay at current rates. This is good for planning. If you're raising funds, investors will factor in this stable rate environment when valuing your company."
+        : "Your impact: Your loan EMIs stay the same. If you're planning to buy a house or car, now might be a good time to lock in a fixed rate before any potential cuts.",
+      deep_dive: "Extended Analysis: The RBI's decision to maintain status quo reflects careful balancing between supporting growth and controlling inflation. Key factors include: (1) CPI inflation at 5.1%, (2) Global commodity prices post-Russian conflict, (3) US Fed's policy trajectory. Looking ahead, markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%. For portfolio positioning, consider a barbell strategy - mix of defensive rate-sensitive stocks with growth tech exposure."
+    };
+
+    setInteractionContent(contents[mode]);
+    setIsLoading(false);
   };
 
   const Sidebar = () => (
@@ -403,16 +445,62 @@ export default function HomeScreen() {
 
                 {/* ACTION BUTTONS */}
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <button className="px-4 py-2 bg-black text-white rounded-xl text-sm font-medium">
+                  <button 
+                    onClick={() => handleInteraction('explain_simply')}
+                    disabled={isLoading}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                      interactionMode === 'explain_simply' 
+                        ? 'bg-black text-white' 
+                        : 'bg-black text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    <Sparkles size={16} />
                     Explain Simply
                   </button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200">
+                  <button 
+                    onClick={() => handleInteraction('impact_on_me')}
+                    disabled={isLoading}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                      interactionMode === 'impact_on_me' 
+                        ? 'bg-gray-800 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <TrendingUp size={16} />
                     Impact on Me
                   </button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200">
+                  <button 
+                    onClick={() => handleInteraction('deep_dive')}
+                    disabled={isLoading}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                      interactionMode === 'deep_dive' 
+                        ? 'bg-gray-800 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Compass size={16} />
                     Deep Dive
                   </button>
                 </div>
+
+                {/* INTERACTION CONTENT */}
+                {isLoading ? (
+                  <SkeletonLoader />
+                ) : interactionContent ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-50 border border-amber-100 rounded-2xl p-5 lg:p-6"
+                  >
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-3">
+                      <Sparkles size={18} />
+                      {interactionMode === 'explain_simply' && 'Simple Explanation'}
+                      {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
+                      {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
+                    </div>
+                    <p className="text-gray-700 leading-relaxed">{interactionContent}</p>
+                  </motion.div>
+                ) : null}
 
                 {/* BRIEFING SECTIONS */}
                 <div className="space-y-4 pt-4">
