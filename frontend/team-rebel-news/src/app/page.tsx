@@ -25,7 +25,13 @@ import {
   LineChart,
   Newspaper,
   PieChart,
-  Wallet
+  Wallet,
+  Award,
+  Users,
+  Shield,
+  Clock,
+  Star,
+  CheckCircle
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 
@@ -36,15 +42,23 @@ const demoTopics = [
 ];
 
 const features = [
-  { icon: Brain, title: "Personalized Insights", description: "News curated for your role and interests" },
-  { icon: Zap, title: "Instant Briefings", description: "AI-powered summaries in seconds" },
-  { icon: Target, title: "Future-Ready", description: "Trend analysis and predictions" },
+  { icon: Brain, title: "Personalized Insights", description: "News curated for your role and interests", color: "from-violet-500 to-purple-600" },
+  { icon: Zap, title: "Instant Briefings", description: "AI-powered summaries in seconds", color: "from-orange-500 to-red-600" },
+  { icon: Target, title: "Future-Ready", description: "Trend analysis and predictions", color: "from-green-500 to-emerald-600" },
+];
+
+const detailedFeatures = [
+  { icon: Clock, title: "Save 2+ Hours Daily", desc: "Get comprehensive briefs in minutes, not hours" },
+  { icon: Shield, title: "Verified Sources", desc: "Only trusted, credible news sources curated" },
+  { icon: Award, title: "Industry Leading", desc: "Award-winning AI technology powering insights" },
+  { icon: Star, title: "Premium Quality", desc: "Handpicked content by expert editors" },
 ];
 
 const stats = [
-  { value: "10K+", label: "News Sources" },
-  { value: "50ms", label: "AI Response" },
-  { value: "99%", label: "Accuracy" },
+  { value: "10K+", label: "News Sources", icon: Newspaper },
+  { value: "50ms", label: "AI Response", icon: Zap },
+  { value: "99%", label: "Accuracy", icon: Target },
+  { value: "1M+", label: "Users", icon: Users },
 ];
 
 const navItems = [
@@ -54,10 +68,16 @@ const navItems = [
 ];
 
 const categories = [
-  { name: "Markets", icon: BarChart3, count: "2.4k" },
-  { name: "Startups", icon: Rocket, count: "1.8k" },
-  { name: "Economy", icon: Globe, count: "1.2k" },
-  { name: "Technology", icon: Cpu, count: "3.1k" },
+  { name: "Markets", icon: BarChart3, count: "2.4k", color: "from-green-500 to-emerald-600" },
+  { name: "Startups", icon: Rocket, count: "1.8k", color: "from-purple-500 to-indigo-600" },
+  { name: "Economy", icon: Globe, count: "1.2k", color: "from-blue-500 to-cyan-600" },
+  { name: "Technology", icon: Cpu, count: "3.1k", color: "from-orange-500 to-red-600" },
+];
+
+const testimonials = [
+  { name: "Rajesh Kumar", role: "Portfolio Manager", text: "My ET changed how I consume news. The AI briefings save me 2 hours daily.", avatar: "RK" },
+  { name: "Priya Sharma", role: "Startup Founder", text: "The personalized insights help me stay ahead of market trends effortlessly.", avatar: "PS" },
+  { name: "Amit Patel", role: "Financial Analyst", text: "Finally, news that matters to my role. The impact analysis is brilliant.", avatar: "AP" },
 ];
 
 const leftIcons = [
@@ -89,7 +109,7 @@ function FloatingParticle({ i }: { i: number }) {
         opacity: [0, 0.6, 0],
         scale: [0, 1, 0],
         x: [0, 50, 0],
-        y: [0, -100, 0],
+        y: [0, -150, 0],
       }}
       transition={{ 
         duration: randomDuration, 
@@ -97,12 +117,32 @@ function FloatingParticle({ i }: { i: number }) {
         delay: randomDelay,
         ease: "easeInOut"
       }}
-      className="absolute rounded-full bg-[#FF4F00]/30"
+      className="absolute rounded-full"
       style={{
         left: `${randomX}%`,
         bottom: -20,
         width: size,
         height: size,
+        background: i % 2 === 0 
+          ? "linear-gradient(135deg, #FF4F00, #FF7A00)" 
+          : "linear-gradient(135deg, #FF7A00, #FFB800)",
+      }}
+    />
+  );
+}
+
+function GlowingOrb({ className }: { className?: string }) {
+  return (
+    <motion.div
+      animate={{ 
+        scale: [1, 1.15, 1],
+        rotate: [0, 180, 360],
+      }}
+      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      className={`rounded-full ${className}`}
+      style={{
+        background: "linear-gradient(135deg, #FF4F00 0%, #FF7A00 50%, #FFB800 100%)",
+        filter: "blur(60px)",
       }}
     />
   );
@@ -242,6 +282,47 @@ function RightCard() {
   );
 }
 
+function CenterCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 2.4, duration: 0.6, type: "spring" }}
+      className="hidden xl:block absolute -bottom-32 left-1/2 -translate-x-1/2"
+    >
+      <motion.div
+        whileHover={{ scale: 1.02, y: -5 }}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-200/50 p-5 w-80"
+      >
+        <div className="flex items-center gap-4 mb-4">
+          <motion.div 
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="w-12 h-12 bg-gradient-to-br from-[#FF4F00] to-orange-500 rounded-xl flex items-center justify-center"
+          >
+            <Star size={22} className="text-white" />
+          </motion.div>
+          <div>
+            <p className="font-bold text-[#1a1a1a]">4.9/5 Rating</p>
+            <p className="text-xs text-gray-500">Based on 10K+ reviews</p>
+          </div>
+          <div className="ml-auto flex">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} size={14} className="text-yellow-400 fill-yellow-400" />
+            ))}
+          </div>
+        </div>
+        <p className="text-sm text-gray-600">"Best news app for professionals. Highly recommended!"</p>
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#FF4F00] to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">RS</div>
+          <span className="text-sm font-medium text-[#1a1a1a]">Rahul Singh</span>
+          <span className="text-xs text-gray-400 ml-auto">CEO, TechCorp</span>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function LandingPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -344,23 +425,18 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-orange-50 via-orange-30/30 to-white" />
         
         <div className="absolute inset-0">
-          <motion.div 
-            animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
-            transition={{ duration: 8, repeat: Infinity }}
-            className="absolute top-0 -left-60 w-[800px] h-[800px] bg-gradient-to-r from-orange-400/20 to-amber-400/20 rounded-full blur-3xl" 
-          />
-          <motion.div 
-            animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 10, repeat: Infinity, delay: 3 }}
-            className="absolute bottom-0 -right-60 w-[900px] h-[900px] bg-gradient-to-r from-orange-300/20 to-red-300/20 rounded-full blur-3xl" 
-          />
-          {[...Array(20)].map((_, i) => (
+          <GlowingOrb className="absolute top-10 -left-40 w-[600px] h-[600px] opacity-60" />
+          <GlowingOrb className="absolute bottom-20 -right-40 w-[700px] h-[700px] opacity-50" />
+          <GlowingOrb className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] opacity-30" />
+          {[...Array(30)].map((_, i) => (
             <FloatingParticle key={i} i={i} />
           ))}
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 w-full">
-          <div className="flex items-stretch justify-between gap-10">
+          <div className="flex items-stretch justify-between gap-10 relative">
+            <CenterCard />
+            
             <div className="hidden lg:flex flex-col items-end justify-between w-72">
               <div className="space-y-5">
                 {leftIcons.map((item, i) => (
@@ -388,16 +464,16 @@ export default function LandingPage() {
               <LeftCard />
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto py-10">
+            <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto py-16">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="mb-6"
+                className="mb-8"
               >
-                <span className="inline-flex items-center gap-3 px-5 py-2.5 bg-white rounded-full shadow-lg border border-gray-200/50">
+                <span className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-full shadow-lg border border-gray-200/50">
                   <motion.span 
-                    animate={{ scale: [1, 1.5, 1] }}
+                    animate={{ scale: [1, 1.5, 1], boxShadow: ["0 0 0 0 rgba(255,79,0,0.4)", "0 0 0 8px rgba(255,79,0,0)", "0 0 0 0 rgba(255,79,0,0)"] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                     className="w-3 h-3 bg-[#FF4F00] rounded-full" 
                   />
@@ -409,7 +485,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 25 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl lg:text-7xl font-bold text-[#1a1a1a] mb-6 text-center"
+                className="text-6xl lg:text-8xl font-bold text-[#1a1a1a] mb-8 text-center"
               >
                 Your Personal
                 <br />
@@ -422,9 +498,9 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1 }}
-                className="mb-12"
+                className="mb-14"
               >
-                <p className="text-lg text-gray-600 leading-relaxed max-w-lg text-center">
+                <p className="text-xl text-gray-600 leading-relaxed max-w-xl text-center">
                   <TypewriterText text="Get AI-powered briefings tailored to your role. Understand the impact, not just the headlines." delay={0.8} />
                 </p>
               </motion.div>
@@ -433,17 +509,17 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.4 }}
-                className="flex items-center gap-5 mb-14"
+                className="flex items-center gap-5 mb-16"
               >
                 <Link 
                   href="/dashboard" 
-                  className="px-8 py-3.5 bg-[#1a1a1a] text-white rounded-xl font-semibold hover:bg-[#333] transition-all hover:shadow-xl hover:-translate-y-1"
+                  className="px-10 py-4 bg-[#1a1a1a] text-white rounded-2xl font-bold text-lg hover:bg-[#333] transition-all hover:shadow-2xl hover:-translate-y-2"
                 >
                   Explore Dashboard
                 </Link>
                 <Link 
                   href="/onboarding" 
-                  className="px-8 py-3.5 bg-white text-[#1a1a1a] border-2 border-gray-200 rounded-xl font-semibold hover:border-[#FF4F00] hover:text-[#FF4F00] transition-all hover:-translate-y-1"
+                  className="px-10 py-4 bg-white text-[#1a1a1a] border-2 border-gray-200 rounded-2xl font-bold text-lg hover:border-[#FF4F00] hover:text-[#FF4F00] transition-all hover:-translate-y-2"
                 >
                   Get Started
                 </Link>
@@ -453,17 +529,20 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.8 }}
-                className="flex items-center gap-12"
+                className="flex items-center justify-center gap-10"
               >
                 {stats.map((stat, i) => (
                   <motion.div 
                     key={stat.label}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1.9 + i * 0.1 }}
-                    className="text-center"
+                    className="flex flex-col items-center"
                   >
-                    <p className="text-2xl font-bold text-[#1a1a1a]">{stat.value}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <stat.icon size={20} className="text-[#FF4F00]" />
+                      <p className="text-3xl font-bold text-[#1a1a1a]">{stat.value}</p>
+                    </div>
                     <p className="text-sm text-gray-500">{stat.label}</p>
                   </motion.div>
                 ))}
@@ -502,38 +581,41 @@ export default function LandingPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 2.2 }}
+          transition={{ delay: 2.5 }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
-          <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2.5 }}>
-            <ArrowDown className="w-6 h-6 text-gray-400" />
+          <motion.div animate={{ y: [0, 12, 0], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2.5 }}>
+            <ArrowDown className="w-7 h-7 text-gray-400" />
           </motion.div>
         </motion.div>
       </section>
 
-      <section className="py-20 bg-white border-y border-gray-200 overflow-hidden">
+      <section className="py-24 bg-white border-y border-gray-200 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="flex items-center justify-between overflow-x-auto pb-4"
+            className="flex items-center justify-center gap-4 flex-wrap"
           >
             {categories.map((cat, i) => (
               <motion.div
                 key={cat.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
+                whileHover={{ scale: 1.05, y: -5 }}
               >
-                <div className="flex-shrink-0 flex items-center gap-3 px-6 py-3 bg-white rounded-2xl border border-gray-200 hover:border-[#FF4F00]/50 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group">
-                  <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center group-hover:bg-[#FF4F00] transition-colors">
-                    <cat.icon size={18} className="text-gray-600 group-hover:text-white" />
+                <div className="flex items-center gap-3 px-8 py-4 bg-white rounded-2xl border border-gray-200 hover:shadow-2xl transition-all cursor-pointer group">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${cat.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <cat.icon size={22} className="text-white" />
                   </div>
-                  <span className="font-semibold text-base text-[#1a1a1a]">{cat.name}</span>
-                  <span className="text-sm text-gray-400">{cat.count}</span>
+                  <div>
+                    <span className="font-bold text-lg text-[#1a1a1a]">{cat.name}</span>
+                    <span className="text-sm text-gray-400 ml-2">{cat.count} articles</span>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -541,14 +623,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-28 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-32 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-20">
             <motion.h2 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-4xl lg:text-5xl font-bold text-[#1a1a1a] mb-4"
+              className="text-5xl lg:text-6xl font-bold text-[#1a1a1a] mb-6"
             >
               See It In Action
             </motion.h2>
@@ -557,40 +639,40 @@ export default function LandingPage() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-gray-500 text-lg"
+              className="text-gray-500 text-xl"
             >
               How personalized news works for different users
             </motion.p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {demoTopics.map((topic, i) => (
               <motion.div
                 key={topic.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 40, rotate: -2 }}
+                whileInView={{ opacity: 1, y: 0, rotate: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                className="bg-white rounded-3xl p-6 border border-gray-200 hover:shadow-2xl hover:border-[#FF4F00]/30 transition-all cursor-pointer group"
+                transition={{ delay: i * 0.15, type: "spring" }}
+                whileHover={{ y: -15, rotate: 1, transition: { duration: 0.2 } }}
+                className="bg-white rounded-3xl p-8 border border-gray-200 hover:shadow-[0_20px_60px_-15px_rgba(255,79,0,0.3)] hover:border-[#FF4F00]/30 transition-all cursor-pointer group"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="px-3 py-1.5 bg-orange-50 text-[#FF4F00] text-sm font-semibold rounded-full">{topic.badge}</span>
+                <div className="flex items-center justify-between mb-6">
+                  <span className="px-4 py-2 bg-gradient-to-r from-orange-100 to-orange-50 text-[#FF4F00] text-sm font-bold rounded-full">{topic.badge}</span>
                   <motion.div 
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    className="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl flex items-center justify-center group-hover:bg-[#FF4F00] transition-colors"
+                    whileHover={{ scale: 1.15, rotate: 15 }}
+                    className="w-14 h-14 bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl flex items-center justify-center group-hover:from-[#FF4F00] group-hover:to-orange-500 transition-all"
                   >
-                    <topic.icon size={20} className="text-[#FF4F00] group-hover:text-white" />
+                    <topic.icon size={24} className="text-[#FF4F00] group-hover:text-white transition-colors" />
                   </motion.div>
                 </div>
-                <h3 className="text-xl font-bold text-[#1a1a1a] mb-2">{topic.title}</h3>
-                <p className="text-gray-500">{topic.subtitle}</p>
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">{topic.title}</h3>
+                <p className="text-gray-500 text-lg">{topic.subtitle}</p>
                 <motion.div 
                   initial={{ width: 0 }}
                   whileInView={{ width: "100%" }}
                   viewport={{ once: true }}
-                  transition={{ delay: 0.3 + i * 0.15, duration: 0.8 }}
-                  className="h-1 bg-gradient-to-r from-[#FF4F00] to-orange-400 rounded-full mt-4"
+                  transition={{ delay: 0.3 + i * 0.15, duration: 1 }}
+                  className="h-1.5 bg-gradient-to-r from-[#FF4F00] via-orange-400 to-yellow-400 rounded-full mt-6"
                 />
               </motion.div>
             ))}
@@ -598,14 +680,68 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-28 bg-white">
+      <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-20">
             <motion.h2 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-4xl lg:text-5xl font-bold text-[#1a1a1a] mb-4"
+              className="text-5xl lg:text-6xl font-bold text-[#1a1a1a] mb-6"
+            >
+              Loved by Professionals
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-gray-500 text-xl"
+            >
+              Join thousands who trust My ET for their news
+            </motion.p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={t.name}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                whileHover={{ y: -10 }}
+                className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 border border-gray-200 hover:shadow-2xl hover:border-[#FF4F00]/30 transition-all"
+              >
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} size={18} className="text-yellow-400 fill-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-600 text-lg mb-6 leading-relaxed">"{t.text}"</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#FF4F00] to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#1a1a1a]">{t.name}</p>
+                    <p className="text-sm text-gray-500">{t.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-32 bg-white">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <div className="text-center mb-20">
+            <motion.h2 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-5xl lg:text-6xl font-bold text-[#1a1a1a] mb-6"
             >
               Why My ET?
             </motion.h2>
@@ -614,56 +750,69 @@ export default function LandingPage() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-gray-500 text-lg"
+              className="text-gray-500 text-xl"
             >
               Built for modern news consumption
             </motion.p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                whileHover={{ scale: 1.03, y: -5 }}
-                className="bg-white rounded-3xl p-8 text-center border border-gray-200 hover:shadow-2xl hover:border-[#FF4F00]/30 transition-all"
+                whileHover={{ scale: 1.05, y: -10 }}
+                className="bg-white rounded-3xl p-10 text-center border-2 border-gray-100 hover:border-[#FF4F00]/30 hover:shadow-[0_20px_60px_-15px_rgba(255,79,0,0.2)] transition-all group"
               >
                 <motion.div 
-                  whileHover={{ rotate: 360 }}
+                  whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.6 }}
-                  className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-5"
+                  className={`w-20 h-20 bg-gradient-to-br ${f.color} rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}
                 >
-                  <f.icon size={28} className="text-[#FF4F00]" />
+                  <f.icon size={36} className="text-white" />
                 </motion.div>
-                <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">{f.title}</h3>
-                <p className="text-gray-500">{f.description}</p>
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4">{f.title}</h3>
+                <p className="text-gray-500 text-lg">{f.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-28 px-4 lg:px-8 bg-[#1a1a1a] relative overflow-hidden">
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 6, repeat: Infinity }}
-          className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-[#FF4F00]/20 rounded-full blur-3xl" 
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 8, repeat: Infinity, delay: 2 }}
-          className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-orange-500/20 rounded-full blur-3xl" 
-        />
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-6">
+            {detailedFeatures.map((f, i) => (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg hover:border-[#FF4F00]/30 transition-all"
+              >
+                <f.icon size={28} className="text-[#FF4F00] mb-4" />
+                <h4 className="font-bold text-[#1a1a1a] mb-2">{f.title}</h4>
+                <p className="text-sm text-gray-500">{f.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-32 px-4 lg:px-8 bg-[#1a1a1a] relative overflow-hidden">
+        <GlowingOrb className="absolute top-0 left-10 w-[500px] h-[500px] opacity-30" />
+        <GlowingOrb className="absolute bottom-0 right-10 w-[400px] h-[400px] opacity-30" />
         
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl lg:text-5xl font-bold text-white mb-5"
+            className="text-5xl lg:text-6xl font-bold text-white mb-6"
           >
             How It Works
           </motion.h2>
@@ -672,33 +821,35 @@ export default function LandingPage() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-gray-400 text-lg mb-14"
+            className="text-gray-400 text-xl mb-16"
           >
             Get started in seconds
           </motion.p>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {[
-              { step: "01", title: "Choose Profile", desc: "Tell us your role" },
-              { step: "02", title: "Select Interests", desc: "Pick your topics" },
-              { step: "03", title: "Get Briefings", desc: "AI-powered insights" },
+              { step: "01", title: "Choose Profile", desc: "Tell us your role", icon: User },
+              { step: "02", title: "Select Interests", desc: "Pick your topics", icon: Compass },
+              { step: "03", title: "Get Briefings", desc: "AI-powered insights", icon: Sparkles },
             ].map((item, i) => (
               <motion.div
                 key={item.step}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
+                whileHover={{ y: -10 }}
                 className="text-center group"
               >
                 <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="text-6xl font-light text-[#FF4F00]/40 group-hover:text-[#FF4F00]/60 transition-colors"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="w-20 h-20 bg-gradient-to-br from-[#FF4F00] to-orange-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:shadow-[0_0_30px_rgba(255,79,0,0.5)] transition-shadow"
                 >
-                  {item.step}
+                  <item.icon size={32} className="text-white" />
                 </motion.div>
-                <h3 className="text-xl font-bold text-white mt-3 mb-2">{item.title}</h3>
-                <p className="text-gray-400">{item.desc}</p>
+                <span className="text-7xl font-light text-[#FF4F00]/30 group-hover:text-[#FF4F00]/50 transition-colors">{item.step}</span>
+                <h3 className="text-2xl font-bold text-white mt-4 mb-3">{item.title}</h3>
+                <p className="text-gray-400 text-lg">{item.desc}</p>
               </motion.div>
             ))}
           </div>
