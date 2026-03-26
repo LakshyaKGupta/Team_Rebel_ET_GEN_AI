@@ -29,18 +29,20 @@ export default function ActionCard({ mode, isActive, isLoading, onClick }: Actio
     <button
       onClick={onClick}
       disabled={isLoading}
-      className={`px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 btn-press ${
-        isActive 
-          ? 'bg-black text-white' 
-          : 'bg-black text-white hover:bg-gray-800'
-      }`}
+      className={`
+        flex-1 min-w-[100px] px-4 py-3 lg:px-5 lg:py-3 rounded-xl font-medium flex items-center justify-center gap-2 btn-press
+        ${isActive ? 'bg-gray-800 text-white' : 'bg-black text-white'}
+        ${!isActive && 'hover:bg-gray-800'}
+        disabled:opacity-70 disabled:cursor-not-allowed
+        text-sm lg:text-sm
+      `}
     >
       {isLoading ? (
-        <Loader2 size={16} className="animate-spin" />
+        <Loader2 size={16} className="animate-spin flex-shrink-0" />
       ) : (
-        <Icon size={16} />
+        <Icon size={16} className="flex-shrink-0" />
       )}
-      {label}
+      <span className="whitespace-nowrap">{label}</span>
     </button>
   );
 }

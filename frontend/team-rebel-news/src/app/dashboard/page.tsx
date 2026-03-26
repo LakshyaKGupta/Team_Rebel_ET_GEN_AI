@@ -21,7 +21,7 @@ const insights = [
 ];
 
 const insightsMap = {
-  investor: { label: "Tailored for Investor", color: "bg-amber-50 text-amber-700" },
+  investor: { label: "Tailored for Investor", color: "bg-orange-50 text-[#FF4F00]" },
   student: { label: "Tailored for Student", color: "bg-blue-50 text-blue-700" },
   founder: { label: "Tailored for Founder", color: "bg-purple-50 text-purple-700" },
   exploring: { label: "For You", color: "bg-gray-100 text-gray-700" },
@@ -101,98 +101,126 @@ export default function Dashboard() {
   if (selectedTopic) {
     return (
       <div className="min-h-screen bg-white flex">
+        {/* Desktop Sidebar - Hidden on mobile */}
         <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
+        
         <main className="flex-1 flex flex-col min-h-screen">
           <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-            <div className="max-w-2xl mx-auto px-4 py-6">
-              <button onClick={() => selectTopic(null)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6">
-                ← Back to Newsroom
-              </button>
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
-                    <span>{selectedTopic.category}</span>
-                    <span>•</span>
-                    <span>{selectedTopic.time}</span>
-                  </div>
-                  <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
-                  <p className="text-lg lg:text-xl text-gray-500">{selectedTopic.subtitle}</p>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${userBadge.color}`}>
-                    {userBadge.label}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-3 pt-4">
-                  <ActionCard mode="explain_simply" isActive={interactionMode === 'explain_simply'} isLoading={isLoading} onClick={() => handleInteraction('explain_simply')} />
-                  <ActionCard mode="impact_on_me" isActive={interactionMode === 'impact_on_me'} isLoading={isLoading} onClick={() => handleInteraction('impact_on_me')} />
-                  <ActionCard mode="deep_dive" isActive={interactionMode === 'deep_dive'} isLoading={isLoading} onClick={() => handleInteraction('deep_dive')} />
-                </div>
-                {error && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 border border-red-100 rounded-2xl p-5">
-                    <p className="text-red-600 font-medium">{error}</p>
-                    <button onClick={() => interactionMode && handleInteraction(interactionMode as 'explain_simply' | 'impact_on_me' | 'deep_dive')} className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-medium">
-                      Try Again
-                    </button>
-                  </motion.div>
-                )}
-                {isLoading ? <SkeletonLoader /> : interactionContent && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-50 border border-amber-100 rounded-2xl p-5 lg:p-6">
-                    <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-3">
-                      <Sparkles size={18} />
-                      {interactionMode === 'explain_simply' && 'Simple Explanation'}
-                      {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
-                      {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
+            {/* Desktop: 2-column layout | Mobile: Single column */}
+            <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
+              {/* Main Content */}
+              <div className="max-w-2xl mx-auto lg:mx-0 px-4 lg:px-6 py-6">
+                <button onClick={() => selectTopic(null)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6">
+                  ← Back to Newsroom
+                </button>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
+                      <span>{selectedTopic.category}</span>
+                      <span>•</span>
+                      <span>{selectedTopic.time}</span>
                     </div>
-                    <p className="text-gray-700 leading-relaxed">{interactionContent}</p>
-                  </motion.div>
-                )}
-                <BriefSection sections={getBriefingSections()} />
-                
-                {/* Mobile: Collapsible Sources */}
-                <div className="lg:hidden pt-6 border-t border-gray-100">
-                  <button 
-                    onClick={() => setSourcesExpanded(!sourcesExpanded)}
-                    className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl"
-                  >
-                    <h3 className="font-semibold text-lg">Sources</h3>
-                    <span className="text-gray-400">{sourcesExpanded ? '−' : '+'}</span>
-                  </button>
-                  {sourcesExpanded && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        {sources.map((source, i) => (
-                          <div key={i} className="p-3 border border-gray-100 rounded-xl">
-                            <p className="font-medium text-sm">{source.name}</p>
-                            <p className="text-gray-500 text-xs">{source.url}</p>
-                          </div>
-                        ))}
-                      </div>
+                    <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
+                    <p className="text-lg lg:text-xl text-gray-500">{selectedTopic.subtitle}</p>
+                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${userBadge.color}`}>
+                      {userBadge.label}
+                    </span>
+                  </div>
+                  
+                  {/* Interaction Buttons - Full width on mobile, optimized */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                    <ActionCard mode="explain_simply" isActive={interactionMode === 'explain_simply'} isLoading={isLoading} onClick={() => handleInteraction('explain_simply')} />
+                    <ActionCard mode="impact_on_me" isActive={interactionMode === 'impact_on_me'} isLoading={isLoading} onClick={() => handleInteraction('impact_on_me')} />
+                    <ActionCard mode="deep_dive" isActive={interactionMode === 'deep_dive'} isLoading={isLoading} onClick={() => handleInteraction('deep_dive')} />
+                  </div>
+                  
+                  {error && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 border border-red-100 rounded-2xl p-5">
+                      <p className="text-red-600 font-medium">{error}</p>
+                      <button onClick={() => interactionMode && handleInteraction(interactionMode as 'explain_simply' | 'impact_on_me' | 'deep_dive')} className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-medium hover:bg-red-200 transition-colors">
+                        Try Again
+                      </button>
                     </motion.div>
                   )}
+                  
+                  {isLoading ? <SkeletonLoader /> : interactionContent && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-50 border border-amber-100 rounded-2xl p-5 lg:p-6">
+                      <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-3">
+                        <Sparkles size={18} />
+                        {interactionMode === 'explain_simply' && 'Simple Explanation'}
+                        {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
+                        {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
+                      </div>
+                      <p className="text-gray-700 leading-relaxed">{interactionContent}</p>
+                    </motion.div>
+                  )}
+                  
+                  <BriefSection sections={getBriefingSections()} />
+                  
+                  {/* Mobile: Collapsible Sources */}
+                  <div className="lg:hidden pt-6 border-t border-gray-100">
+                    <button 
+                      onClick={() => setSourcesExpanded(!sourcesExpanded)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                    >
+                      <h3 className="font-semibold text-lg">Sources</h3>
+                      <span className="text-gray-400">{sourcesExpanded ? '−' : '+'}</span>
+                    </button>
+                    {sourcesExpanded && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                          {sources.map((source, i) => (
+                            <div key={i} className="p-3 border border-gray-100 rounded-xl">
+                              <p className="font-medium text-sm">{source.name}</p>
+                              <p className="text-gray-500 text-xs">{source.url}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+              
+              {/* Right Panel - Desktop Only */}
+              <aside className="hidden lg:block w-full p-6 space-y-6 border-l border-gray-100">
+                <div>
+                  <h3 className="font-semibold mb-4">Your Insights</h3>
+                  <div className="space-y-3">
+                    {insights.map((insight, i) => (
+                      <div key={i} className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Star size={14} className="text-amber-500" />
+                          <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
+                        </div>
+                        <p className="text-sm font-medium">{insight.title}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </motion.div>
+                <div>
+                  <h3 className="font-semibold mb-4">Sources</h3>
+                  <div className="space-y-2">
+                    {sources.map((source, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
+                        <div>
+                          <p className="text-sm font-medium">{source.name}</p>
+                          <p className="text-xs text-gray-500">{source.url}</p>
+                        </div>
+                        <ExternalLink size={14} className="text-gray-400" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
         </main>
-        <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-gray-100 p-6 space-y-6">
-          <div>
-            <h3 className="font-semibold mb-4">Your Insights</h3>
-            <div className="space-y-3">
-              {insights.map((insight, i) => (
-                <div key={i} className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Star size={14} className="text-amber-500" />
-                    <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
-                  </div>
-                  <p className="text-sm font-medium">{insight.title}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
+        
         <BottomNav activeNav={activeNav} onNavChange={(nav) => { setActiveNav(nav); selectTopic(null); }} />
       </div>
     );
@@ -205,40 +233,58 @@ export default function Dashboard() {
         <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           <div className="max-w-2xl mx-auto px-4 lg:px-6">
             {/* SECTION 1: Personalized Topics */}
-            <section className="py-6">
-              <h2 className="text-lg font-semibold mb-4">For You</h2>
-              <div className="space-y-3">
-                {featuredTopics.map((topic, index) => (
+            <section className="py-6 lg:py-8">
+              <motion.h2 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-lg lg:text-xl font-semibold text-gray-900 mb-4"
+              >
+                For You
+              </motion.h2>
+              {featuredTopics.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-gray-500">No topics available. Complete onboarding to get personalized news.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {featuredTopics.map((topic, index) => (
                   <motion.button
                     key={topic.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     onClick={() => selectTopic(topic)}
-                    className="w-full text-left bg-white border border-gray-200 hover:border-gray-300 rounded-2xl p-5 transition-all shadow-sm hover:shadow-md"
+                    className="w-full text-left bg-white border border-gray-200 hover:border-gray-300 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center">
                         <topic.icon size={24} className="text-gray-700" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-gray-400 uppercase">{topic.category}</span>
+                          <span className="text-xs text-gray-400 uppercase tracking-wide">{topic.category}</span>
                           <span className="text-xs text-gray-300">•</span>
                           <span className="text-xs text-gray-400">{topic.time}</span>
                         </div>
-                        <h3 className="font-semibold text-lg mb-1">{topic.title}</h3>
+                        <h3 className="font-semibold text-lg text-gray-900 mb-1">{topic.title}</h3>
                         <p className="text-gray-500 text-sm">{topic.subtitle}</p>
                       </div>
                     </div>
                   </motion.button>
                 ))}
               </div>
+              )}
             </section>
 
             {/* SECTION 2: Quick Insights */}
-            <section className="py-6 border-t border-gray-100">
-              <h2 className="text-lg font-semibold mb-4">Quick Insights</h2>
+            <section className="py-6 lg:py-8 border-t border-gray-100">
+              <motion.h2 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-lg lg:text-xl font-semibold text-gray-900 mb-4"
+              >
+                Quick Insights
+              </motion.h2>
               <div className="grid grid-cols-2 gap-3">
                 {insights.map((insight, i) => (
                   <motion.div
@@ -246,13 +292,13 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + i * 0.1 }}
-                    className="p-4 bg-amber-50 rounded-xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
+                    className="p-4 bg-amber-50 rounded-xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors duration-200"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Zap size={14} className="text-amber-500" />
                       <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
                     </div>
-                    <p className="text-sm font-medium line-clamp-2">{insight.title}</p>
+                    <p className="text-sm font-medium text-gray-800">{insight.title}</p>
                   </motion.div>
                 ))}
               </div>
