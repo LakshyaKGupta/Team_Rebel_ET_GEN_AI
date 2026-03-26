@@ -19,7 +19,15 @@ import {
   Menu,
   Search,
   Bell,
-  User
+  User,
+  X,
+  ExternalLink,
+  ArrowLeftRight,
+  Newspaper,
+  Settings,
+  LogOut,
+  Star,
+  Clock
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 
@@ -57,18 +65,24 @@ const topicTemplates: Record<string, Topic[]> = {
   ],
 };
 
-const categoryIcons: Record<string, React.ElementType> = {
-  stocks: LineChart,
-  startups: Rocket,
-  economy: Globe,
-  global: Globe,
-  tech: Cpu,
-  finance: PiggyBank,
-};
+const sources = [
+  { name: "Economic Times", category: "Primary", url: "et.ecoin.com" },
+  { name: "Money Control", category: "Markets", url: "moneycontrol.com" },
+  { name: "The Hindu", category: "Policy", url: "thehindu.com" },
+  { name: "Financial Express", category: "Economy", url: "financialexpress.com" },
+];
+
+const insights = [
+  { title: "Your portfolio is 70% tech stocks", type: "Insight" },
+  { title: "3 new startups in your sector", type: "Alert" },
+  { title: "RBI meeting next week", type: "Reminder" },
+];
 
 export default function HomeScreen() {
   const { preferences } = useUser();
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
 
   const userType = preferences.userType || "exploring";
   const topics = topicTemplates[userType] || topicTemplates.exploring;
@@ -89,206 +103,421 @@ export default function HomeScreen() {
     return "Good evening";
   };
 
-  if (selectedTopic) {
-    return (
-      <div className="min-h-screen bg-white">
-        <div className="fixed top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md border-b border-gray-100 z-50 flex items-center px-4">
-          <button 
-            onClick={() => setSelectedTopic(null)}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-black"
-          >
-            ← Back
+  const Sidebar = () => (
+    <aside className="w-64 flex-shrink-0 border-r border-gray-100 p-6 space-y-6 hidden lg:block">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
+          <span className="text-white font-semibold">ET</span>
+        </div>
+        <div>
+          <p className="font-semibold">My ET</p>
+          <p className="text-xs text-gray-500">AI Newsroom</p>
+        </div>
+      </div>
+
+      <nav className="space-y-1">
+        <button className="w-full flex items-center gap-3 px-4 py-3 bg-black text-white rounded-xl">
+          <Sparkles size={18} />
+          <span className="font-medium">For You</span>
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
+          <TrendingUp size={18} />
+          <span className="font-medium">Markets</span>
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
+          <Compass size={18} />
+          <span className="font-medium">Explore</span>
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
+          <Newspaper size={18} />
+          <span className="font-medium">Saved</span>
+        </button>
+      </nav>
+
+      <div className="pt-4 border-t border-gray-100">
+        <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Your Interests</p>
+        <div className="flex flex-wrap gap-2">
+          {preferences.selectedInterests.map(interest => (
+            <span key={interest} className="px-3 py-1 bg-gray-100 text-xs rounded-full capitalize">
+              {interest}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-4 border-t border-gray-100">
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
+          <Settings size={18} />
+          <span className="font-medium">Settings</span>
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
+          <User size={18} />
+          <span className="font-medium">Profile</span>
+        </button>
+      </div>
+    </aside>
+  );
+
+  const RightSidebar = () => (
+    <aside className="w-80 flex-shrink-0 border-l border-gray-100 p-6 space-y-6 hidden lg:block">
+      <div>
+        <h3 className="font-semibold mb-4">Your Insights</h3>
+        <div className="space-y-3">
+          {insights.map((insight, i) => (
+            <div key={i} className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div className="flex items-center gap-2 mb-1">
+                <Star size={14} className="text-amber-500" />
+                <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
+              </div>
+              <p className="text-sm font-medium">{insight.title}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold mb-4">Sources</h3>
+        <div className="space-y-2">
+          {sources.map((source, i) => (
+            <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
+              <div>
+                <p className="text-sm font-medium">{source.name}</p>
+                <p className="text-xs text-gray-500">{source.url}</p>
+              </div>
+              <ExternalLink size={14} className="text-gray-400" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+
+  const MobileHeader = () => (
+    <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md border-b border-gray-100 z-50">
+      <div className="flex items-center justify-between h-full px-4">
+        <button onClick={() => setMobileMenuOpen(true)} className="p-2 -ml-2">
+          <Menu size={24} />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
+            <span className="text-white text-xs font-semibold">ET</span>
+          </div>
+          <span className="font-semibold">My ET</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="p-2">
+            <Search size={20} />
+          </button>
+          <button className="p-2">
+            <Bell size={20} />
           </button>
         </div>
-        <div className="pt-20 px-6 max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+      </div>
+    </header>
+  );
+
+  const MobileMenu = () => (
+    <>
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
+          <motion.div 
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl"
           >
-            <div className="flex items-center gap-2 text-xs text-gray-400 uppercase tracking-wide">
-              <span>{selectedTopic.category}</span>
-              <span>•</span>
-              <span>{selectedTopic.time}</span>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold">ET</span>
+                </div>
+                <span className="font-semibold">My ET</span>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2">
+                <X size={20} />
+              </button>
             </div>
-            
-            <h1 className="text-3xl font-semibold">{selectedTopic.title}</h1>
-            <p className="text-lg text-gray-500">{selectedTopic.subtitle}</p>
-
-            <div className="bg-gray-50 rounded-3xl p-6 space-y-4 mt-6">
-              <div className="flex items-center gap-2 text-sm font-medium">
+            <nav className="p-4 space-y-1">
+              <button className="w-full flex items-center gap-3 px-4 py-3 bg-black text-white rounded-xl">
                 <Sparkles size={18} />
-                <span>AI Briefing</span>
-              </div>
-              <p className="text-gray-600 leading-relaxed">
-                This is where the AI-generated briefing would appear. The system synthesizes 
-                multiple news sources to provide a comprehensive summary tailored to your 
-                {userType === "investor" ? " investment portfolio" : userType === "student" ? " learning goals" : userType === "founder" ? " business interests" : " interests"}.
-              </p>
-              <div className="flex gap-3 pt-2">
-                <button className="px-4 py-2 bg-black text-white rounded-xl text-sm font-medium">
-                  Explain Simply
-                </button>
-                <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
-                  Impact on Me
-                </button>
-              </div>
-            </div>
+                <span className="font-medium">For You</span>
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
+                <TrendingUp size={18} />
+                <span className="font-medium">Markets</span>
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
+                <Compass size={18} />
+                <span className="font-medium">Explore</span>
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
+                <Newspaper size={18} />
+                <span className="font-medium">Saved</span>
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
+                <Settings size={18} />
+                <span className="font-medium">Settings</span>
+              </button>
+            </nav>
+          </motion.div>
+        </div>
+      )}
+    </>
+  );
 
-            <div className="space-y-3 pt-4">
-              <h3 className="font-semibold">Sources</h3>
-              <div className="space-y-2">
-                <div className="p-4 border border-gray-100 rounded-xl">
-                  <p className="font-medium text-sm">Economic Times</p>
-                  <p className="text-gray-500 text-xs">et.ecoin.com</p>
+  const SourcesSheet = () => (
+    <>
+      {sourcesSheetOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSourcesSheetOpen(false)} />
+          <motion.div 
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 max-h-[70vh] overflow-y-auto"
+          >
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">Sources</h3>
+              <button onClick={() => setSourcesSheetOpen(false)} className="p-2">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {sources.map((source, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl">
+                  <div>
+                    <p className="font-medium">{source.name}</p>
+                    <p className="text-sm text-gray-500">{source.url}</p>
+                  </div>
+                  <ExternalLink size={18} className="text-gray-400" />
                 </div>
-                <div className="p-4 border border-gray-100 rounded-xl">
-                  <p className="font-medium text-sm">Money Control</p>
-                  <p className="text-gray-500 text-xs">moneycontrol.com</p>
-                </div>
-              </div>
+              ))}
             </div>
           </motion.div>
         </div>
+      )}
+    </>
+  );
+
+  const MobileBottomNav = () => (
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
+      <div className="flex items-center justify-around py-2">
+        <button className="flex flex-col items-center gap-1 py-2 px-4">
+          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
+            <Sparkles size={16} className="text-white" />
+          </div>
+          <span className="text-xs font-medium">For You</span>
+        </button>
+        <button className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400">
+          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+            <TrendingUp size={16} />
+          </div>
+          <span className="text-xs">Markets</span>
+        </button>
+        <button className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400">
+          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+            <Compass size={16} />
+          </div>
+          <span className="text-xs">Explore</span>
+        </button>
+        <button className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400">
+          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+            <User size={16} />
+          </div>
+          <span className="text-xs">Profile</span>
+        </button>
+      </div>
+    </nav>
+  );
+
+  if (selectedTopic) {
+    return (
+      <div className="min-h-screen bg-white">
+        <MobileHeader />
+        <div className="pt-14 lg:pt-0">
+          <div className="max-w-3xl mx-auto px-4 py-6 lg:py-8">
+            <button 
+              onClick={() => setSelectedTopic(null)}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6 lg:hidden"
+            >
+              ← Back
+            </button>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
+                <span>{selectedTopic.category}</span>
+                <span>•</span>
+                <span>{selectedTopic.time}</span>
+              </div>
+              
+              <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
+              <p className="text-lg lg:text-xl text-gray-500">{selectedTopic.subtitle}</p>
+
+              <div className="bg-gray-50 rounded-2xl lg:rounded-3xl p-5 lg:p-6 space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Sparkles size={18} className="text-amber-500" />
+                  <span>AI Briefing</span>
+                </div>
+                <p className="text-gray-600 leading-relaxed">
+                  This is where the AI-generated briefing would appear. The system synthesizes 
+                  multiple news sources to provide a comprehensive summary tailored to your 
+                  {userType === "investor" ? " investment portfolio" : userType === "student" ? " learning goals" : userType === "founder" ? " business interests" : " interests"}.
+                </p>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <button className="px-4 py-2 bg-black text-white rounded-xl text-sm font-medium">
+                    Explain Simply
+                  </button>
+                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
+                    Impact on Me
+                  </button>
+                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
+                    Deep Dive
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Sources</h3>
+                  <button 
+                    onClick={() => setSourcesSheetOpen(true)}
+                    className="lg:hidden text-sm text-gray-500"
+                  >
+                    View all
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  {sources.map((source, i) => (
+                    <div key={i} className="p-4 border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer">
+                      <p className="font-medium text-sm">{source.name}</p>
+                      <p className="text-gray-500 text-xs">{source.url}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+        <SourcesSheet />
+        <MobileBottomNav />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 z-50">
-        <div className="max-w-lg mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold">ET</span>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">{getGreeting()}</p>
-                <p className="font-semibold">My Newsroom</p>
+      <MobileHeader />
+      <MobileMenu />
+      <SourcesSheet />
+
+      <div className="flex">
+        <Sidebar />
+        
+        <main className="flex-1 lg:max-w-2xl">
+          {/* Desktop Header */}
+          <header className="hidden lg:block border-b border-gray-100">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">{getGreeting()}</p>
+                  <h1 className="text-2xl font-semibold">Your Newsroom</h1>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1 bg-black text-white text-sm font-medium rounded-full">
+                    {getUserTypeLabel()}
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-gray-100 rounded-full">
-                <Search size={20} />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-full">
-                <Bell size={20} />
-              </button>
+          </header>
+
+          {/* Mobile User Badge */}
+          <div className="lg:hidden px-4 py-4">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-black text-white text-xs font-medium rounded-full">
+                {getUserTypeLabel()}
+              </span>
+              <span className="text-xs text-gray-500">Personalized for you</span>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* User Type Badge */}
-      <div className="max-w-lg mx-auto px-4 py-4">
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 bg-black text-white text-xs font-medium rounded-full">
-            {getUserTypeLabel()}
-          </span>
-          <span className="text-xs text-gray-500">Personalized for you</span>
-        </div>
+          {/* Topics */}
+          <div className="px-4 lg:px-6 pb-24 lg:pb-8">
+            <div className="space-y-3">
+              {topics.map((topic, index) => (
+                <motion.div
+                  key={topic.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <button
+                    onClick={() => setSelectedTopic(topic)}
+                    className="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-2xl lg:rounded-3xl p-4 lg:p-5 transition-all"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white rounded-xl lg:rounded-2xl flex items-center justify-center shadow-sm">
+                        <topic.icon size={20} className="text-gray-700 lg:text-gray-700" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-400 uppercase">{topic.category}</span>
+                          <span className="text-xs text-gray-300">•</span>
+                          <span className="text-xs text-gray-400">{topic.time}</span>
+                        </div>
+                        <h3 className="font-semibold text-base lg:text-lg mb-1 truncate">{topic.title}</h3>
+                        <p className="text-gray-500 text-sm truncate">{topic.subtitle}</p>
+                        <div className="flex items-center gap-2 mt-3">
+                          {topic.hasBriefing && (
+                            <span className="flex items-center gap-1 px-2 py-1 bg-black text-white text-xs rounded-lg">
+                              <Zap size={12} />
+                              Briefing
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400">{topic.readTime} read</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={20} className="text-gray-400 flex-shrink-0" />
+                    </div>
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Quick Actions - Desktop */}
+            <div className="hidden lg:block mt-8 pt-4 border-t border-gray-100">
+              <h3 className="font-semibold mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <button className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all">
+                  <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                    <Sparkles size={20} className="text-white" />
+                  </div>
+                  <span className="text-sm font-medium">AI Summary</span>
+                </button>
+                <button className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all">
+                  <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                    <TrendingUp size={20} className="text-white" />
+                  </div>
+                  <span className="text-sm font-medium">Markets</span>
+                </button>
+                <button className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all">
+                  <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                    <Compass size={20} className="text-white" />
+                  </div>
+                  <span className="text-sm font-medium">Explore</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <RightSidebar />
       </div>
 
-      {/* Topics */}
-      <main className="max-w-lg mx-auto px-4 pb-24">
-        <div className="space-y-2">
-          {topics.map((topic, index) => (
-            <motion.div
-              key={topic.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <button
-                onClick={() => setSelectedTopic(topic)}
-                className="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-3xl p-5 transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                    <topic.icon size={24} className="text-gray-700" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-gray-400 uppercase">{topic.category}</span>
-                      <span className="text-xs text-gray-300">•</span>
-                      <span className="text-xs text-gray-400">{topic.time}</span>
-                    </div>
-                    <h3 className="font-semibold text-lg mb-1">{topic.title}</h3>
-                    <p className="text-gray-500 text-sm">{topic.subtitle}</p>
-                    <div className="flex items-center gap-2 mt-3">
-                      {topic.hasBriefing && (
-                        <span className="flex items-center gap-1 px-2 py-1 bg-black text-white text-xs rounded-lg">
-                          <Zap size={12} />
-                          Briefing
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">{topic.readTime} read</span>
-                    </div>
-                  </div>
-                  <ChevronRight size={20} className="text-gray-400" />
-                </div>
-              </button>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 pt-4 border-t border-gray-100">
-          <h3 className="font-semibold mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-3 gap-3">
-            <button className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-                <Sparkles size={20} className="text-white" />
-              </div>
-              <span className="text-xs font-medium">AI Summary</span>
-            </button>
-            <button className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-                <TrendingUp size={20} className="text-white" />
-              </div>
-              <span className="text-xs font-medium">Markets</span>
-            </button>
-            <button className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-                <Compass size={20} className="text-white" />
-              </div>
-              <span className="text-xs font-medium">Explore</span>
-            </button>
-          </div>
-        </div>
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
-        <div className="max-w-lg mx-auto flex items-center justify-around py-3">
-          <button className="flex flex-col items-center gap-1">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-              <Sparkles size={16} className="text-white" />
-            </div>
-            <span className="text-xs font-medium">For You</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-gray-400">
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-              <TrendingUp size={16} />
-            </div>
-            <span className="text-xs">Markets</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-gray-400">
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-              <Compass size={16} />
-            </div>
-            <span className="text-xs">Explore</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-gray-400">
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-              <User size={16} />
-            </div>
-            <span className="text-xs">Profile</span>
-          </button>
-        </div>
-      </nav>
+      <MobileBottomNav />
     </div>
   );
 }
