@@ -444,11 +444,11 @@ export default function HomeScreen() {
                 </div>
 
                 {/* ACTION BUTTONS */}
-                <div className="flex flex-wrap gap-3 pt-2">
+                <div className="flex flex-wrap gap-3 pt-4">
                   <button 
                     onClick={() => handleInteraction('explain_simply')}
                     disabled={isLoading}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                    className={`px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 btn-press ${
                       interactionMode === 'explain_simply' 
                         ? 'bg-black text-white' 
                         : 'bg-black text-white hover:bg-gray-800'
@@ -460,7 +460,7 @@ export default function HomeScreen() {
                   <button 
                     onClick={() => handleInteraction('impact_on_me')}
                     disabled={isLoading}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                    className={`px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 btn-press ${
                       interactionMode === 'impact_on_me' 
                         ? 'bg-gray-800 text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -472,7 +472,7 @@ export default function HomeScreen() {
                   <button 
                     onClick={() => handleInteraction('deep_dive')}
                     disabled={isLoading}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                    className={`px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 btn-press ${
                       interactionMode === 'deep_dive' 
                         ? 'bg-gray-800 text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -503,14 +503,14 @@ export default function HomeScreen() {
                 ) : null}
 
                 {/* BRIEFING SECTIONS */}
-                <div className="space-y-4 pt-4">
+                <div className="space-y-4 pt-6">
                   {briefingSections.map((section, index) => (
                     <motion.div
                       key={section.title}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="bg-gray-50 rounded-2xl p-5 lg:p-6"
+                      className="card p-5 lg:p-6"
                     >
                       <h3 className="font-semibold text-lg mb-3">{section.title}</h3>
                       <p className="text-gray-600 leading-relaxed">{section.content}</p>
@@ -519,11 +519,11 @@ export default function HomeScreen() {
                 </div>
 
                 {/* SOURCES - Desktop inline */}
-                <div className="hidden lg:block space-y-3 pt-4 border-t border-gray-100">
+                <div className="hidden lg:block space-y-3 pt-6 border-t border-gray-100">
                   <h3 className="font-semibold text-lg">Sources</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {sources.map((source, i) => (
-                      <div key={i} className="p-4 border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer">
+                      <div key={i} className="card p-4 cursor-pointer card-hover">
                         <p className="font-medium text-sm">{source.name}</p>
                         <p className="text-gray-500 text-xs">{source.url}</p>
                       </div>

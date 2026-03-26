@@ -117,7 +117,7 @@ export default function LandingPage() {
           </div>
           <button 
             onClick={() => setShowOnboarding(true)}
-            className="px-5 py-2 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
+            className="px-5 py-2 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors btn-press"
           >
             Get Started
           </button>
@@ -146,15 +146,15 @@ export default function LandingPage() {
               Understand news, not just read it. Personalized briefings that adapt to who you are.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
               <button 
                 onClick={() => setShowOnboarding(true)}
-                className="w-full sm:w-auto px-8 py-4 bg-black text-white rounded-2xl font-medium text-lg flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
+                className="w-full sm:w-auto px-8 py-4 bg-black text-white rounded-2xl font-medium text-lg flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors btn-press"
               >
                 Get Started
                 <ArrowRight size={20} />
               </button>
-              <button className="w-full sm:w-auto px-8 py-4 border-2 border-gray-200 rounded-2xl font-medium text-lg flex items-center justify-center gap-2 hover:border-gray-400 transition-colors">
+              <button className="w-full sm:w-auto px-8 py-4 border-2 border-gray-200 rounded-2xl font-medium text-lg flex items-center justify-center gap-2 hover:border-gray-400 transition-colors btn-press">
                 <Search size={20} />
                 Explore Demo
               </button>

@@ -141,7 +141,7 @@ export default function Onboarding() {
                   <button
                     key={id}
                     onClick={() => setLocalUserType(id as UserType)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left card-hover ${
                       userType === id 
                         ? "border-black bg-gray-50" 
                         : "border-gray-100 hover:border-gray-300"
