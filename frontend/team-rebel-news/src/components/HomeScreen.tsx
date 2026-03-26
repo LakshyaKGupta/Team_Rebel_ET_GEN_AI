@@ -331,75 +331,157 @@ export default function HomeScreen() {
   );
 
   if (selectedTopic) {
+    const getUserBadge = () => {
+      switch (userType) {
+        case "investor": return { label: "Tailored for Investor", color: "bg-amber-50 text-amber-700" };
+        case "student": return { label: "Tailored for Student", color: "bg-blue-50 text-blue-700" };
+        case "founder": return { label: "Tailored for Founder", color: "bg-purple-50 text-purple-700" };
+        default: return { label: "For You", color: "bg-gray-100 text-gray-700" };
+      }
+    };
+    const userBadge = getUserBadge();
+
+    const briefingSections = [
+      {
+        title: "What happened",
+        content: "The Reserve Bank of India (RBI) has decided to keep the repo rate unchanged at 6.5% in its latest monetary policy meeting. This decision comes amid ongoing inflation concerns and global economic uncertainty. The central bank also maintained its stance on withdrawing accommodation."
+      },
+      {
+        title: "Why it matters",
+        content: "For investors, this means your existing loan EMIs will remain stable. However, the persistent inflation outlook suggests rates may not be cut soon. Fixed deposits continue to offer decent returns, and equity markets may see moderate movement based on this decision."
+      },
+      {
+        title: "Impact",
+        content: userType === "investor" ? "Your portfolio exposure to rate-sensitive sectors (banking, real estate) may benefit from rate stability. Consider reviewing your bond allocations and FD maturities." :
+                userType === "student" ? "Understanding how RBI decisions affect everyday finances - from loan interest rates to inflation - helps build financial literacy." :
+                userType === "founder" ? "Cost of capital remains stable for now. Plan your fundraising timeline considering the interest rate environment." :
+                "These decisions affect everything from loan EMIs to inflation - understanding them helps you make better financial decisions."
+      },
+      {
+        title: "What next",
+        content: "Watch for RBI's next policy meeting in April. Key indicators to track: inflation trajectory, global commodity prices, and US Fed decisions. Consider reviewing your investment portfolio for rate-sensitive assets."
+      }
+    ];
+
     return (
       <div className="min-h-screen bg-white">
         <MobileHeader />
-        <div className="pt-14 lg:pt-0">
-          <div className="max-w-3xl mx-auto px-4 py-6 lg:py-8">
-            <button 
-              onClick={() => setSelectedTopic(null)}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6 lg:hidden"
-            >
-              ← Back
-            </button>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
-                <span>{selectedTopic.category}</span>
-                <span>•</span>
-                <span>{selectedTopic.time}</span>
-              </div>
+        <div className="flex">
+          {/* LEFT SIDEBAR - Navigation */}
+          <Sidebar />
+          
+          {/* MAIN CONTENT */}
+          <main className="flex-1 lg:flex-1">
+            <div className="max-w-2xl mx-auto px-4 py-6 lg:py-8">
+              <button 
+                onClick={() => setSelectedTopic(null)}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6"
+              >
+                ← Back to Newsroom
+              </button>
               
-              <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
-              <p className="text-lg lg:text-xl text-gray-500">{selectedTopic.subtitle}</p>
-
-              <div className="bg-gray-50 rounded-2xl lg:rounded-3xl p-5 lg:p-6 space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Sparkles size={18} className="text-amber-500" />
-                  <span>AI Briefing</span>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                {/* TOP SECTION */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
+                    <span>{selectedTopic.category}</span>
+                    <span>•</span>
+                    <span>{selectedTopic.time}</span>
+                  </div>
+                  
+                  <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
+                  <p className="text-lg lg:text-xl text-gray-500">{selectedTopic.subtitle}</p>
+                  
+                  <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${userBadge.color}`}>
+                    {userBadge.label}
+                  </span>
                 </div>
-                <p className="text-gray-600 leading-relaxed">
-                  This is where the AI-generated briefing would appear. The system synthesizes 
-                  multiple news sources to provide a comprehensive summary tailored to your 
-                  {userType === "investor" ? " investment portfolio" : userType === "student" ? " learning goals" : userType === "founder" ? " business interests" : " interests"}.
-                </p>
+
+                {/* ACTION BUTTONS */}
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button className="px-4 py-2 bg-black text-white rounded-xl text-sm font-medium">
                     Explain Simply
                   </button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
+                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200">
                     Impact on Me
                   </button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
+                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200">
                     Deep Dive
                   </button>
                 </div>
-              </div>
 
-              <div className="space-y-3 pt-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-lg">Sources</h3>
-                  <button 
-                    onClick={() => setSourcesSheetOpen(true)}
-                    className="lg:hidden text-sm text-gray-500"
-                  >
-                    View all
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                  {sources.map((source, i) => (
-                    <div key={i} className="p-4 border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer">
-                      <p className="font-medium text-sm">{source.name}</p>
-                      <p className="text-gray-500 text-xs">{source.url}</p>
-                    </div>
+                {/* BRIEFING SECTIONS */}
+                <div className="space-y-4 pt-4">
+                  {briefingSections.map((section, index) => (
+                    <motion.div
+                      key={section.title}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-gray-50 rounded-2xl p-5 lg:p-6"
+                    >
+                      <h3 className="font-semibold text-lg mb-3">{section.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">{section.content}</p>
+                    </motion.div>
                   ))}
                 </div>
+
+                {/* SOURCES - Desktop inline */}
+                <div className="hidden lg:block space-y-3 pt-4 border-t border-gray-100">
+                  <h3 className="font-semibold text-lg">Sources</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {sources.map((source, i) => (
+                      <div key={i} className="p-4 border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer">
+                        <p className="font-medium text-sm">{source.name}</p>
+                        <p className="text-gray-500 text-xs">{source.url}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SOURCES - Mobile expandable */}
+                <div className="lg:hidden space-y-3 pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">Sources</h3>
+                    <button 
+                      onClick={() => setSourcesSheetOpen(true)}
+                      className="text-sm text-gray-500"
+                    >
+                      View all
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </main>
+
+          {/* RIGHT SIDEBAR - Sources */}
+          <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-gray-100 p-6 space-y-6">
+            <div>
+              <h3 className="font-semibold mb-4">Sources</h3>
+              <div className="space-y-2">
+                {sources.map((source, i) => (
+                  <div key={i} className="p-4 border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <p className="font-medium text-sm">{source.name}</p>
+                    <p className="text-gray-500 text-xs">{source.url}</p>
+                  </div>
+                ))}
               </div>
-            </motion.div>
-          </div>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Related Topics</h3>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-gray-100 text-xs rounded-full">RBI Policy</span>
+                <span className="px-3 py-1 bg-gray-100 text-xs rounded-full">Interest Rates</span>
+                <span className="px-3 py-1 bg-gray-100 text-xs rounded-full">Economy</span>
+              </div>
+            </div>
+          </aside>
         </div>
         <SourcesSheet />
         <MobileBottomNav />
