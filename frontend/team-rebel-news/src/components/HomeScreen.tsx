@@ -83,6 +83,7 @@ export default function HomeScreen() {
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
   
   const [interactionMode, setInteractionMode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -158,21 +159,38 @@ export default function HomeScreen() {
       </div>
 
       <nav className="space-y-1">
-        <button className="w-full flex items-center gap-3 px-4 py-3 bg-black text-white rounded-xl">
+        <button 
+          onClick={() => setActiveNav('home')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+            activeNav === 'home' 
+              ? 'bg-black text-white' 
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
           <Sparkles size={18} />
           <span className="font-medium">For You</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
-          <TrendingUp size={18} />
-          <span className="font-medium">Markets</span>
-        </button>
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
+        <button 
+          onClick={() => setActiveNav('topics')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+            activeNav === 'topics' 
+              ? 'bg-black text-white' 
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
           <Compass size={18} />
-          <span className="font-medium">Explore</span>
+          <span className="font-medium">Topics</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl">
-          <Newspaper size={18} />
-          <span className="font-medium">Saved</span>
+        <button 
+          onClick={() => setActiveNav('profile')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+            activeNav === 'profile' 
+              ? 'bg-black text-white' 
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <User size={18} />
+          <span className="font-medium">Profile</span>
         </button>
       </nav>
 
@@ -280,21 +298,32 @@ export default function HomeScreen() {
               </button>
             </div>
             <nav className="p-4 space-y-1">
-              <button className="w-full flex items-center gap-3 px-4 py-3 bg-black text-white rounded-xl">
+              <button 
+                onClick={() => { setActiveNav('home'); setMobileMenuOpen(false); setSelectedTopic(null); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
+                  activeNav === 'home' ? 'bg-black text-white' : 'text-gray-600'
+                }`}
+              >
                 <Sparkles size={18} />
                 <span className="font-medium">For You</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
-                <TrendingUp size={18} />
-                <span className="font-medium">Markets</span>
-              </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
+              <button 
+                onClick={() => { setActiveNav('topics'); setMobileMenuOpen(false); setSelectedTopic(null); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
+                  activeNav === 'topics' ? 'bg-black text-white' : 'text-gray-600'
+                }`}
+              >
                 <Compass size={18} />
-                <span className="font-medium">Explore</span>
+                <span className="font-medium">Topics</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
-                <Newspaper size={18} />
-                <span className="font-medium">Saved</span>
+              <button 
+                onClick={() => { setActiveNav('profile'); setMobileMenuOpen(false); setSelectedTopic(null); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
+                  activeNav === 'profile' ? 'bg-black text-white' : 'text-gray-600'
+                }`}
+              >
+                <User size={18} />
+                <span className="font-medium">Profile</span>
               </button>
               <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
                 <Settings size={18} />
@@ -344,29 +373,32 @@ export default function HomeScreen() {
   const MobileBottomNav = () => (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
       <div className="flex items-center justify-around py-2">
-        <button className="flex flex-col items-center gap-1 py-2 px-4">
-          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-            <Sparkles size={16} className="text-white" />
+        <button 
+          onClick={() => { setActiveNav('home'); setSelectedTopic(null); }}
+          className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'home' ? 'text-black' : 'text-gray-400'}`}
+        >
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'home' ? 'bg-black' : 'bg-gray-100'}`}>
+            <Sparkles size={16} className={activeNav === 'home' ? 'text-white' : ''} />
           </div>
-          <span className="text-xs font-medium">For You</span>
+          <span className={`text-xs font-medium ${activeNav === 'home' ? 'text-black' : ''}`}>For You</span>
         </button>
-        <button className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400">
-          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-            <TrendingUp size={16} />
+        <button 
+          onClick={() => { setActiveNav('topics'); setSelectedTopic(null); }}
+          className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'topics' ? 'text-black' : 'text-gray-400'}`}
+        >
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'topics' ? 'bg-black' : 'bg-gray-100'}`}>
+            <Compass size={16} className={activeNav === 'topics' ? 'text-white' : ''} />
           </div>
-          <span className="text-xs">Markets</span>
+          <span className={`text-xs font-medium ${activeNav === 'topics' ? 'text-black' : ''}`}>Topics</span>
         </button>
-        <button className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400">
-          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Compass size={16} />
+        <button 
+          onClick={() => { setActiveNav('profile'); setSelectedTopic(null); }}
+          className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'profile' ? 'text-black' : 'text-gray-400'}`}
+        >
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'profile' ? 'bg-black' : 'bg-gray-100'}`}>
+            <User size={16} className={activeNav === 'profile' ? 'text-white' : ''} />
           </div>
-          <span className="text-xs">Explore</span>
-        </button>
-        <button className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400">
-          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-            <User size={16} />
-          </div>
-          <span className="text-xs">Profile</span>
+          <span className={`text-xs font-medium ${activeNav === 'profile' ? 'text-black' : ''}`}>Profile</span>
         </button>
       </div>
     </nav>
