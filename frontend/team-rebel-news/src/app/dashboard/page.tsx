@@ -3,18 +3,15 @@
 import { useState } from "react";
 import { useUser } from "@/context/UserContext";
 import { useBriefing } from "@/context/BriefingContext";
-import Navbar from "@/components/nav/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
-import TopicCard from "@/components/cards/TopicCard";
-import EmptyState from "@/components/layout/EmptyState";
 import ActionCard from "@/components/briefing/ActionCard";
 import SourceList from "@/components/briefing/SourceList";
 import BriefSection from "@/components/briefing/BriefSection";
 import SkeletonLoader from "@/components/briefing/SkeletonLoader";
 import { topicTemplates, sources } from "@/lib/data";
-import { Topic, BriefingSection as BriefingSectionType } from "@/lib/types";
-import { Sparkles, X, Star, ExternalLink } from "lucide-react";
+import { BriefingSection as BriefingSectionType } from "@/lib/types";
+import { Sparkles, Star, ExternalLink, TrendingUp, ArrowRight, Clock, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
 const insights = [
@@ -30,11 +27,20 @@ const insightsMap = {
   exploring: { label: "For You", color: "bg-gray-100 text-gray-700" },
 };
 
+const shortNewsItems = [
+  { id: 1, headline: "Sensex gains 200 points", summary: "Market rebounds on positive global cues amid foreign investor buying", time: "2h ago" },
+  { id: 2, headline: "RBI may cut rates in Q4", summary: "Central bank signals potential rate reduction as inflation cools", time: "3h ago" },
+  { id: 3, headline: "Tech IPO frenzy continues", summary: "Three more startups file for IPO amid record funding year", time: "4h ago" },
+  { id: 4, headline: "Oil prices drop 5%", summary: "Global crude prices fall on supply surplus concerns", time: "5h ago" },
+  { id: 5, headline: "IT sector reports strong Q3", summary: "Top IT companies beat estimates with 15% revenue growth", time: "6h ago" },
+  { id: 6, headline: "Real estate sees recovery", summary: "Housing sales up 20% in major cities amid strong demand", time: "7h ago" },
+  { id: 7, headline: "Crypto market surges", summary: "Bitcoin crosses $80K as institutional adoption increases", time: "8h ago" },
+  { id: 8, headline: "Auto sales hit record", summary: "Car manufacturers report highest ever monthly sales", time: "9h ago" },
+];
+
 export default function Dashboard() {
   const { preferences } = useUser();
   const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse, setError } = useBriefing();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
   const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
   const [interactionContent, setInteractionContent] = useState<string | null>(null);
 
@@ -47,29 +53,25 @@ export default function Dashboard() {
   const topics = topicTemplates[userType] || topicTemplates.exploring;
   const userBadge = insightsMap[userType];
 
+  const featuredTopics = topics.slice(0, 3);
+
   const handleInteraction = async (mode: 'explain_simply' | 'impact_on_me' | 'deep_dive') => {
     setInteractionMode(mode);
     setLoading(true);
     setInteractionContent(null);
-
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-
       const shouldFail = Math.random() < 0.1;
       if (shouldFail) throw new Error("AI service temporarily unavailable");
-
       const contents: Record<string, string> = {
-        explain_simply: "In simple terms: The RBI kept interest rates steady. This means banks will continue offering loans at current rates.",
+        explain_simply: "In simple terms: The RBI kept interest rates steady. Banks continue offering loans at current rates.",
         impact_on_me: userType === "investor" 
-          ? "Your investment impact: Your bank stocks may see stability. If you have home loans, your EMI remains unchanged."
-          : userType === "student"
-          ? "Your impact: This teaches how central banks control inflation and affect everyday finances."
-          : userType === "founder"
-          ? "Your business impact: Cost of capital remains stable for now. Plan your fundraising timeline accordingly."
-          : "Your impact: Your loan EMIs stay the same. Now might be a good time to lock in rates.",
-        deep_dive: "Extended Analysis: The RBI's decision reflects careful balancing between growth support and inflation control. Key factors: CPI inflation at 5.1%, global commodity prices, US Fed policy. Rate cuts expected in Q4 FY26 if inflation moderates.",
+          ? "Your investment impact: Bank stocks may see stability. EMI unchanged."
+          : userType === "student" 
+          ? "This teaches how central banks control inflation and affect finances."
+          : "Cost of capital remains stable for planning.",
+        deep_dive: "Extended Analysis: RBI decision balances growth support and inflation control. CPI inflation at 5.1%, global commodity prices, US Fed policy. Rate cuts expected Q4 FY26.",
       };
-
       const content = contents[mode];
       setInteractionContent(content);
       addAIResponse({ mode, content, timestamp: Date.now() });
@@ -81,34 +83,22 @@ export default function Dashboard() {
   };
 
   const getBriefingSections = (): BriefingSectionType[] => [
-    { title: "What happened", content: "The Reserve Bank of India (RBI) has decided to keep the repo rate unchanged at 6.5% in its latest monetary policy meeting." },
-    { title: "Why it matters", content: "For investors, this means your existing loan EMIs will remain stable. Fixed deposits continue to offer decent returns." },
-    { title: "Impact", content: userType === "investor" 
-      ? "Your portfolio exposure to rate-sensitive sectors may benefit from rate stability." 
-      : userType === "student"
-      ? "Understanding how RBI decisions affect everyday finances helps build financial literacy."
-      : "Cost of capital remains stable for your business planning."
-    },
-    { title: "What next", content: "Watch for RBI's next policy meeting in April. Key indicators: inflation trajectory, global commodity prices." },
+    { title: "What happened", content: "The Reserve Bank of India kept the repo rate unchanged at 6.5%." },
+    { title: "Why it matters", content: "For investors, loan EMIs remain stable. Fixed deposits continue offering decent returns." },
+    { title: "Impact", content: userType === "investor" ? "Portfolio exposure to rate-sensitive sectors may benefit." : "Cost of capital remains stable." },
+    { title: "What next", content: "Watch RBI's next meeting in April. Track inflation and global commodity prices." },
   ];
 
   if (selectedTopic) {
     return (
       <div className="min-h-screen bg-white flex">
         <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
-        
         <main className="flex-1 flex flex-col min-h-screen">
-          <Navbar showGreeting onMenuClick={() => setMobileMenuOpen(true)} />
-          
           <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
             <div className="max-w-2xl mx-auto px-4 py-6">
-              <button 
-                onClick={() => selectTopic(null)}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6"
-              >
+              <button onClick={() => selectTopic(null)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6">
                 ← Back to Newsroom
               </button>
-              
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
@@ -122,13 +112,11 @@ export default function Dashboard() {
                     {userBadge.label}
                   </span>
                 </div>
-
                 <div className="flex flex-wrap gap-3 pt-4">
                   <ActionCard mode="explain_simply" isActive={interactionMode === 'explain_simply'} isLoading={isLoading} onClick={() => handleInteraction('explain_simply')} />
                   <ActionCard mode="impact_on_me" isActive={interactionMode === 'impact_on_me'} isLoading={isLoading} onClick={() => handleInteraction('impact_on_me')} />
                   <ActionCard mode="deep_dive" isActive={interactionMode === 'deep_dive'} isLoading={isLoading} onClick={() => handleInteraction('deep_dive')} />
                 </div>
-
                 {error && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 border border-red-100 rounded-2xl p-5">
                     <p className="text-red-600 font-medium">{error}</p>
@@ -137,7 +125,6 @@ export default function Dashboard() {
                     </button>
                   </motion.div>
                 )}
-
                 {isLoading ? <SkeletonLoader /> : interactionContent && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-50 border border-amber-100 rounded-2xl p-5 lg:p-6">
                     <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-3">
@@ -149,9 +136,7 @@ export default function Dashboard() {
                     <p className="text-gray-700 leading-relaxed">{interactionContent}</p>
                   </motion.div>
                 )}
-
                 <BriefSection sections={getBriefingSections()} />
-
                 <div className="space-y-3 pt-6 border-t border-gray-100">
                   <h3 className="font-semibold text-lg">Sources</h3>
                   <SourceList sources={sources} columns={2} />
@@ -160,7 +145,6 @@ export default function Dashboard() {
             </div>
           </div>
         </main>
-
         <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-gray-100 p-6 space-y-6">
           <div>
             <h3 className="font-semibold mb-4">Your Insights</h3>
@@ -177,6 +161,7 @@ export default function Dashboard() {
             </div>
           </div>
         </aside>
+        <BottomNav activeNav={activeNav} onNavChange={(nav) => { setActiveNav(nav); selectTopic(null); }} />
       </div>
     );
   }
@@ -184,25 +169,97 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-white flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
-      
       <main className="flex-1 flex flex-col min-h-screen">
-        <Navbar showGreeting onMenuClick={() => setMobileMenuOpen(true)} />
-        
         <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-          <div className="max-w-2xl mx-auto px-4 lg:px-6 pt-4">
-            <div className="space-y-3">
-              {topics.length === 0 ? (
-                <EmptyState type="topics" title="No topics yet" description="Complete your profile to see personalized news" actionLabel="Set Preferences" />
-              ) : (
-                topics.map((topic, index) => (
-                  <TopicCard key={topic.id} topic={topic} index={index} onClick={() => selectTopic(topic)} />
-                ))
-              )}
-            </div>
+          <div className="max-w-2xl mx-auto px-4 lg:px-6">
+            {/* SECTION 1: Personalized Topics */}
+            <section className="py-6">
+              <h2 className="text-lg font-semibold mb-4">For You</h2>
+              <div className="space-y-3">
+                {featuredTopics.map((topic, index) => (
+                  <motion.button
+                    key={topic.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => selectTopic(topic)}
+                    className="w-full text-left bg-white border border-gray-200 hover:border-gray-300 rounded-2xl p-5 transition-all shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center">
+                        <topic.icon size={24} className="text-gray-700" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-400 uppercase">{topic.category}</span>
+                          <span className="text-xs text-gray-300">•</span>
+                          <span className="text-xs text-gray-400">{topic.time}</span>
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">{topic.title}</h3>
+                        <p className="text-gray-500 text-sm">{topic.subtitle}</p>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </section>
+
+            {/* SECTION 2: Quick Insights */}
+            <section className="py-6 border-t border-gray-100">
+              <h2 className="text-lg font-semibold mb-4">Quick Insights</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {insights.map((insight, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + i * 0.1 }}
+                    className="p-4 bg-amber-50 rounded-xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap size={14} className="text-amber-500" />
+                      <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
+                    </div>
+                    <p className="text-sm font-medium line-clamp-2">{insight.title}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+
+            {/* SECTION 3: Short-Form News Feed */}
+            <section className="py-6 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Latest News</h2>
+                <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <Clock size={12} />
+                  Updated just now
+                </span>
+              </div>
+              <div className="space-y-3">
+                {shortNewsItems.map((news, index) => (
+                  <motion.div
+                    key={news.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + index * 0.05 }}
+                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs text-gray-400">{news.time}</span>
+                    </div>
+                    <h3 className="font-medium text-base mb-1">{news.headline}</h3>
+                    <p className="text-gray-500 text-sm line-clamp-2 mb-3">{news.summary}</p>
+                    <button className="flex items-center gap-1 text-sm font-medium text-black hover:underline">
+                      View Intelligence
+                      <ArrowRight size={14} />
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       </main>
-
       <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-gray-100 p-6 space-y-6">
         <div>
           <h3 className="font-semibold mb-4">Your Insights</h3>
@@ -233,7 +290,6 @@ export default function Dashboard() {
           </div>
         </div>
       </aside>
-
       <BottomNav activeNav={activeNav} onNavChange={(nav) => { setActiveNav(nav); selectTopic(null); }} />
     </div>
   );
