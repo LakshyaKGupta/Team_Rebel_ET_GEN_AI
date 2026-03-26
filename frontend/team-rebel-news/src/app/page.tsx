@@ -97,10 +97,10 @@ const rightIcons = [
 ];
 
 function FloatingParticle({ i }: { i: number }) {
-  const randomX = Math.random() * 100;
-  const randomDuration = 15 + Math.random() * 10;
-  const randomDelay = Math.random() * 5;
-  const size = 6 + Math.random() * 10;
+  const positions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95];
+  const sizes = [8, 12, 6, 10, 14, 8, 10, 6, 12, 8, 10, 14, 6, 12, 8, 10, 6, 12, 8];
+  const durations = [18, 22, 15, 20, 25, 17, 21, 16, 23, 19, 22, 26, 15, 20, 18, 21, 16, 24, 19];
+  const delays = [0, 1, 2, 3, 0.5, 1.5, 2.5, 3.5, 0.8, 1.8, 2.8, 3.8, 4, 1, 2, 3, 0.3, 1.3, 2.3];
   
   return (
     <motion.div
@@ -108,21 +108,21 @@ function FloatingParticle({ i }: { i: number }) {
       animate={{ 
         opacity: [0, 0.6, 0],
         scale: [0, 1, 0],
-        x: [0, 50, 0],
-        y: [0, -150, 0],
+        x: [0, 30, 0],
+        y: [0, -120, 0],
       }}
       transition={{ 
-        duration: randomDuration, 
+        duration: durations[i % durations.length], 
         repeat: Infinity,
-        delay: randomDelay,
+        delay: delays[i % delays.length],
         ease: "easeInOut"
       }}
       className="absolute rounded-full"
       style={{
-        left: `${randomX}%`,
+        left: `${positions[i % positions.length]}%`,
         bottom: -20,
-        width: size,
-        height: size,
+        width: sizes[i % sizes.length],
+        height: sizes[i % sizes.length],
         background: i % 2 === 0 
           ? "linear-gradient(135deg, #FF4F00, #FF7A00)" 
           : "linear-gradient(135deg, #FF7A00, #FFB800)",
@@ -136,9 +136,9 @@ function GlowingOrb({ className }: { className?: string }) {
     <motion.div
       animate={{ 
         scale: [1, 1.15, 1],
-        rotate: [0, 180, 360],
+        opacity: [0.4, 0.7, 0.4],
       }}
-      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      transition={{ duration: 6, repeat: Infinity }}
       className={`rounded-full ${className}`}
       style={{
         background: "linear-gradient(135deg, #FF4F00 0%, #FF7A00 50%, #FFB800 100%)",
@@ -335,12 +335,15 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    if (mounted && !preferences.hasCompletedOnboarding) {
-      router.push("/onboarding");
+    if (mounted && preferences.hasCompletedOnboarding) {
+      // User has completed onboarding - stay on landing
+    } else if (mounted && !preferences.hasCompletedOnboarding) {
+      // Optional: redirect to onboarding after showing landing
+      // router.push("/onboarding");
     }
   }, [mounted, preferences.hasCompletedOnboarding, router]);
 
-  if (!mounted || !preferences.hasCompletedOnboarding) {
+  if (!mounted) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-gray-200 border-t-[#FF4F00] rounded-full animate-spin" />
