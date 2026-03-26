@@ -117,7 +117,11 @@ export default function Onboarding() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 max-w-lg mx-auto w-full">
+      <div className="pt-6 px-6">
+        <p className="text-sm text-gray-400 text-center">Step {step} of 4</p>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-lg mx-auto w-full">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
