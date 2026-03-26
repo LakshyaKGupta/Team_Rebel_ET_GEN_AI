@@ -30,6 +30,7 @@ import {
   Clock
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import { useBriefing } from "@/context/BriefingContext";
 
 interface Topic {
   id: string;
@@ -80,14 +81,15 @@ const insights = [
 
 export default function HomeScreen() {
   const { preferences } = useUser();
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse } = useBriefing();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
   const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
-  
-  const [interactionMode, setInteractionMode] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [interactionContent, setInteractionContent] = useState<string | null>(null);
+
+  const selectedTopic = briefingState.selectedTopic;
+  const isLoading = briefingState.isLoading;
+  const interactionMode = briefingState.interactionMode;
 
   const userType = preferences.userType || "exploring";
   const topics = topicTemplates[userType] || topicTemplates.exploring;
@@ -125,7 +127,7 @@ export default function HomeScreen() {
 
   const handleInteraction = async (mode: string) => {
     setInteractionMode(mode);
-    setIsLoading(true);
+    setLoading(true);
     setInteractionContent(null);
 
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -142,8 +144,10 @@ export default function HomeScreen() {
       deep_dive: "Extended Analysis: The RBI's decision to maintain status quo reflects careful balancing between supporting growth and controlling inflation. Key factors include: (1) CPI inflation at 5.1%, (2) Global commodity prices post-Russian conflict, (3) US Fed's policy trajectory. Looking ahead, markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%. For portfolio positioning, consider a barbell strategy - mix of defensive rate-sensitive stocks with growth tech exposure."
     };
 
-    setInteractionContent(contents[mode]);
-    setIsLoading(false);
+    const content = contents[mode];
+    setInteractionContent(content);
+    addAIResponse({ mode, content, timestamp: Date.now() });
+    setLoading(false);
   };
 
   const Sidebar = () => (
@@ -299,7 +303,7 @@ export default function HomeScreen() {
             </div>
             <nav className="p-4 space-y-1">
               <button 
-                onClick={() => { setActiveNav('home'); setMobileMenuOpen(false); setSelectedTopic(null); }}
+                onClick={() => { setActiveNav('home'); setMobileMenuOpen(false); selectTopic(null); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
                   activeNav === 'home' ? 'bg-black text-white' : 'text-gray-600'
                 }`}
@@ -308,7 +312,7 @@ export default function HomeScreen() {
                 <span className="font-medium">For You</span>
               </button>
               <button 
-                onClick={() => { setActiveNav('topics'); setMobileMenuOpen(false); setSelectedTopic(null); }}
+                onClick={() => { setActiveNav('topics'); setMobileMenuOpen(false); selectTopic(null); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
                   activeNav === 'topics' ? 'bg-black text-white' : 'text-gray-600'
                 }`}
@@ -317,7 +321,7 @@ export default function HomeScreen() {
                 <span className="font-medium">Topics</span>
               </button>
               <button 
-                onClick={() => { setActiveNav('profile'); setMobileMenuOpen(false); setSelectedTopic(null); }}
+                onClick={() => { setActiveNav('profile'); setMobileMenuOpen(false); selectTopic(null); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
                   activeNav === 'profile' ? 'bg-black text-white' : 'text-gray-600'
                 }`}
@@ -374,7 +378,7 @@ export default function HomeScreen() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
       <div className="flex items-center justify-around py-2">
         <button 
-          onClick={() => { setActiveNav('home'); setSelectedTopic(null); }}
+          onClick={() => { setActiveNav('home'); selectTopic(null); }}
           className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'home' ? 'text-black' : 'text-gray-400'}`}
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'home' ? 'bg-black' : 'bg-gray-100'}`}>
@@ -383,7 +387,7 @@ export default function HomeScreen() {
           <span className={`text-xs font-medium ${activeNav === 'home' ? 'text-black' : ''}`}>For You</span>
         </button>
         <button 
-          onClick={() => { setActiveNav('topics'); setSelectedTopic(null); }}
+          onClick={() => { setActiveNav('topics'); selectTopic(null); }}
           className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'topics' ? 'text-black' : 'text-gray-400'}`}
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'topics' ? 'bg-black' : 'bg-gray-100'}`}>
@@ -392,7 +396,7 @@ export default function HomeScreen() {
           <span className={`text-xs font-medium ${activeNav === 'topics' ? 'text-black' : ''}`}>Topics</span>
         </button>
         <button 
-          onClick={() => { setActiveNav('profile'); setSelectedTopic(null); }}
+          onClick={() => { setActiveNav('profile'); selectTopic(null); }}
           className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'profile' ? 'text-black' : 'text-gray-400'}`}
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'profile' ? 'bg-black' : 'bg-gray-100'}`}>
@@ -448,7 +452,7 @@ export default function HomeScreen() {
           <main className="flex-1 lg:flex-1">
             <div className="max-w-2xl mx-auto px-4 py-6 lg:py-8">
               <button 
-                onClick={() => setSelectedTopic(null)}
+                onClick={() => selectTopic(null)}
                 className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6"
               >
                 ← Back to Newsroom
@@ -657,7 +661,7 @@ export default function HomeScreen() {
                   transition={{ delay: index * 0.1 }}
                 >
                   <button
-                    onClick={() => setSelectedTopic(topic)}
+                    onClick={() => selectTopic(topic)}
                     className="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-2xl lg:rounded-3xl p-4 lg:p-5 transition-all"
                   >
                     <div className="flex items-start gap-4">

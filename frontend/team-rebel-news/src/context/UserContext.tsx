@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 type UserType = "investor" | "student" | "founder" | "exploring" | null;
 type Interest = "stocks" | "startups" | "economy" | "global" | "tech" | "finance";
@@ -33,10 +33,32 @@ const defaultPreferences: UserPreferences = {
   hasCompletedOnboarding: false,
 };
 
+const STORAGE_KEY = "myet_preferences";
+
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setPreferences({ ...defaultPreferences, ...parsed });
+      } catch (e) {
+        console.error("Failed to parse saved preferences", e);
+      }
+    }
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    }
+  }, [preferences, isHydrated]);
 
   const setUserType = (userType: UserType) => {
     setPreferences((prev) => ({ ...prev, userType }));
@@ -60,6 +82,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const resetOnboarding = () => {
     setPreferences(defaultPreferences);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
