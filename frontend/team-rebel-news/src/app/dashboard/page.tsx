@@ -20,8 +20,18 @@ const insights = [
   { title: "RBI meeting next week", type: "Reminder" },
 ];
 
+const colors = {
+  background: "#F8FAFC",
+  card: "#FFFFFF",
+  primary: "#2563EB",
+  secondary: "#22C55E",
+  border: "#E5E7EB",
+  textPrimary: "#0F172A",
+  textSecondary: "#64748B",
+};
+
 const insightsMap = {
-  investor: { label: "Tailored for Investor", color: "bg-orange-50 text-[#FF4F00]" },
+  investor: { label: "Tailored for Investor", color: "bg-amber-50 text-amber-700" },
   student: { label: "Tailored for Student", color: "bg-blue-50 text-blue-700" },
   founder: { label: "Tailored for Founder", color: "bg-purple-50 text-purple-700" },
   exploring: { label: "For You", color: "bg-gray-100 text-gray-700" },

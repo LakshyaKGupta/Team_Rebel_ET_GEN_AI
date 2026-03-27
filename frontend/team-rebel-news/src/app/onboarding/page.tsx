@@ -103,10 +103,10 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <div className="fixed top-0 left-0 right-0 h-1 bg-gray-100 z-50">
+    <div className="min-h-screen bg-[#080B14] flex flex-col">
+      <div className="fixed top-0 left-0 right-0 h-1 bg-[#0D1220] z-50">
         <motion.div 
-          className="h-full bg-black"
+          className="h-full bg-gradient-to-r from-[#E8501A] to-[#F0A500]"
           initial={{ width: "25%" }}
           animate={{ width: `${step * 25}%` }}
           transition={{ duration: 0.3 }}
@@ -114,7 +114,7 @@ export default function Onboarding() {
       </div>
 
       <div className="pt-6 px-6">
-        <p className="text-sm text-gray-400 text-center">Step {step} of 4</p>
+        <p className="text-sm text-[#7E8BA3] text-center">Step {step} of 4</p>
       </div>
 
       <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-lg mx-auto w-full">
@@ -128,8 +128,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">Let&apos;s personalize your news experience</h1>
-                <p className="text-gray-500 text-lg">This takes less than 30 seconds</p>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">Let&apos;s personalize your experience</h1>
+                <p className="text-[#7E8BA3] text-lg">This takes less than 30 seconds</p>
               </div>
 
               <div className="space-y-3">
@@ -137,21 +137,21 @@ export default function Onboarding() {
                   <button
                     key={id}
                     onClick={() => setLocalUserType(id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left card-hover ${
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
                       userType === id 
-                        ? "border-black bg-gray-50" 
-                        : "border-gray-100 hover:border-gray-300"
+                        ? "border-[#E8501A] bg-[#E8501A]/10" 
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
                     }`}
                   >
-                    <div className={`p-3 rounded-xl ${userType === id ? "bg-black text-white" : "bg-gray-100"}`}>
+                    <div className={`p-3 rounded-xl ${userType === id ? "bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white" : "bg-white/[0.07] text-[#7E8BA3]"}`}>
                       <Icon size={24} />
                     </div>
                     <div>
-                      <p className="font-medium text-lg">{label}</p>
-                      <p className="text-gray-500 text-sm">{desc}</p>
+                      <p className="font-medium text-lg text-white">{label}</p>
+                      <p className="text-[#7E8BA3] text-sm">{desc}</p>
                     </div>
                     {userType === id && (
-                      <Check className="ml-auto" size={20} />
+                      <Check className="ml-auto text-[#E8501A]" size={20} />
                     )}
                   </button>
                 ))}
@@ -168,7 +168,7 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">What do you care about?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What do you care about?</h1>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -176,16 +176,16 @@ export default function Onboarding() {
                   <button
                     key={id}
                     onClick={() => toggleInterest(id)}
-                    className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-200 card-hover ${
+                    className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-200 ${
                       selectedInterests.includes(id)
-                        ? "border-black bg-gray-50"
-                        : "border-gray-100 hover:border-gray-300"
+                        ? "border-[#E8501A] bg-[#E8501A]/10"
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
                     }`}
                   >
-                    <div className={`p-3 rounded-xl ${selectedInterests.includes(id) ? "bg-black text-white" : "bg-gray-100"}`}>
+                    <div className={`p-3 rounded-xl ${selectedInterests.includes(id) ? "bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white" : "bg-white/[0.07] text-[#7E8BA3]"}`}>
                       <Icon size={28} />
                     </div>
-                    <p className="font-medium text-center text-sm">{label}</p>
+                    <p className="font-medium text-center text-sm text-white">{label}</p>
                   </button>
                 ))}
               </div>
@@ -201,7 +201,7 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">What do you want from news?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What do you want from news?</h1>
               </div>
 
               <div className="space-y-3">
@@ -209,14 +209,14 @@ export default function Onboarding() {
                   <button
                     key={id}
                     onClick={() => setGoalLocal(id)}
-                    className={`w-full flex items-center justify-between p-5 rounded-2xl border-2 transition-all duration-200 text-left card-hover ${
+                    className={`w-full flex items-center justify-between p-5 rounded-2xl border-2 transition-all duration-200 text-left ${
                       goal === id 
-                        ? "border-black bg-gray-50" 
-                        : "border-gray-100 hover:border-gray-300"
+                        ? "border-[#E8501A] bg-[#E8501A]/10" 
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
                     }`}
                   >
-                    <p className="font-medium text-lg">{label}</p>
-                    {goal === id && <Check size={20} />}
+                    <p className="font-medium text-lg text-white">{label}</p>
+                    {goal === id && <Check size={20} className="text-[#E8501A]" />}
                   </button>
                 ))}
               </div>
@@ -232,7 +232,7 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">How often should we update you?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">How often should we update you?</h1>
               </div>
 
               <div className="space-y-3">
@@ -240,20 +240,20 @@ export default function Onboarding() {
                   <button
                     key={id}
                     onClick={() => setNotificationPrefLocal(id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left card-hover ${
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
                       notificationPref === id 
-                        ? "border-black bg-gray-50" 
-                        : "border-gray-100 hover:border-gray-300"
+                        ? "border-[#E8501A] bg-[#E8501A]/10" 
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
                     }`}
                   >
-                    <div className={`p-3 rounded-xl ${notificationPref === id ? "bg-black text-white" : "bg-gray-100"}`}>
+                    <div className={`p-3 rounded-xl ${notificationPref === id ? "bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white" : "bg-white/[0.07] text-[#7E8BA3]"}`}>
                       <Icon size={20} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium">{label}</p>
-                      <p className="text-gray-500 text-sm">{desc}</p>
+                      <p className="font-medium text-white">{label}</p>
+                      <p className="text-[#7E8BA3] text-sm">{desc}</p>
                     </div>
-                    {notificationPref === id && <Check size={20} />}
+                    {notificationPref === id && <Check size={20} className="text-[#E8501A]" />}
                   </button>
                 ))}
               </div>
@@ -266,7 +266,7 @@ export default function Onboarding() {
             {step > 1 && (
               <button 
                 onClick={() => setStep(s => s - 1)}
-                className="text-gray-500 hover:text-black transition-colors"
+                className="text-[#7E8BA3] hover:text-white transition-colors"
               >
                 Back
               </button>
@@ -276,8 +276,8 @@ export default function Onboarding() {
               disabled={!canProceed()}
               className={`ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
                 canProceed() 
-                  ? "bg-black text-white" 
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  ? "bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white" 
+                  : "bg-white/[0.07] text-[#7E8BA3] cursor-not-allowed"
               }`}
             >
               Continue

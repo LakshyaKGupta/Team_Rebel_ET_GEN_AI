@@ -16,10 +16,10 @@ export default function BriefSection({ sections }: BriefSectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="card p-5 lg:p-6"
+          className="bg-[rgba(255,255,255,0.04)] border border-white/[0.07] rounded-2xl p-5 lg:p-6"
         >
-          <h3 className="font-semibold text-lg mb-3">{section.title}</h3>
-          <p className="text-gray-600 leading-relaxed">{section.content}</p>
+          <h3 className="font-semibold text-lg mb-3 text-white">{section.title}</h3>
+          <p className="text-[#7E8BA3] leading-relaxed">{section.content}</p>
         </motion.div>
       ))}
     </div>
