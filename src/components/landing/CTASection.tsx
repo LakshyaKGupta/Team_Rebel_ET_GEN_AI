@@ -3,7 +3,14 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { colors } from "./Navigation";
+
+const newspaperColors = {
+  paper: "#F5F0E6",
+  ink: "#1A1A1A",
+  accent: "#8B4513",
+  muted: "#5C5C5C",
+  line: "#D4CFC4",
+};
 
 export default function CTASection() {
   return (
@@ -11,74 +18,74 @@ export default function CTASection() {
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
-      className="py-20 lg:py-28 px-4 lg:px-6 relative"
-      style={{ background: colors.card }}
+      transition={{ duration: 0.8 }}
+      className="py-20 px-4 lg:px-8"
+      style={{ backgroundColor: "#FFFFFF" }}
     >
-      <div className="absolute top-0 left-0 w-full h-px" style={{ background: `linear-gradient(to right, transparent, ${colors.border}40, transparent)` }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-gradient-to-br from-[#1E3A5F]/8 via-[#C9A962]/8 to-[#8B5A3C]/8 rounded-full blur-[120px] pointer-events-none" />
-      
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.98 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
-        className="max-w-4xl mx-auto text-center relative"
-      >
-        <div className="inline-flex items-center gap-6 mb-10">
-          {[
-            { value: '50K+', label: 'Professionals' },
-            { value: '1000+', label: 'Sources' },
-            { value: '4.9', label: 'Rating' },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className="text-2xl font-extrabold tracking-tight" style={{ color: colors.primary }}>{stat.value}</div>
-              <div className="text-xs font-medium tracking-wide" style={{ color: colors.textSecondary }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-        
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 tracking-tight leading-tight" style={{ color: colors.textPrimary }}>
-          Your news briefing<br />awaits.
-        </h2>
-        <p className="text-base lg:text-lg mb-10 max-w-xl mx-auto leading-relaxed" style={{ color: colors.textSecondary }}>
-          Set up your profile once. Get clarity forever.
-        </p>
-        
+      <div className="max-w-3xl mx-auto text-center">
         <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="inline-block"
-        >
-          <Link 
-            href="/onboarding" 
-            className="btn-ripple micro-bounce inline-flex items-center gap-3 px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-white relative overflow-hidden group"
-            style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #2D4A6F 100%)' }}
-          >
-            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(135deg, #2D4A6F 0%, #1E3A5F 100%)' }} />
-            <span className="relative flex items-center gap-3">
-              Start Free
-              <motion.span
-                animate={{ x: [0, 6, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
-              >
-                <ArrowRight size={22} />
-              </motion.span>
-            </span>
-          </Link>
-        </motion.div>
-        
-        <motion.p 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.5, duration: 1 }}
-          className="mt-8 text-sm"
-          style={{ color: colors.textSecondary }}
+          transition={{ duration: 0.8 }}
         >
-          No credit card required · 30-second setup
-        </motion.p>
-      </motion.div>
+          <div 
+            className="w-32 h-px mx-auto mb-8"
+            style={{ backgroundColor: newspaperColors.line }}
+          />
+          
+          <div className="flex items-center justify-center gap-8 mb-8">
+            {[
+              { value: '50K+', label: 'Readers' },
+              { value: '1000+', label: 'Sources' },
+              { value: '4.9/5', label: 'Rating' },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="font-serif text-2xl font-bold" style={{ color: newspaperColors.ink }}>
+                  {stat.value}
+                </div>
+                <div className="text-xs tracking-[0.1em] uppercase" style={{ color: newspaperColors.muted }}>
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="w-32 h-px mx-auto mb-8" style={{ backgroundColor: newspaperColors.line }} />
+          
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4" style={{ color: newspaperColors.ink }}>
+            Your News Briefing Awaits
+          </h2>
+          <p className="font-serif text-base mb-8" style={{ color: newspaperColors.muted }}>
+            Set up your profile once. Get clarity forever.
+          </p>
+          
+          <Link href="/onboarding">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-10 py-4 font-serif font-semibold tracking-wide transition-all duration-300"
+              style={{ 
+                backgroundColor: newspaperColors.ink, 
+                color: newspaperColors.paper,
+                border: `2px solid ${newspaperColors.ink}`,
+              }}
+            >
+              <span className="flex items-center gap-2">
+                Start Free
+                <ArrowRight size={18} />
+              </span>
+            </motion.button>
+          </Link>
+          
+          <p 
+            className="mt-6 text-xs tracking-wider"
+            style={{ color: newspaperColors.muted }}
+          >
+            No credit card required · 30-second setup
+          </p>
+        </motion.div>
+      </div>
     </motion.section>
   );
 }

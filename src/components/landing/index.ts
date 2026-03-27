@@ -1,4 +1,4 @@
-export { default as Navigation, colors } from "./Navigation";
+export { default as Navigation } from "./Navigation";
 export { default as HeroSection } from "./HeroSection";
 export { default as FeaturesSection } from "./FeaturesSection";
 export { default as ProcessSection } from "./ProcessSection";

@@ -9,7 +9,6 @@ import {
   UseCasesSection, 
   CTASection, 
   Footer,
-  colors 
 } from "@/components/landing";
 
 export default function LandingPage() {

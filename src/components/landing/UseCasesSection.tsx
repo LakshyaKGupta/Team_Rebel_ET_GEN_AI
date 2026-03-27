@@ -2,7 +2,14 @@
 
 import { motion } from "framer-motion";
 import { TrendingUp, GraduationCap, Rocket } from "lucide-react";
-import { colors } from "./Navigation";
+
+const newspaperColors = {
+  paper: "#F5F0E6",
+  ink: "#1A1A1A",
+  accent: "#8B4513",
+  muted: "#5C5C5C",
+  line: "#D4CFC4",
+};
 
 const useCases = [
   { 
@@ -34,33 +41,33 @@ export default function UseCasesSection() {
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
-      className="py-20 lg:py-28 px-4 lg:px-6 relative"
-      style={{ background: colors.background }}
+      transition={{ duration: 0.8 }}
+      className="py-20 px-4 lg:px-8"
+      style={{ backgroundColor: newspaperColors.paper }}
     >
-      <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-[#8B5A3C]/10 rounded-full blur-[100px] pointer-events-none" />
-      
-      <div className="max-w-6xl mx-auto relative">
+      <div className="max-w-5xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12 lg:mb-16"
+          className="text-center mb-12"
         >
-          <motion.span 
-            className="inline-block text-[11px] font-semibold tracking-[0.15em] uppercase mb-5 px-4 py-1.5 rounded-full"
-            style={{ color: colors.accent, background: `${colors.accent}15` }}
-            initial={{ opacity: 0, y: -10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+          <span 
+            className="text-[10px] tracking-[0.3em] uppercase font-semibold"
+            style={{ color: newspaperColors.accent }}
           >
             Built for You
-          </motion.span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-5 tracking-tight" style={{ color: colors.textPrimary }}>News, translated.</h2>
-          <p className="text-base lg:text-lg max-w-xl mx-auto leading-relaxed" style={{ color: colors.textSecondary }}>Same news, different perspective. Every output is tailored to your context.</p>
+          </span>
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mt-3 mb-4" style={{ color: newspaperColors.ink }}>
+            News, Translated
+          </h2>
+          <div className="w-24 h-px mx-auto mb-4" style={{ backgroundColor: newspaperColors.ink }} />
+          <p className="font-serif text-base max-w-xl mx-auto" style={{ color: newspaperColors.muted }}>
+            Same news, different perspective. Every output is tailored to your context.
+          </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-3 gap-8">
           {useCases.map((useCase, i) => (
             <motion.div
               key={useCase.title}
@@ -68,35 +75,54 @@ export default function UseCasesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.15 }}
-              whileHover={{ scale: 1.015, y: -4 }}
-              className="rounded-2xl overflow-hidden transition-all duration-500"
-              style={{ background: colors.card, border: `1px solid ${colors.border}`, boxShadow: '0 2px 8px rgba(30, 58, 95, 0.04), 0 4px 16px rgba(30, 58, 95, 0.02)' }}
+              whileHover={{ y: -4 }}
+              className="overflow-hidden"
+              style={{ 
+                backgroundColor: "#FFFFFF",
+                border: `1px solid ${newspaperColors.line}`,
+              }}
             >
-              <div className="p-6 lg:p-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <motion.div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500"
-                    style={{ background: `${colors.primary}10`, boxShadow: '0 2px 8px rgba(30, 58, 95, 0.1)' }}
-                    whileHover={{ rotate: 360, scale: 1.05 }}
-                    transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div 
+                    className="w-12 h-12 flex items-center justify-center"
+                    style={{ 
+                      backgroundColor: newspaperColors.paper,
+                      border: `1px solid ${newspaperColors.line}`,
+                    }}
                   >
-                    <useCase.icon size={24} style={{ color: colors.primary }} />
-                  </motion.div>
+                    <useCase.icon size={24} style={{ color: newspaperColors.ink }} />
+                  </div>
                   <div>
-                    <h3 className="font-bold tracking-tight transition-colors duration-500" style={{ color: colors.textPrimary }}>{useCase.title}</h3>
-                    <p className="text-sm leading-relaxed transition-colors duration-500" style={{ color: colors.textSecondary }}>{useCase.description}</p>
+                    <h3 className="font-serif font-bold" style={{ color: newspaperColors.ink }}>
+                      {useCase.title}
+                    </h3>
+                    <p className="font-serif text-sm" style={{ color: newspaperColors.muted }}>
+                      {useCase.description}
+                    </p>
                   </div>
                 </div>
-                <motion.div 
-                  className="p-4 rounded-xl transition-all duration-500"
-                  whileHover={{ scale: 1.01, boxShadow: '0 4px 12px rgba(30, 58, 95, 0.08)' }}
-                  style={{ background: `${colors.primary}5`, border: `1px solid ${colors.primary}10` }}
+                
+                <div 
+                  className="p-4"
+                  style={{ 
+                    backgroundColor: newspaperColors.paper,
+                    border: `1px solid ${newspaperColors.line}`,
+                  }}
                 >
-                  <span className="text-xs font-medium px-2 py-1 rounded-full transition-all duration-200" style={{ background: colors.primary, color: 'white' }}>
+                  <span 
+                    className="text-[9px] tracking-[0.15em] uppercase font-bold px-2 py-1"
+                    style={{ 
+                      backgroundColor: newspaperColors.ink,
+                      color: newspaperColors.paper,
+                    }}
+                  >
                     {useCase.badge}
                   </span>
-                  <p className="mt-3 text-sm font-medium transition-colors duration-200" style={{ color: colors.textPrimary }}>&quot;{useCase.output}&quot;</p>
-                </motion.div>
+                  <p className="mt-3 font-serif text-sm italic" style={{ color: newspaperColors.ink }}>
+                    &ldquo;{useCase.output}&rdquo;
+                  </p>
+                </div>
               </div>
             </motion.div>
           ))}
