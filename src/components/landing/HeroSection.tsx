@@ -26,9 +26,8 @@ const cards = [
     title: "RBI keeps rates unchanged",
     description: "Central bank maintains current rates amid inflation concerns",
     icon: TrendingUp,
-    delay: 0.3,
-    xOffset: -120,
-    scale: 0.95,
+    delay: 0.6,
+    xOffset: -140,
   },
   {
     id: "insight",
@@ -36,10 +35,9 @@ const cards = [
     title: "Banking sector may benefit",
     description: "Stable rates could boost banking sector performance",
     icon: Sparkles,
-    delay: 0.5,
+    delay: 0.8,
     xOffset: 0,
-    yOffset: 40,
-    scale: 1.05,
+    yOffset: 30,
   },
   {
     id: "action",
@@ -47,39 +45,140 @@ const cards = [
     title: "Watch HDFC, ICICI",
     description: "Monitor banking stocks for potential gains",
     icon: Zap,
-    delay: 0.7,
-    xOffset: 120,
-    scale: 0.95,
+    delay: 1,
+    xOffset: 140,
   },
 ];
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden" style={{ backgroundColor: newspaperColors.paper }}>
+    <section 
+      className="relative min-h-screen flex flex-col"
+      style={{ backgroundColor: newspaperColors.paper }}
+    >
       <NewspaperBackground />
       
-      <div className="relative max-w-5xl mx-auto px-4 lg:px-8 py-16 lg:py-24">
-        <Masthead />
-        <EditionTag />
-        <RuledLine />
-        
-        <div className="text-center mt-12 mb-16">
-          <Headline />
-          <Subtext />
+      <div className="flex-1 flex flex-col justify-center px-6 lg:px-12 py-16">
+        <div className="max-w-6xl mx-auto w-full">
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
+            className="text-center mb-12"
+          >
+            <motion.div 
+              className="inline-flex items-center gap-3 mb-6"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+            >
+              <motion.div 
+                className="w-12 h-px"
+                style={{ backgroundColor: newspaperColors.line }}
+              />
+              <Newspaper size={24} style={{ color: newspaperColors.accent }} />
+              <span 
+                className="text-[11px] tracking-[0.35em] uppercase font-bold"
+                style={{ color: newspaperColors.ink }}
+              >
+                The Economic Times
+              </span>
+              <Newspaper size={24} style={{ color: newspaperColors.accent }} />
+              <motion.div 
+                className="w-12 h-px"
+                style={{ backgroundColor: newspaperColors.line }}
+              />
+            </motion.div>
+            
+            <motion.h1 
+              className="font-serif text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6"
+              style={{ color: newspaperColors.ink }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              Understand News.{' '}
+              <span style={{ color: newspaperColors.accent }}>Make Better Decisions.</span>
+            </motion.h1>
+            
+            <motion.p 
+              className="font-serif text-lg md:text-xl max-w-2xl mx-auto"
+              style={{ color: newspaperColors.muted }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            >
+              Personalized insights, actionable intelligence, and future predictions.
+            </motion.p>
+          </motion.div>
+
+          <motion.div 
+            className="mt-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+          >
+            <HeroCards />
+          </motion.div>
+
+          <motion.div 
+            className="flex flex-col sm:flex-row items-center justify-center gap-5 mt-14"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.4, duration: 0.8 }}
+          >
+            <Link href="/dashboard">
+              <motion.button
+                whileHover={{ scale: 1.05, y: -3, boxShadow: "6px 6px 0px " + newspaperColors.accent }}
+                whileTap={{ scale: 0.98 }}
+                className="px-10 py-4 font-serif font-bold tracking-wide"
+                style={{ 
+                  backgroundColor: newspaperColors.ink, 
+                  color: newspaperColors.paper,
+                  border: `3px solid ${newspaperColors.ink}`,
+                  boxShadow: "4px 4px 0px " + newspaperColors.accent,
+                }}
+              >
+                <span className="flex items-center gap-3">
+                  Get Started
+                  <ArrowRight size={18} />
+                </span>
+              </motion.button>
+            </Link>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-10 py-4 font-serif font-bold tracking-wide"
+              style={{ 
+                backgroundColor: "transparent", 
+                color: newspaperColors.ink,
+                border: `3px solid ${newspaperColors.ink}`,
+              }}
+            >
+              Watch Demo
+            </motion.button>
+          </motion.div>
         </div>
-        
-        <RuledLine />
-        <SectionLabel />
-        <HeroCards />
-        <RuledLine />
-        
-        <div className="mt-16 mb-8">
-          <Buttons />
-        </div>
-        
-        <RuledLine />
-        <ScrollIndicator />
       </div>
+
+      <motion.div 
+        className="pb-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2 }}
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+          className="flex flex-col items-center gap-2"
+        >
+          <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: newspaperColors.muted }}>
+            Scroll to explore
+          </span>
+          <ChevronDown size={20} style={{ color: newspaperColors.muted }} />
+        </motion.div>
+      </motion.div>
     </section>
   );
 }
@@ -87,16 +186,20 @@ export default function HeroSection() {
 function NewspaperBackground() {
   return (
     <>
-      <div 
-        className="absolute inset-0 -z-10"
-        style={{ backgroundColor: newspaperColors.paper }}
-      />
+      <div className="absolute inset-0 -z-10" style={{ backgroundColor: newspaperColors.paper }} />
       
       <div 
-        className="absolute inset-0 -z-10 opacity-[0.03]"
+        className="absolute inset-0 -z-10 opacity-[0.02]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
+      />
+
+      <motion.div 
+        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] rounded-full -z-10"
+        style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.06) 0%, transparent 70%)' }}
+        animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 10, repeat: Infinity }}
       />
 
       <div className="absolute top-0 left-0 w-24 h-full -z-10" style={{ borderRight: `1px solid ${newspaperColors.line}` }} />
@@ -105,138 +208,13 @@ function NewspaperBackground() {
   );
 }
 
-function Masthead() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-      className="text-center"
-    >
-      <div className="flex items-center justify-center gap-3 mb-2">
-        <Newspaper size={32} style={{ color: newspaperColors.accent }} />
-        <h1 
-          className="text-3xl md:text-4xl font-serif font-bold tracking-wide"
-          style={{ color: newspaperColors.ink }}
-        >
-          THE ECONOMIC TIMES
-        </h1>
-        <Newspaper size={32} style={{ color: newspaperColors.accent }} />
-      </div>
-      <p 
-        className="text-xs tracking-[0.3em] uppercase"
-        style={{ color: newspaperColors.muted }}
-      >
-        AI-Powered Intelligence Platform
-      </p>
-    </motion.div>
-  );
-}
-
-function EditionTag() {
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.2, duration: 0.6 }}
-      className="flex items-center justify-between mt-6 text-[10px] tracking-[0.15em] uppercase"
-      style={{ color: newspaperColors.muted }}
-    >
-      <span>{dateStr}</span>
-      <span>|</span>
-      <span>Vol. CLXII No. 247</span>
-      <span>|</span>
-      <span>Price: $2.50</span>
-    </motion.div>
-  );
-}
-
-function RuledLine() {
-  return (
-    <div 
-      className="h-px w-full my-8"
-      style={{ backgroundColor: newspaperColors.ink }}
-    />
-  );
-}
-
-function SectionLabel() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.4 }}
-      className="text-center mb-8"
-    >
-      <span 
-        className="text-[10px] tracking-[0.4em] uppercase font-semibold px-4 py-1"
-        style={{ color: newspaperColors.paper, backgroundColor: newspaperColors.ink }}
-      >
-        Intelligence Briefing
-      </span>
-    </motion.div>
-  );
-}
-
-function Headline() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, delay: 0.2 }}
-    >
-      <h1 
-        className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] tracking-tight mb-6"
-        style={{ color: newspaperColors.ink }}
-      >
-        Understand News.
-        <br />
-        <span style={{ color: newspaperColors.accent }}>Make Better Decisions.</span>
-      </h1>
-    </motion.div>
-  );
-}
-
-function Subtext() {
-  return (
-    <motion.p
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.4 }}
-      className="font-serif text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
-      style={{ color: newspaperColors.muted }}
-    >
-      <span className="italic">
-        "The news that matters, translated into intelligence you can act on."
-      </span>
-      <br />
-      <span className="text-xs tracking-wider mt-4 block">
-        — Personalized insights · Actionable intelligence · Future predictions
-      </span>
-    </motion.p>
-  );
-}
-
 function HeroCards() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6, delay: 0.5 }}
-      className="grid grid-cols-1 md:grid-cols-3 gap-8"
-    >
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
       {cards.map((card) => (
         <IntelligenceCard key={card.id} card={card} />
       ))}
-    </motion.div>
+    </div>
   );
 }
 
@@ -248,68 +226,65 @@ function IntelligenceCard({ card }: { card: typeof cards[0] }) {
   const initialState = {
     opacity: 0,
     x: card.xOffset || 0,
-    y: card.yOffset || 0,
+    y: card.yOffset ? card.yOffset + 50 : 50,
   };
 
   const animateState = {
     opacity: 1,
     x: 0,
-    y: 0,
+    y: card.yOffset || 0,
   };
 
   return (
     <motion.div
-      className="relative"
       initial={initialState}
       animate={animateState}
       transition={{
-        duration: 1,
+        duration: 1.2,
         ease: [0.4, 0, 0.2, 1],
         delay: card.delay,
       }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -10, transition: { duration: 0.4 } }}
     >
       <div
-        className="relative p-5"
+        className="relative p-6 h-full"
         style={{
           backgroundColor: isAction ? "#1A1A1A" : "#FFFFFF",
           border: `2px solid ${isAction ? newspaperColors.ink : newspaperColors.line}`,
           boxShadow: isInsight 
-            ? "8px 8px 0px rgba(26,26,26,0.1)"
+            ? "10px 10px 0px rgba(139,69,19,0.15)"
             : isAction
-            ? "6px 6px 0px rgba(26,26,26,0.15)"
-            : "4px 4px 0px rgba(26,26,26,0.05)",
+            ? "8px 8px 0px rgba(26,26,26,0.18)"
+            : "6px 6px 0px rgba(26,26,26,0.06)",
         }}
       >
-        <div 
-          className="absolute top-0 left-0 w-full h-1"
+        <motion.div 
+          className="absolute top-0 left-0 w-full h-1.5 overflow-hidden"
           style={{ backgroundColor: isAction ? newspaperColors.accent : newspaperColors.ink }}
-        />
+        >
+          <motion.div 
+            className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
+          />
+        </motion.div>
 
-        <div className="flex items-center gap-3 mb-4 pt-2">
-          <div 
-            className="w-10 h-10 flex items-center justify-center"
+        <div className="flex items-center gap-4 mb-5 pt-2">
+          <motion.div 
+            className="w-12 h-12 flex items-center justify-center"
             style={{ 
-              backgroundColor: isAction ? "rgba(139,69,19,0.2)" : `${newspaperColors.ink}08`,
+              backgroundColor: isAction ? "rgba(139,69,19,0.2)" : `${newspaperColors.ink}05`,
               border: `1px solid ${newspaperColors.line}`,
             }}
+            whileHover={{ scale: 1.1, rotate: 5 }}
           >
-            <Icon 
-              size={18} 
-              style={{ color: isAction ? newspaperColors.accent : newspaperColors.ink }} 
-            />
-          </div>
+            <Icon size={20} style={{ color: isAction ? newspaperColors.accent : newspaperColors.ink }} />
+          </motion.div>
           <div>
-            <span 
-              className="text-[10px] font-bold tracking-[0.2em] uppercase block"
-              style={{ color: isAction ? newspaperColors.accent : newspaperColors.ink }}
-            >
+            <span className="text-[11px] font-bold tracking-[0.2em] uppercase block" style={{ color: isAction ? newspaperColors.accent : newspaperColors.ink }}>
               {card.type}
             </span>
-            <span 
-              className="text-[9px] tracking-wider uppercase"
-              style={{ color: newspaperColors.muted }}
-            >
+            <span className="text-[9px] tracking-wider uppercase" style={{ color: newspaperColors.muted }}>
               {card.id === "news" && "Breaking Report"}
               {card.id === "insight" && "Analysis"}
               {card.id === "action" && "Recommended"}
@@ -317,100 +292,21 @@ function IntelligenceCard({ card }: { card: typeof cards[0] }) {
           </div>
         </div>
 
-        <h4 
-          className="font-serif font-bold text-base mb-2 leading-snug"
-          style={{ color: isAction ? "#FFFFFF" : newspaperColors.ink }}
-        >
+        <h4 className="font-serif font-bold text-lg mb-3 leading-snug" style={{ color: isAction ? "#FFFFFF" : newspaperColors.ink }}>
           {card.title}
         </h4>
-        <p 
-          className="text-xs leading-relaxed font-serif"
-          style={{ color: isAction ? "rgba(255,255,255,0.7)" : newspaperColors.muted }}
-        >
+        <p className="text-sm leading-relaxed font-serif" style={{ color: isAction ? "rgba(255,255,255,0.7)" : newspaperColors.muted }}>
           {card.description}
         </p>
 
-        <div 
-          className="mt-4 pt-3"
-          style={{ borderTop: `1px solid ${isAction ? "rgba(255,255,255,0.1)" : newspaperColors.line}` }}
-        >
-          <span 
-            className="text-[9px] tracking-[0.15em] uppercase font-medium"
-            style={{ color: isAction ? "rgba(255,255,255,0.5)" : newspaperColors.muted }}
-          >
+        <div className="mt-6 pt-4" style={{ borderTop: `1px solid ${isAction ? "rgba(255,255,255,0.1)" : newspaperColors.line}` }}>
+          <span className="text-[10px] tracking-[0.15em] uppercase font-medium" style={{ color: isAction ? "rgba(255,255,255,0.5)" : newspaperColors.muted }}>
             {card.id === "news" && "◆ Latest Update · 2 hours ago"}
             {card.id === "insight" && "◆ AI-Powered Analysis"}
             {card.id === "action" && "◆ Action Required"}
           </span>
         </div>
       </div>
-    </motion.div>
-  );
-}
-
-function Buttons() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 1 }}
-      className="flex flex-col sm:flex-row items-center justify-center gap-6"
-    >
-      <Link href="/dashboard">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="px-8 py-3 font-serif font-semibold tracking-wide transition-all duration-300"
-          style={{ 
-            backgroundColor: newspaperColors.ink, 
-            color: newspaperColors.paper,
-            border: `2px solid ${newspaperColors.ink}`,
-          }}
-        >
-          <span className="flex items-center gap-2">
-            Begin Reading
-            <ArrowRight size={16} />
-          </span>
-        </motion.button>
-      </Link>
-
-      <motion.button
-        whileHover={{ scale: 1.02, backgroundColor: `${newspaperColors.ink}08` }}
-        whileTap={{ scale: 0.98 }}
-        className="px-8 py-3 font-serif font-semibold tracking-wide transition-all duration-300"
-        style={{ 
-          backgroundColor: "transparent", 
-          color: newspaperColors.ink,
-          border: `2px solid ${newspaperColors.ink}`,
-        }}
-      >
-        View Demo Edition
-      </motion.button>
-    </motion.div>
-  );
-}
-
-function ScrollIndicator() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 1.5 }}
-      className="text-center mt-12"
-    >
-      <span 
-        className="text-[10px] tracking-[0.3em] uppercase"
-        style={{ color: newspaperColors.muted }}
-      >
-        Continue Reading Below
-      </span>
-      <motion.div
-        animate={{ y: [0, 6, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="mt-2"
-      >
-        <ChevronDown size={18} style={{ color: newspaperColors.muted }} />
-      </motion.div>
     </motion.div>
   );
 }
