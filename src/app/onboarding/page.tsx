@@ -23,7 +23,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  SkipForward,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { UserType, Interest, Goal, NotificationPref } from "@/lib/types";
@@ -129,6 +128,22 @@ export default function Onboarding() {
       localStorage.setItem("myet_current_user", email);
     }
 
+    const allPrefs = JSON.parse(localStorage.getItem("myet_preferences") || "{}");
+    const userPrefs = allPrefs[email];
+    
+    if (userPrefs && userPrefs.hasCompletedOnboarding) {
+      router.push("/dashboard");
+      setIsLoading(false);
+      return;
+    }
+
+    if (userPrefs) {
+      setLocalUserType(userPrefs.userType);
+      setSelectedInterestsLocal(userPrefs.selectedInterests || []);
+      setGoalLocal(userPrefs.goal);
+      setNotificationPrefLocal(userPrefs.notificationPref);
+    }
+
     setIsLoading(false);
     setStep(1);
   };
@@ -145,15 +160,6 @@ export default function Onboarding() {
       completeOnboarding();
       router.push("/dashboard");
     }
-  };
-
-  const handleSkip = () => {
-    setUserType("exploring");
-    setSelectedInterests(["stocks", "economy"]);
-    setGoal("stay_updated");
-    setNotificationPref("key_only");
-    completeOnboarding();
-    router.push("/dashboard");
   };
 
   const handleBack = () => {
@@ -271,16 +277,6 @@ export default function Onboarding() {
                 </button>
               </p>
             </div>
-
-            <div className="pt-4 border-t border-white/[0.07]">
-              <button
-                onClick={handleSkip}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium border border-white/[0.07] text-[#7E8BA3] hover:text-white hover:border-white/20 transition-all"
-              >
-                <SkipForward size={18} />
-                Continue without account
-              </button>
-            </div>
           </motion.div>
         </div>
       </div>
@@ -348,13 +344,6 @@ export default function Onboarding() {
                   </button>
                 ))}
               </div>
-
-              <button
-                onClick={handleSkip}
-                className="w-full text-center text-[#7E8BA3] hover:text-white transition-colors text-sm py-2"
-              >
-                Skip this step
-              </button>
             </motion.div>
           )}
 

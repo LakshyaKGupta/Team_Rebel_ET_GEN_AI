@@ -8,8 +8,9 @@ import {
   X,
   Home,
   Compass,
+  User,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 const newspaperColors = {
@@ -29,6 +30,12 @@ const navItems = [
 export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const user = localStorage.getItem("myet_current_user");
+    setIsLoggedIn(!!user);
+  }, [pathname]);
 
   return (
     <>
@@ -98,17 +105,32 @@ export default function Navigation() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Link 
-              href="/onboarding" 
-              className="hidden sm:flex px-5 py-2 font-serif text-sm font-semibold transition-all duration-200"
-              style={{ 
-                backgroundColor: newspaperColors.ink,
-                color: newspaperColors.paper,
-                border: `1px solid ${newspaperColors.ink}`,
-              }}
-            >
-              Sign Up / Login
-            </Link>
+            {isLoggedIn ? (
+              <Link 
+                href="/dashboard" 
+                className="hidden sm:flex items-center gap-2 px-5 py-2 font-serif text-sm font-semibold transition-all duration-200"
+                style={{ 
+                  backgroundColor: newspaperColors.ink,
+                  color: newspaperColors.paper,
+                  border: `1px solid ${newspaperColors.ink}`,
+                }}
+              >
+                <User size={16} />
+                Dashboard
+              </Link>
+            ) : (
+              <Link 
+                href="/onboarding" 
+                className="hidden sm:flex px-5 py-2 font-serif text-sm font-semibold transition-all duration-200"
+                style={{ 
+                  backgroundColor: newspaperColors.ink,
+                  color: newspaperColors.paper,
+                  border: `1px solid ${newspaperColors.ink}`,
+                }}
+              >
+                Sign Up / Login
+              </Link>
+            )}
           </motion.div>
 
           <motion.button 

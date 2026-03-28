@@ -18,6 +18,7 @@ interface UserPreferences {
 interface UserContextType {
   preferences: UserPreferences;
   isLoading: boolean;
+  currentUser: string | null;
   setUserType: (type: UserType) => void;
   setSelectedInterests: (interests: Interest[]) => void;
   setGoal: (goal: Goal) => void;
@@ -41,25 +42,36 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  const loadPreferencesForUser = (email: string) => {
+    const allPrefs = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    return allPrefs[email] || { ...defaultPreferences };
+  };
+
+  const savePreferencesForUser = (email: string, prefs: UserPreferences) => {
+    const allPrefs = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    allPrefs[email] = prefs;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allPrefs));
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setPreferences({ ...defaultPreferences, ...parsed });
-      } catch (e) {
-        console.error("Failed to parse saved preferences", e);
-      }
+    const user = localStorage.getItem("myet_current_user");
+    setCurrentUser(user);
+    
+    if (user) {
+      const userPrefs = loadPreferencesForUser(user);
+      setPreferences(userPrefs);
     }
+    
     setIsHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    if (isHydrated && currentUser) {
+      savePreferencesForUser(currentUser, preferences);
     }
-  }, [preferences, isHydrated]);
+  }, [preferences, currentUser, isHydrated]);
 
   const setUserType = (userType: UserType) => {
     setPreferences((prev) => ({ ...prev, userType }));
@@ -82,8 +94,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const resetOnboarding = () => {
+    if (currentUser) {
+      savePreferencesForUser(currentUser, defaultPreferences);
+    }
     setPreferences(defaultPreferences);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
@@ -91,6 +105,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       value={{
         preferences,
         isLoading: !isHydrated,
+        currentUser,
         setUserType,
         setSelectedInterests,
         setGoal,
