@@ -45,14 +45,14 @@ export default function CTASection() {
       {floatingIcons.map((item, i) => (
         <motion.div
           key={i}
-          className="fixed pointer-events-none"
+          className="absolute pointer-events-none z-0"
           style={{ 
             left: item.x, 
             top: item.y,
             color: newspaperColors.ink,
           }}
           animate={{
-            opacity: [0.02, 0.05, 0.02],
+            opacity: [0.08, 0.15, 0.08],
             y: [0, -10, 0],
             scale: [1, 1.2, 1],
           }}

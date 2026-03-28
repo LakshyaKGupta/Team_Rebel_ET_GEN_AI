@@ -347,14 +347,14 @@ function FloatingNewspaperElements() {
       {floatingIcons.map((item, i) => (
         <motion.div
           key={i}
-          className="fixed pointer-events-none"
+          className="absolute pointer-events-none z-0"
           style={{ 
             left: item.x, 
             top: item.y,
             color: newspaperColors.ink,
           }}
           animate={{
-            opacity: [0.03, 0.06, 0.03],
+            opacity: [0.1, 0.2, 0.1],
             y: [0, -20, 0],
             x: [0, 15, 0],
             rotate: [0, 10, 0],
