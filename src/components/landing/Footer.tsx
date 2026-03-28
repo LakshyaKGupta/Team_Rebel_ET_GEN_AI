@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Newspaper as NewsIcon } from "lucide-react";
 
 const newspaperColors = {
   paper: "#F5F0E6",
@@ -29,14 +30,14 @@ export default function Footer() {
                 color: newspaperColors.paper,
               }}
             >
-              <span className="font-serif text-lg font-bold">ET</span>
+              <NewsIcon size={20} />
             </div>
             <div>
               <div className="font-serif font-bold" style={{ color: newspaperColors.ink }}>
-                THE ECONOMIC TIMES
+                My Economic Times
               </div>
               <p className="font-serif text-xs" style={{ color: newspaperColors.muted }}>
-                News that means something.
+                Your personalized newsroom.
               </p>
             </div>
           </Link>
@@ -60,7 +61,7 @@ export default function Footer() {
           style={{ borderTop: `1px solid ${newspaperColors.line}` }}
         >
           <p className="font-serif text-xs" style={{ color: newspaperColors.muted }}>
-            © 2026 The Economic Times AI. All rights reserved.
+            © 2026 My Economic Times. News, personalized.
           </p>
         </div>
       </div>

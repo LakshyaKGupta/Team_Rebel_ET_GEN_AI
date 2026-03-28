@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Star, Users, BookOpen } from "lucide-react";
+import { ArrowRight, Users, BookOpen, Star, Sparkles, Globe } from "lucide-react";
 
 const newspaperColors = {
   paper: "#F5F0E6",
@@ -14,8 +14,15 @@ const newspaperColors = {
 
 const stats = [
   { value: '50K+', label: 'Readers', icon: Users },
-  { value: '1000+', label: 'Sources', icon: BookOpen },
-  { value: '4.9/5', label: 'Rating', icon: Star },
+  { value: '500+', label: 'Sources', icon: BookOpen },
+  { value: '4.8/5', label: 'Rating', icon: Star },
+];
+
+const floatingIcons = [
+  { icon: Sparkles, x: '5%', y: '20%', size: 24, delay: 0 },
+  { icon: Globe, x: '92%', y: '30%', size: 26, delay: 1 },
+  { icon: Sparkles, x: '8%', y: '75%', size: 22, delay: 2 },
+  { icon: Globe, x: '88%', y: '70%', size: 28, delay: 3 },
 ];
 
 export default function CTASection() {
@@ -25,16 +32,58 @@ export default function CTASection() {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.6 }}
-      className="py-24 px-4 lg:px-8 relative"
-      style={{ backgroundColor: "#FFFFFF" }}
+      className="py-24 px-4 lg:px-8 relative bg-white overflow-hidden"
     >
+      <div className="absolute inset-0 -z-10" style={{
+        backgroundImage: `
+          linear-gradient(90deg, ${newspaperColors.line}08 1px, transparent 1px),
+          linear-gradient(${newspaperColors.line}05 1px, transparent 1px)
+        `,
+        backgroundSize: '55px 55px',
+      }} />
+
+      {floatingIcons.map((item, i) => (
+        <motion.div
+          key={i}
+          className="fixed pointer-events-none"
+          style={{ 
+            left: item.x, 
+            top: item.y,
+            color: newspaperColors.ink,
+          }}
+          animate={{
+            opacity: [0.02, 0.05, 0.02],
+            y: [0, -10, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            opacity: { duration: 5 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+            y: { duration: 8 + i * 2, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+            scale: { duration: 4 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+          }}
+        >
+          <item.icon size={item.size} strokeWidth={1} />
+        </motion.div>
+      ))}
+
       <motion.div 
-        className="absolute top-0 left-0 w-full h-2"
-        style={{ backgroundColor: newspaperColors.ink }}
-        initial={{ scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1.5 }}
+        className="absolute top-[30%] left-[15%] w-[300px] h-[300px] rounded-full -z-10"
+        style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.06) 0%, transparent 60%)' }}
+        animate={{ 
+          scale: [1, 1.3, 1],
+          rotate: [0, 10, 0],
+        }}
+        transition={{ duration: 12, repeat: Infinity }}
+      />
+
+      <motion.div 
+        className="absolute bottom-[25%] right-[20%] w-[250px] h-[250px] rounded-full -z-10"
+        style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.05) 0%, transparent 60%)' }}
+        animate={{ 
+          scale: [1, 1.2, 1],
+          y: [0, -20, 0],
+        }}
+        transition={{ duration: 14, repeat: Infinity }}
       />
 
       <div className="max-w-3xl mx-auto text-center">
@@ -44,25 +93,33 @@ export default function CTASection() {
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-4"
+          >
+            <span className="text-[10px] tracking-[0.4em] uppercase font-bold" style={{ color: newspaperColors.accent }}>
+              Get Started
+            </span>
+          </motion.div>
+
+          <h2 className="font-serif text-4xl md:text-5xl font-black mb-6" style={{ color: newspaperColors.ink }}>
+            Build Your Newsroom
+          </h2>
+          
           <motion.div 
-            className="flex items-center justify-center gap-4 mb-10"
+            className="w-24 h-0.5 mx-auto mb-8"
+            style={{ backgroundColor: newspaperColors.accent }}
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="flex-1 max-w-[80px] h-px" style={{ backgroundColor: newspaperColors.line }} />
-            <motion.div 
-              className="w-3 h-3 rotate-45"
-              style={{ backgroundColor: newspaperColors.accent }}
-              animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            />
-            <div className="flex-1 max-w-[80px] h-px" style={{ backgroundColor: newspaperColors.line }} />
-          </motion.div>
+            transition={{ duration: 1, delay: 0.2 }}
+          />
           
           <motion.div 
-            className="flex items-center justify-center gap-12 mb-10"
+            className="flex items-center justify-center gap-10 mb-8"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -71,22 +128,31 @@ export default function CTASection() {
             {stats.map((stat, i) => (
               <motion.div 
                 key={stat.label} 
-                className="text-center"
+                className="text-center relative"
                 initial={{ opacity: 0, scale: 0.8 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.2 + i * 0.15, type: "spring" }}
+                whileHover={{ scale: 1.1 }}
               >
                 <motion.div 
-                  className="w-12 h-12 mx-auto mb-3 flex items-center justify-center"
+                  className="absolute -top-2 -right-2 w-3 h-3"
                   style={{ 
-                    backgroundColor: newspaperColors.paper,
-                    border: `2px solid ${newspaperColors.ink}`,
+                    backgroundColor: newspaperColors.accent,
+                    borderRadius: '50%',
                   }}
-                  whileHover={{ scale: 1.1 }}
-                >
+                  animate={{ 
+                    scale: [1, 1.3, 1],
+                    opacity: [0.5, 1, 0.5],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                />
+                <div className="w-12 h-12 mx-auto mb-3 flex items-center justify-center" style={{ 
+                  backgroundColor: newspaperColors.paper,
+                  border: `2px solid ${newspaperColors.ink}`,
+                }}>
                   <stat.icon size={20} style={{ color: newspaperColors.ink }} />
-                </motion.div>
+                </div>
                 <div className="font-serif text-2xl font-bold" style={{ color: newspaperColors.ink }}>
                   {stat.value}
                 </div>
@@ -97,97 +163,61 @@ export default function CTASection() {
             ))}
           </motion.div>
           
-          <motion.div 
-            className="flex items-center justify-center gap-4 mb-10"
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-          >
-            <div className="flex-1 max-w-[80px] h-px" style={{ backgroundColor: newspaperColors.line }} />
-            <motion.div 
-              className="w-3 h-3 rotate-45"
-              style={{ backgroundColor: newspaperColors.accent }}
-              animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-            />
-            <div className="flex-1 max-w-[80px] h-px" style={{ backgroundColor: newspaperColors.line }} />
-          </motion.div>
-          
-          <motion.h2 
-            className="font-serif text-4xl md:text-5xl font-black mb-6" 
-            style={{ color: newspaperColors.ink }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-          >
-            Your News Briefing Awaits
-          </motion.h2>
-          
           <motion.p 
             className="font-serif text-lg mb-10" 
             style={{ color: newspaperColors.muted }}
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.5 }}
           >
-            Set up your profile once. Get clarity forever.
+            Takes 30 seconds. Changes how you read news forever.
           </motion.p>
           
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.9, duration: 0.6 }}
-          >
-            <Link href="/onboarding">
-              <motion.button
-                whileHover={{ scale: 1.05, x: -4 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-12 py-5 font-serif font-bold tracking-wide transition-all duration-300"
+          <Link href="/onboarding">
+            <motion.button
+              whileHover={{ scale: 1.05, y: -4, boxShadow: "8px 8px 0px " + newspaperColors.accent }}
+              whileTap={{ scale: 0.97 }}
+              className="px-14 py-5 font-serif font-bold text-lg tracking-wide relative overflow-hidden"
+              style={{ 
+                backgroundColor: newspaperColors.ink, 
+                color: newspaperColors.paper,
+                border: `3px solid ${newspaperColors.ink}`,
+                boxShadow: "5px 5px 0px " + newspaperColors.accent,
+              }}
+            >
+              <motion.div 
+                className="absolute top-0 left-0 w-full h-full"
                 style={{ 
-                  backgroundColor: newspaperColors.ink, 
-                  color: newspaperColors.paper,
-                  border: `3px solid ${newspaperColors.ink}`,
-                  boxShadow: `5px 5px 0px ${newspaperColors.accent}`,
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
                 }}
-              >
-                <span className="flex items-center gap-3">
-                  Start Free
-                  <motion.span
-                    animate={{ x: [0, 6, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                  >
-                    <ArrowRight size={20} />
-                  </motion.span>
-                </span>
-              </motion.button>
-            </Link>
-          </motion.div>
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              />
+              <span className="flex items-center gap-3 relative z-10">
+                Start Free
+                <motion.span
+                  animate={{ x: [0, 6, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 2 }}
+                >
+                  <ArrowRight size={20} />
+                </motion.span>
+              </span>
+            </motion.button>
+          </Link>
           
           <motion.p 
-            className="mt-8 text-xs tracking-[0.2em]"
+            className="mt-6 text-xs tracking-wide"
             style={{ color: newspaperColors.muted }}
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 1.1 }}
+            transition={{ delay: 0.7 }}
           >
-            No credit card required · 30-second setup
+            No credit card needed
           </motion.p>
         </motion.div>
       </div>
-
-      <motion.div 
-        className="absolute bottom-0 left-0 w-full h-2"
-        style={{ backgroundColor: newspaperColors.ink }}
-        initial={{ scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.5, duration: 1.5 }}
-      />
     </motion.section>
   );
 }

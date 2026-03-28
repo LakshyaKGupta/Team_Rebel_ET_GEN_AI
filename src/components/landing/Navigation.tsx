@@ -21,9 +21,9 @@ const newspaperColors = {
 };
 
 const navItems = [
-  { id: 'home', label: 'Home', href: '/', icon: Home },
-  { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: Compass },
-  { id: 'features', label: 'Features', href: '#features', icon: Sparkles },
+  { id: 'features', label: 'Features', href: '#features' },
+  { id: 'how', label: 'How It Works', href: '#how' },
+  { id: 'pricing', label: 'Pricing', href: '#pricing' },
 ];
 
 export default function Navigation() {
@@ -42,62 +42,83 @@ export default function Navigation() {
           borderBottom: `2px solid ${newspaperColors.ink}`,
         }}
       >
-        <div className="max-w-5xl mx-auto px-4 lg:px-8 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 flex items-center justify-center"
-              style={{ 
-                backgroundColor: newspaperColors.ink,
-                color: newspaperColors.paper,
-              }}
-            >
-              <span className="font-serif font-bold text-sm">ET</span>
-            </div>
-            <div className="flex items-baseline">
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 py-3 flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Link href="/" className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 flex items-center justify-center"
+                style={{ 
+                  backgroundColor: newspaperColors.ink,
+                  color: newspaperColors.paper,
+                }}
+              >
+                <span className="font-serif font-bold text-sm">ET</span>
+              </div>
               <span 
-                className="text-sm font-serif font-bold tracking-wide"
+                className="text-sm font-serif font-bold tracking-wider"
                 style={{ color: newspaperColors.ink }}
               >
                 THE ECONOMIC TIMES
               </span>
-            </div>
-          </Link>
+            </Link>
+          </motion.div>
           
-          <div className="hidden lg:flex items-center">
-            {navItems.map((item) => (
-              <Link 
+          <motion.div 
+            className="hidden lg:flex items-center gap-1"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            {navItems.map((item, i) => (
+              <motion.div
                 key={item.id}
-                href={item.href}
-                className="px-4 py-2 font-serif text-sm transition-colors duration-200"
-                style={{ 
-                  color: pathname === item.href ? newspaperColors.ink : newspaperColors.muted,
-                  borderBottom: pathname === item.href ? `2px solid ${newspaperColors.ink}` : '2px solid transparent',
-                }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
               >
-                {item.label}
-              </Link>
+                <Link 
+                  href={item.href}
+                  className="px-4 py-2 font-serif text-sm transition-all duration-200"
+                  style={{ 
+                    color: pathname === item.href ? newspaperColors.ink : newspaperColors.muted,
+                  }}
+                >
+                  {item.label}
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
 
-          <div className="flex items-center gap-3">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <Link 
               href="/onboarding" 
               className="hidden sm:flex px-5 py-2 font-serif text-sm font-semibold transition-all duration-200"
               style={{ 
                 backgroundColor: newspaperColors.ink,
                 color: newspaperColors.paper,
+                border: `1px solid ${newspaperColors.ink}`,
               }}
             >
-              Get Started
+              Sign Up / Login
             </Link>
-            <button 
-              onClick={() => setMobileMenuOpen(true)} 
-              className="lg:hidden p-2"
-              style={{ color: newspaperColors.ink }}
-            >
-              <Menu size={20} />
-            </button>
-          </div>
+          </motion.div>
+
+          <motion.button 
+            onClick={() => setMobileMenuOpen(true)} 
+            className="lg:hidden p-2"
+            style={{ color: newspaperColors.ink }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Menu size={20} />
+          </motion.button>
         </div>
       </motion.nav>
 
@@ -146,10 +167,22 @@ export default function Navigation() {
                     color: pathname === item.href ? newspaperColors.paper : newspaperColors.ink,
                   }}
                 >
-                  <item.icon size={18} />
                   <span>{item.label}</span>
                 </Link>
               ))}
+              <div className="pt-4 mt-4" style={{ borderTop: `1px solid ${newspaperColors.line}` }}>
+                <Link 
+                  href="/onboarding" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-center px-4 py-3 font-serif font-semibold"
+                  style={{ 
+                    backgroundColor: newspaperColors.ink,
+                    color: newspaperColors.paper,
+                  }}
+                >
+                  Sign Up / Login
+                </Link>
+              </div>
             </div>
           </motion.div>
         </div>

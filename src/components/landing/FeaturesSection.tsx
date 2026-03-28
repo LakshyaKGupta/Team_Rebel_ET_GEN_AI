@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Brain, Zap, Target, Newspaper } from "lucide-react";
+import { Eye, Lightbulb, Clock, BookOpen, Newspaper, TrendingUp } from "lucide-react";
 
 const newspaperColors = {
   paper: "#F5F0E6",
@@ -13,23 +13,30 @@ const newspaperColors = {
 
 const features = [
   { 
-    icon: Brain, 
-    title: "Personalized Intelligence", 
-    description: "News tailored to your role and interests. Our AI learns your preferences.",
+    icon: Eye, 
+    title: "News That's Yours", 
+    description: "Not generic headlines. Stories that actually affect your money, job, or business.",
     number: "01"
   },
   { 
-    icon: Zap, 
-    title: "Actionable Insights", 
-    description: "Clear guidance on what to do next. Turn information into action.",
+    icon: Lightbulb, 
+    title: "Instant Clarity", 
+    description: "No more 30-minute reading sessions. Get the essence in 5 minutes flat.",
     number: "02"
   },
   { 
-    icon: Target, 
-    title: "Future Predictions", 
-    description: "Stay ahead with trend analysis. Know what's coming before it happens.",
+    icon: Clock, 
+    title: "500+ Sources, One View", 
+    description: "We read ET, Bloomberg, Reuters, and 500 more. You just read your briefing.",
     number: "03"
   },
+];
+
+const floatingIcons = [
+  { icon: BookOpen, x: '5%', y: '20%', size: 28, delay: 0 },
+  { icon: Newspaper, x: '90%', y: '30%', size: 24, delay: 1 },
+  { icon: TrendingUp, x: '8%', y: '70%', size: 26, delay: 2 },
+  { icon: Newspaper, x: '85%', y: '80%', size: 30, delay: 3 },
 ];
 
 export default function FeaturesSection() {
@@ -40,9 +47,63 @@ export default function FeaturesSection() {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.6 }}
-      className="py-24 px-4 lg:px-8 relative"
+      className="py-24 px-4 lg:px-8 relative overflow-hidden"
       style={{ backgroundColor: newspaperColors.paper }}
     >
+      <div className="absolute inset-0 -z-10" style={{
+        backgroundImage: `
+          linear-gradient(90deg, ${newspaperColors.line}10 1px, transparent 1px),
+          linear-gradient(${newspaperColors.line}08 1px, transparent 1px)
+        `,
+        backgroundSize: '50px 50px',
+      }} />
+
+      {floatingIcons.map((item, i) => (
+        <motion.div
+          key={i}
+          className="fixed pointer-events-none"
+          style={{ 
+            left: item.x, 
+            top: item.y,
+            color: newspaperColors.ink,
+          }}
+          animate={{
+            opacity: [0.02, 0.05, 0.02],
+            y: [0, -15, 0],
+            x: [0, 10, 0],
+            rotate: [0, 8, 0],
+          }}
+          transition={{
+            opacity: { duration: 6 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+            y: { duration: 10 + i * 2, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+            x: { duration: 12 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+            rotate: { duration: 15 + i, repeat: Infinity, ease: "linear", delay: item.delay },
+          }}
+        >
+          <item.icon size={item.size} strokeWidth={1} />
+        </motion.div>
+      ))}
+
+      <motion.div 
+        className="absolute top-1/4 right-1/4 w-[400px] h-[400px] rounded-full -z-10"
+        style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.06) 0%, transparent 60%)' }}
+        animate={{ 
+          scale: [1, 1.2, 1],
+          x: [0, 30, 0],
+        }}
+        transition={{ duration: 15, repeat: Infinity }}
+      />
+
+      <motion.div 
+        className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] rounded-full -z-10"
+        style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.05) 0%, transparent 60%)' }}
+        animate={{ 
+          scale: [1, 1.3, 1],
+          y: [0, -20, 0],
+        }}
+        transition={{ duration: 18, repeat: Infinity }}
+      />
+
       <div className="max-w-5xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -51,54 +112,33 @@ export default function FeaturesSection() {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <motion.div 
-            className="flex items-center justify-center gap-3 mb-6"
+          <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+            transition={{ duration: 0.6 }}
+            className="mb-4"
           >
-            <motion.div 
-              className="w-12 h-px"
-              style={{ backgroundColor: newspaperColors.line }}
-            />
-            <Newspaper size={24} style={{ color: newspaperColors.accent }} />
-            <span 
-              className="text-[11px] tracking-[0.4em] uppercase font-bold"
-              style={{ color: newspaperColors.ink }}
-            >
-              Our Platform
+            <span className="text-[10px] tracking-[0.4em] uppercase font-bold" style={{ color: newspaperColors.accent }}>
+              Features
             </span>
-            <Newspaper size={24} style={{ color: newspaperColors.accent }} />
-            <motion.div 
-              className="w-12 h-px"
-              style={{ backgroundColor: newspaperColors.line }}
-            />
           </motion.div>
           
           <h2 className="font-serif text-4xl md:text-5xl font-black mb-6" style={{ color: newspaperColors.ink }}>
-            Intelligence, Not Just Information
+            Why My ET is Different
           </h2>
           
           <motion.div 
-            className="flex items-center justify-center gap-4 mb-6"
+            className="w-24 h-0.5 mx-auto mb-6"
+            style={{ backgroundColor: newspaperColors.accent }}
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-          >
-            <div className="w-24 h-px" style={{ backgroundColor: newspaperColors.ink }} />
-            <motion.div 
-              className="w-3 h-3 rotate-45"
-              style={{ backgroundColor: newspaperColors.accent }}
-              animate={{ rotate: [45, 135, 45] }}
-              transition={{ duration: 4, repeat: Infinity }}
-            />
-            <div className="w-24 h-px" style={{ backgroundColor: newspaperColors.ink }} />
-          </motion.div>
+            transition={{ duration: 1, delay: 0.2 }}
+          />
           
           <p className="font-serif text-lg max-w-xl mx-auto" style={{ color: newspaperColors.muted }}>
-            We don&apos;t just aggregate news. We transform it into understanding.
+            Because reading news shouldn't feel like homework.
           </p>
         </motion.div>
 
@@ -106,23 +146,31 @@ export default function FeaturesSection() {
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 60 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.2, duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-              whileHover={{ y: -8 }}
-              className="relative text-center p-8"
+              transition={{ delay: i * 0.2, duration: 0.8 }}
+              whileHover={{ y: -12 }}
+              className="relative text-center p-8 bg-white"
               style={{ 
                 border: `2px solid ${newspaperColors.line}`,
-                backgroundColor: "#FFFFFF",
+                boxShadow: `4px 4px 0px ${newspaperColors.line}`,
               }}
             >
               <motion.div 
-                className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1"
-                style={{ 
-                  backgroundColor: newspaperColors.paper,
-                  border: `1px solid ${newspaperColors.line}`,
-                }}
+                className="absolute top-0 left-0 w-full h-1 overflow-hidden"
+                style={{ backgroundColor: newspaperColors.accent }}
+              >
+                <motion.div 
+                  className="h-full w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                  animate={{ x: ['-100%', '300%'] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: i * 0.5 }}
+                />
+              </motion.div>
+
+              <motion.div 
+                className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-white"
+                style={{ border: `1px solid ${newspaperColors.line}` }}
                 initial={{ scale: 0 }}
                 whileInView={{ scale: 1 }}
                 viewport={{ once: true }}
