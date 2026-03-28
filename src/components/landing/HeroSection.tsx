@@ -58,14 +58,10 @@ const cards = [
 ];
 
 const floatingIcons = [
-  { icon: BarChart, x: '3%', y: '15%', size: 44, delay: 0 },
-  { icon: FileText, x: '92%', y: '12%', size: 38, delay: 2 },
-  { icon: Globe, x: '5%', y: '80%', size: 42, delay: 4 },
-  { icon: NewsIcon, x: '90%', y: '75%', size: 46, delay: 1 },
-  { icon: TrendingUp, x: '12%', y: '88%', size: 32, delay: 3 },
-  { icon: FileText, x: '50%', y: '8%', size: 28, delay: 1.5 },
-  { icon: Globe, x: '85%', y: '45%', size: 26, delay: 2.5 },
-  { icon: BarChart, x: '10%', y: '50%', size: 24, delay: 3.5 },
+  { icon: BarChart, x: '3%', y: '15%', size: 44 },
+  { icon: FileText, x: '92%', y: '12%', size: 38 },
+  { icon: Globe, x: '5%', y: '80%', size: 42 },
+  { icon: NewsIcon, x: '90%', y: '75%', size: 46 },
 ];
 
 export default function HeroSection() {
@@ -219,18 +215,20 @@ export default function HeroSection() {
               </motion.button>
             </Link>
 
-            <motion.button
-              whileHover={{ scale: 1.03, backgroundColor: newspaperColors.ink + "08" }}
-              whileTap={{ scale: 0.97 }}
-              className="px-14 py-5 font-serif font-bold text-lg tracking-wide"
-              style={{ 
-                backgroundColor: "transparent", 
-                color: newspaperColors.ink,
-                border: `3px solid ${newspaperColors.ink}`,
-              }}
-            >
-              See How It Works
-            </motion.button>
+            <Link href="#how">
+              <motion.button
+                whileHover={{ scale: 1.03, backgroundColor: newspaperColors.ink + "08" }}
+                whileTap={{ scale: 0.97 }}
+                className="px-14 py-5 font-serif font-bold text-lg tracking-wide"
+                style={{ 
+                  backgroundColor: "transparent", 
+                  color: newspaperColors.ink,
+                  border: `3px solid ${newspaperColors.ink}`,
+                }}
+              >
+                See How It Works
+              </motion.button>
+            </Link>
           </motion.div>
         </div>
       </motion.div>
@@ -265,13 +263,6 @@ function NewspaperBackground() {
   return (
     <>
       <div className="absolute inset-0 -z-10" style={{ backgroundColor: newspaperColors.paper }} />
-      
-      <div 
-        className="absolute inset-0 -z-10 opacity-[0.04]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }}
-      />
 
       <div className="absolute inset-0 -z-10" style={{
         backgroundImage: `
@@ -281,62 +272,28 @@ function NewspaperBackground() {
         backgroundSize: '30px 30px',
       }} />
 
-      <motion.div 
+      <div 
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[900px] rounded-full -z-10"
         style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.1) 0%, transparent 70%)' }}
-        animate={{ 
-          scale: [1, 1.15, 1],
-          opacity: [0.6, 0.9, 0.6],
-          rotate: [0, 8, 0],
-        }}
-        transition={{ duration: 12, repeat: Infinity }}
       />
 
-      <motion.div 
+      <div 
         className="absolute top-[10%] right-[15%] w-[600px] h-[600px] rounded-full -z-10"
         style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.07) 0%, transparent 60%)' }}
-        animate={{ 
-          x: [0, 60, 0],
-          y: [0, -40, 0],
-        }}
-        transition={{ duration: 15, repeat: Infinity }}
       />
 
-      <motion.div 
+      <div 
         className="absolute bottom-[15%] left-[10%] w-[500px] h-[500px] rounded-full -z-10"
         style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.06) 0%, transparent 60%)' }}
-        animate={{ 
-          x: [0, -50, 0],
-          y: [0, 50, 0],
-        }}
-        transition={{ duration: 18, repeat: Infinity }}
       />
 
-      <motion.div 
+      <div 
         className="absolute top-[60%] left-[60%] w-[300px] h-[300px] rounded-full -z-10"
         style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.08) 0%, transparent 60%)' }}
-        animate={{ 
-          scale: [1, 1.3, 1],
-          opacity: [0.4, 0.7, 0.4],
-        }}
-        transition={{ duration: 8, repeat: Infinity }}
       />
 
       <div className="absolute top-0 left-0 w-32 h-full -z-10" style={{ borderRight: `1px solid ${newspaperColors.line}40` }} />
       <div className="absolute top-0 right-0 w-32 h-full -z-10" style={{ borderLeft: `1px solid ${newspaperColors.line}40` }} />
-
-      <motion.div 
-        className="absolute top-[20%] left-[5%] w-1 h-[60%] -z-10"
-        style={{ borderLeft: `1px dashed ${newspaperColors.line}30` }}
-        animate={{ opacity: [0.2, 0.4, 0.2] }}
-        transition={{ duration: 4, repeat: Infinity }}
-      />
-      <motion.div 
-        className="absolute top-[20%] right-[5%] w-1 h-[60%] -z-10"
-        style={{ borderRight: `1px dashed ${newspaperColors.line}30` }}
-        animate={{ opacity: [0.2, 0.4, 0.2] }}
-        transition={{ duration: 4, repeat: Infinity, delay: 2 }}
-      />
     </>
   );
 }
@@ -345,29 +302,18 @@ function FloatingNewspaperElements() {
   return (
     <>
       {floatingIcons.map((item, i) => (
-        <motion.div
+        <div
           key={i}
           className="absolute pointer-events-none z-0"
           style={{ 
             left: item.x, 
             top: item.y,
             color: newspaperColors.ink,
-          }}
-          animate={{
-            opacity: [0.1, 0.2, 0.1],
-            y: [0, -20, 0],
-            x: [0, 15, 0],
-            rotate: [0, 10, 0],
-          }}
-          transition={{
-            opacity: { duration: 8 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
-            y: { duration: 12 + i * 2, repeat: Infinity, ease: "easeInOut", delay: item.delay },
-            x: { duration: 15 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
-            rotate: { duration: 20 + i, repeat: Infinity, ease: "linear", delay: item.delay },
+            opacity: 0.08,
           }}
         >
           <item.icon size={item.size} strokeWidth={1} />
-        </motion.div>
+        </div>
       ))}
     </>
   );

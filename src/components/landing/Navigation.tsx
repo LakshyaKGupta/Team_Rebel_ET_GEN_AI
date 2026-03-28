@@ -23,7 +23,7 @@ const newspaperColors = {
 const navItems = [
   { id: 'features', label: 'Features', href: '#features' },
   { id: 'how', label: 'How It Works', href: '#how' },
-  { id: 'pricing', label: 'Pricing', href: '#pricing' },
+  { id: 'useCases', label: 'Use Cases', href: '#useCases' },
 ];
 
 export default function Navigation() {

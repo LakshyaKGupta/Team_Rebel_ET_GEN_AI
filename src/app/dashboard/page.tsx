@@ -20,21 +20,19 @@ const insights = [
   { title: "RBI meeting next week", type: "Reminder" },
 ];
 
-const colors = {
-  background: "#F8FAFC",
-  card: "#FFFFFF",
-  primary: "#2563EB",
-  secondary: "#22C55E",
-  border: "#E5E7EB",
-  textPrimary: "#0F172A",
-  textSecondary: "#64748B",
+const newspaperColors = {
+  paper: "#F5F0E6",
+  ink: "#1A1A1A",
+  accent: "#8B4513",
+  muted: "#5C5C5C",
+  line: "#D4CFC4",
 };
 
 const insightsMap = {
-  investor: { label: "Tailored for Investor", color: "bg-amber-50 text-amber-700" },
+  investor: { label: "Tailored for Investor", color: "bg-[#F5F0E6] text-[#8B4513]" },
   student: { label: "Tailored for Student", color: "bg-blue-50 text-blue-700" },
   founder: { label: "Tailored for Founder", color: "bg-purple-50 text-purple-700" },
-  exploring: { label: "For You", color: "bg-gray-100 text-gray-700" },
+  exploring: { label: "For You", color: "bg-gray-100 text-[#1A1A1A]" },
 };
 
 const shortNewsItems = [
@@ -110,7 +108,7 @@ export default function Dashboard() {
 
   if (selectedTopic) {
     return (
-      <div className="min-h-screen bg-white flex">
+      <div className="min-h-screen bg-[#F5F0E6] flex">
         {/* Desktop Sidebar - Hidden on mobile */}
         <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
         
@@ -120,18 +118,18 @@ export default function Dashboard() {
             <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
               {/* Main Content */}
               <div className="max-w-2xl mx-auto lg:mx-0 px-4 lg:px-6 py-6">
-                <button onClick={() => selectTopic(null)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-black mb-6">
+                <button onClick={() => selectTopic(null)} className="flex items-center gap-2 text-sm text-[#5C5C5C] hover:text-black mb-6">
                   ← Back to Newsroom
                 </button>
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-gray-400 uppercase tracking-wide">
+                    <div className="flex items-center gap-2 text-sm text-[#5C5C5C] uppercase tracking-wide">
                       <span>{selectedTopic.category}</span>
                       <span>•</span>
                       <span>{selectedTopic.time}</span>
                     </div>
                     <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
-                    <p className="text-lg lg:text-xl text-gray-500">{selectedTopic.subtitle}</p>
+                    <p className="text-lg lg:text-xl text-[#5C5C5C]">{selectedTopic.subtitle}</p>
                     <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${userBadge.color}`}>
                       {userBadge.label}
                     </span>
@@ -154,27 +152,27 @@ export default function Dashboard() {
                   )}
                   
                   {isLoading ? <SkeletonLoader /> : interactionContent && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-50 border border-amber-100 rounded-2xl p-5 lg:p-6">
-                      <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-3">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#F5F0E6] border border-[#D4CFC4] rounded-2xl p-5 lg:p-6">
+                      <div className="flex items-center gap-2 text-sm font-medium text-[#8B4513] mb-3">
                         <Sparkles size={18} />
                         {interactionMode === 'explain_simply' && 'Simple Explanation'}
                         {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
                         {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
                       </div>
-                      <p className="text-gray-700 leading-relaxed">{interactionContent}</p>
+                      <p className="text-[#1A1A1A] leading-relaxed">{interactionContent}</p>
                     </motion.div>
                   )}
                   
                   <BriefSection sections={getBriefingSections()} />
                   
                   {/* Mobile: Collapsible Sources */}
-                  <div className="lg:hidden pt-6 border-t border-gray-100">
+                  <div className="lg:hidden pt-6 border-t border-[#D4CFC4]">
                     <button 
                       onClick={() => setSourcesExpanded(!sourcesExpanded)}
-                      className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                      className="w-full flex items-center justify-between p-4 bg-[#F5F0E6] rounded-xl"
                     >
                       <h3 className="font-semibold text-lg">Sources</h3>
-                      <span className="text-gray-400">{sourcesExpanded ? '−' : '+'}</span>
+                      <span className="text-[#5C5C5C]">{sourcesExpanded ? '−' : '+'}</span>
                     </button>
                     {sourcesExpanded && (
                       <motion.div 
@@ -184,9 +182,9 @@ export default function Dashboard() {
                       >
                         <div className="grid grid-cols-2 gap-2 mt-3">
                           {sources.map((source, i) => (
-                            <div key={i} className="p-3 border border-gray-100 rounded-xl">
+                            <div key={i} className="p-3 border border-[#D4CFC4] rounded-xl">
                               <p className="font-medium text-sm">{source.name}</p>
-                              <p className="text-gray-500 text-xs">{source.url}</p>
+                              <p className="text-[#5C5C5C] text-xs">{source.url}</p>
                             </div>
                           ))}
                         </div>
@@ -197,15 +195,15 @@ export default function Dashboard() {
               </div>
               
               {/* Right Panel - Desktop Only */}
-              <aside className="hidden lg:block w-full p-6 space-y-6 border-l border-gray-100">
+              <aside className="hidden lg:block w-full p-6 space-y-6 border-l border-[#D4CFC4]">
                 <div>
                   <h3 className="font-semibold mb-4">Your Insights</h3>
                   <div className="space-y-3">
                     {insights.map((insight, i) => (
-                      <div key={i} className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                      <div key={i} className="p-4 bg-[#F5F0E6] rounded-xl border border-[#D4CFC4]">
                         <div className="flex items-center gap-2 mb-1">
-                          <Star size={14} className="text-amber-500" />
-                          <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
+                          <Star size={14} className="text-[#8B4513]" />
+                          <span className="text-xs text-[#8B4513] font-medium">{insight.type}</span>
                         </div>
                         <p className="text-sm font-medium">{insight.title}</p>
                       </div>
@@ -216,13 +214,13 @@ export default function Dashboard() {
                   <h3 className="font-semibold mb-4">Sources</h3>
                   <div className="space-y-2">
                     {sources.map((source, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
+                      <button key={i} onClick={() => window.open(`https://${source.url}`, '_blank')} className="w-full flex items-center justify-between p-3 hover:bg-[#F5F0E6] rounded-xl cursor-pointer">
                         <div>
                           <p className="text-sm font-medium">{source.name}</p>
-                          <p className="text-xs text-gray-500">{source.url}</p>
+                          <p className="text-xs text-[#5C5C5C]">{source.url}</p>
                         </div>
-                        <ExternalLink size={14} className="text-gray-400" />
-                      </div>
+                        <ExternalLink size={14} className="text-[#5C5C5C]" />
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -237,7 +235,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-[#F5F0E6] flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
       <main className="flex-1 flex flex-col min-h-screen">
         <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
@@ -247,13 +245,13 @@ export default function Dashboard() {
               <motion.h2 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-lg lg:text-xl font-semibold text-gray-900 mb-4"
+                className="text-lg lg:text-xl font-semibold text-[#1A1A1A] mb-4"
               >
                 For You
               </motion.h2>
               {featuredTopics.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-gray-500">No topics available. Complete onboarding to get personalized news.</p>
+                  <p className="text-[#5C5C5C]">No topics available. Complete onboarding to get personalized news.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -264,20 +262,20 @@ export default function Dashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     onClick={() => selectTopic(topic)}
-                    className="w-full text-left bg-white border border-gray-200 hover:border-gray-300 rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                    className="w-full text-left bg-[#F5F0E6] border border-[#D4CFC4] hover:border-[#8B4513] rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center">
-                        <topic.icon size={24} className="text-gray-700" />
+                      <div className="w-12 h-12 bg-[#F5F0E6] rounded-2xl flex items-center justify-center">
+                        <topic.icon size={24} className="text-[#1A1A1A]" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-gray-400 uppercase tracking-wide">{topic.category}</span>
+                          <span className="text-xs text-[#5C5C5C] uppercase tracking-wide">{topic.category}</span>
                           <span className="text-xs text-gray-300">•</span>
-                          <span className="text-xs text-gray-400">{topic.time}</span>
+                          <span className="text-xs text-[#5C5C5C]">{topic.time}</span>
                         </div>
-                        <h3 className="font-semibold text-lg text-gray-900 mb-1">{topic.title}</h3>
-                        <p className="text-gray-500 text-sm">{topic.subtitle}</p>
+                        <h3 className="font-semibold text-lg text-[#1A1A1A] mb-1">{topic.title}</h3>
+                        <p className="text-[#5C5C5C] text-sm">{topic.subtitle}</p>
                       </div>
                     </div>
                   </motion.button>
@@ -287,38 +285,39 @@ export default function Dashboard() {
             </section>
 
             {/* SECTION 2: Quick Insights */}
-            <section className="py-6 lg:py-8 border-t border-gray-100">
+            <section className="py-6 lg:py-8 border-t border-[#D4CFC4]">
               <motion.h2 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-lg lg:text-xl font-semibold text-gray-900 mb-4"
+                className="text-lg lg:text-xl font-semibold text-[#1A1A1A] mb-4"
               >
                 Quick Insights
               </motion.h2>
               <div className="grid grid-cols-2 gap-3">
                 {insights.map((insight, i) => (
-                  <motion.div
+                  <motion.button
                     key={i}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + i * 0.1 }}
-                    className="p-4 bg-amber-50 rounded-xl border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors duration-200"
+                    onClick={() => selectTopic(topics[0] || null)}
+                    className="p-4 bg-[#F5F0E6] rounded-xl border border-[#D4CFC4] cursor-pointer hover:bg-amber-100 transition-colors duration-200 text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <Zap size={14} className="text-amber-500" />
-                      <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
+                      <Zap size={14} className="text-[#8B4513]" />
+                      <span className="text-xs text-[#8B4513] font-medium">{insight.type}</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-800">{insight.title}</p>
-                  </motion.div>
+                    <p className="text-sm font-medium text-[#1A1A1A]">{insight.title}</p>
+                  </motion.button>
                 ))}
               </div>
             </section>
 
             {/* SECTION 3: Short-Form News Feed - Snap Scroll */}
-            <section className="py-6 border-t border-gray-100">
+            <section className="py-6 border-t border-[#D4CFC4]">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Briefing Feed</h2>
-                <span className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="text-xs text-[#5C5C5C] flex items-center gap-1">
                   <Clock size={12} />
                   Updated just now
                 </span>
@@ -336,11 +335,11 @@ export default function Dashboard() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-2xl p-5 lg:p-6 shadow-sm"
+                        className="bg-gradient-to-b from-gray-50 to-white border border-[#D4CFC4] rounded-2xl p-5 lg:p-6 shadow-sm"
                       >
                         {/* Card Header */}
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-xs text-gray-400">{news.time}</span>
+                          <span className="text-xs text-[#5C5C5C]">{news.time}</span>
                           <span className="px-2 py-1 bg-black text-white text-xs font-medium rounded-full">
                             Brief
                           </span>
@@ -378,22 +377,22 @@ export default function Dashboard() {
               </div>
 
               {/* Mobile: Tap to read more hint */}
-              <p className="lg:hidden text-center text-xs text-gray-400 mt-4">
+              <p className="lg:hidden text-center text-xs text-[#5C5C5C] mt-4">
                 Swipe up for more
               </p>
             </section>
           </div>
         </div>
       </main>
-      <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-gray-100 p-6 space-y-6">
+      <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-[#D4CFC4] p-6 space-y-6">
         <div>
           <h3 className="font-semibold mb-4">Your Insights</h3>
           <div className="space-y-3">
             {insights.map((insight, i) => (
-              <div key={i} className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div key={i} className="p-4 bg-[#F5F0E6] rounded-xl border border-[#D4CFC4]">
                 <div className="flex items-center gap-2 mb-1">
-                  <Star size={14} className="text-amber-500" />
-                  <span className="text-xs text-amber-600 font-medium">{insight.type}</span>
+                  <Star size={14} className="text-[#8B4513]" />
+                  <span className="text-xs text-[#8B4513] font-medium">{insight.type}</span>
                 </div>
                 <p className="text-sm font-medium">{insight.title}</p>
               </div>
@@ -404,13 +403,13 @@ export default function Dashboard() {
           <h3 className="font-semibold mb-4">Sources</h3>
           <div className="space-y-2">
             {sources.map((source, i) => (
-              <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
+              <button key={i} onClick={() => window.open(`https://${source.url}`, '_blank')} className="w-full flex items-center justify-between p-3 hover:bg-[#F5F0E6] rounded-xl cursor-pointer">
                 <div>
                   <p className="text-sm font-medium">{source.name}</p>
-                  <p className="text-xs text-gray-500">{source.url}</p>
+                  <p className="text-xs text-[#5C5C5C]">{source.url}</p>
                 </div>
-                <ExternalLink size={14} className="text-gray-400" />
-              </div>
+                <ExternalLink size={14} className="text-[#5C5C5C]" />
+              </button>
             ))}
           </div>
         </div>

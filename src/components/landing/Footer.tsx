@@ -46,13 +46,13 @@ export default function Footer() {
             className="flex items-center gap-6 text-xs tracking-[0.1em] uppercase"
             style={{ color: newspaperColors.muted }}
           >
-            <a href="#" className="hover:text-black transition-colors">About</a>
+            <Link href="#features" className="hover:text-black transition-colors">About</Link>
             <span>·</span>
-            <a href="#" className="hover:text-black transition-colors">Privacy</a>
+            <Link href="#features" className="hover:text-black transition-colors">Privacy</Link>
             <span>·</span>
-            <a href="#" className="hover:text-black transition-colors">Terms</a>
+            <Link href="#features" className="hover:text-black transition-colors">Terms</Link>
             <span>·</span>
-            <a href="#" className="hover:text-black transition-colors">Contact</a>
+            <Link href="#features" className="hover:text-black transition-colors">Contact</Link>
           </div>
         </div>
         

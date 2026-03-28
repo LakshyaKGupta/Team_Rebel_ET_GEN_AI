@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, GraduationCap, Rocket, Globe, BarChart, Newspaper } from "lucide-react";
+import { TrendingUp, GraduationCap, Rocket } from "lucide-react";
 
 const newspaperColors = {
   paper: "#F5F0E6",
@@ -35,16 +35,10 @@ const useCases = [
   },
 ];
 
-const floatingIcons = [
-  { icon: Globe, x: '4%', y: '15%', size: 28, delay: 0 },
-  { icon: BarChart, x: '92%', y: '25%', size: 26, delay: 1 },
-  { icon: Newspaper, x: '6%', y: '80%', size: 30, delay: 2 },
-  { icon: Globe, x: '88%', y: '75%', size: 24, delay: 3 },
-];
-
 export default function UseCasesSection() {
   return (
     <motion.section 
+      id="useCases"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: "-50px" }}
@@ -60,48 +54,14 @@ export default function UseCasesSection() {
         backgroundSize: '45px 45px',
       }} />
 
-      {floatingIcons.map((item, i) => (
-        <motion.div
-          key={i}
-          className="absolute pointer-events-none z-0"
-          style={{ 
-            left: item.x, 
-            top: item.y,
-            color: newspaperColors.ink,
-          }}
-          animate={{
-            opacity: [0.08, 0.15, 0.08],
-            y: [0, -14, 0],
-            x: [0, 8, 0],
-          }}
-          transition={{
-            opacity: { duration: 6 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
-            y: { duration: 10 + i * 2, repeat: Infinity, ease: "easeInOut", delay: item.delay },
-            x: { duration: 12 + i, repeat: Infinity, ease: "easeInOut", delay: item.delay },
-          }}
-        >
-          <item.icon size={item.size} strokeWidth={1} />
-        </motion.div>
-      ))}
-
-      <motion.div 
+      <div 
         className="absolute top-[15%] right-[20%] w-[400px] h-[400px] rounded-full -z-10"
         style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.07) 0%, transparent 60%)' }}
-        animate={{ 
-          scale: [1, 1.2, 1],
-          x: [0, 40, 0],
-        }}
-        transition={{ duration: 14, repeat: Infinity }}
       />
 
-      <motion.div 
+      <div 
         className="absolute bottom-[20%] left-[15%] w-[350px] h-[350px] rounded-full -z-10"
         style={{ background: 'radial-gradient(circle, rgba(139,69,19,0.05) 0%, transparent 60%)' }}
-        animate={{ 
-          scale: [1, 1.25, 1],
-          y: [0, -30, 0],
-        }}
-        transition={{ duration: 16, repeat: Infinity }}
       />
 
       <div className="max-w-5xl mx-auto">
