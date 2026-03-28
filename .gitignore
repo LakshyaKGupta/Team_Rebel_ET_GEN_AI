@@ -4,5 +4,8 @@ out/
 dist/
 build/
 *.log
+.env
 .env*.local
 .DS_Store
+
+/src/generated/prisma

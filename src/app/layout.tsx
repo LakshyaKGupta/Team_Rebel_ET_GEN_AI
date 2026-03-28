@@ -3,6 +3,8 @@ import { Syne, Inter, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import { BriefingProvider } from "@/context/BriefingContext";
+import { ChatProvider } from "@/context/ChatContext";
+import { ChatBotWidget } from "@/components/ChatBotWidget";
 
 const syne = Syne({ 
   subsets: ["latin"],
@@ -33,11 +35,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${syne.variable} ${inter.variable} ${spaceMono.variable}`}>
+    <html lang="en" className={`${syne.variable} ${inter.variable} ${spaceMono.variable}`} suppressHydrationWarning>
       <body className="antialiased font-sans">
         <UserProvider>
           <BriefingProvider>
-            {children}
+            <ChatProvider>
+              {children}
+              <ChatBotWidget />
+            </ChatProvider>
           </BriefingProvider>
         </UserProvider>
       </body>

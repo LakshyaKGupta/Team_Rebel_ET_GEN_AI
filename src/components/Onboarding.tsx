@@ -22,7 +22,7 @@ import {
 import { useUser } from "@/context/UserContext";
 
 type UserType = "investor" | "student" | "founder" | "exploring" | null;
-type Interest = "stocks" | "startups" | "economy" | "global" | "tech" | "finance";
+type Interest = string;
 type Goal = "invest" | "stay_updated" | "learn" | null;
 type NotificationPref = "realtime" | "key_only" | "daily" | "none" | null;
 
@@ -118,7 +118,7 @@ export default function Onboarding() {
       </div>
 
       <div className="pt-6 px-6">
-        <p className="text-sm text-gray-400 text-center">Step {step} of 4</p>
+        <p className="text-sm text-gray-400 text-center">Step {step} of 5</p>
       </div>
 
       <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-lg mx-auto w-full">
@@ -132,8 +132,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">Let&apos;s personalize your news experience</h1>
-                <p className="text-gray-500 text-lg">This takes less than 30 seconds</p>
+                <h1 className="text-3xl font-semibold tracking-tight">Build your front page</h1>
+                <p className="text-gray-500 text-lg">Pick your lens so the first screen already feels useful.</p>
               </div>
 
               <div className="space-y-3">
@@ -172,7 +172,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">What do you care about?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight">Choose your topics</h1>
+                <p className="text-gray-500 text-lg">Select the lanes you want to see first.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -205,7 +206,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">What do you want from news?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight">What should the app optimize for?</h1>
+                <p className="text-gray-500 text-lg">Speed, learning, or decision support.</p>
               </div>
 
               <div className="space-y-3">
@@ -236,7 +238,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">How often should we update you?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight">How often should it reach you?</h1>
+                <p className="text-gray-500 text-lg">Choose signal level now. You can change it later.</p>
               </div>
 
               <div className="space-y-3">
@@ -273,7 +276,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">Your personalized news experience is ready</h1>
+                <h1 className="text-3xl font-semibold tracking-tight">Your front page is ready</h1>
+                <p className="text-gray-500 text-lg">Enter the feed and open only the stories worth your time.</p>
               </div>
 
               <div className="bg-gray-50 rounded-3xl p-6 space-y-4">
@@ -301,7 +305,7 @@ export default function Onboarding() {
                 onClick={handleContinue}
                 className="w-full bg-black text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center gap-2"
               >
-                Enter My Newsroom
+                Open Dashboard
                 <ArrowRight size={20} />
               </button>
             </motion.div>

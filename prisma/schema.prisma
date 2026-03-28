@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String?
+  avatarUrl     String?  @map("avatar_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  preferences   UserPreference?
+
+  @@map("users")
+}
+
+model UserPreference {
+  id                    String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  theme                String   @default("light")
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
+  emailUpdates         Boolean  @default(false) @map("email_updates")
+  userType             String?  @map("user_type")
+  selectedInterests    String?  @map("selected_interests")
+  goal                 String?
+  notificationPref     String?  @map("notification_pref")
+  hasCompletedOnboarding Boolean @default(false) @map("has_completed_onboarding")
+  experienceLevel      String?  @map("experience_level")
+  riskAppetite         String?  @map("risk_appetite")
+  timeHorizon         String?  @map("time_horizon")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Article {
+  id            String   @id @default(uuid())
+  title         String
+  summary       String?
+  content       String?
+  source        String?
+  url           String?  @unique
+  date          DateTime @default(now())
+  sentiment     String?
+  category      String?
+  author        String?
+  imageUrl      String?  @map("image_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  storyArticles StoryArticle[]
+
+  @@map("articles")
+}
+
+model Story {
+  id            String   @id @default(uuid())
+  title         String
+  summary       String?
+  description   String?
+  category      String?
+  priority      Int      @default(0)
+  timeline      String?  @default("past-week")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  articles      StoryArticle[]
+  savedBy       SavedStory[]
+
+  @@map("stories")
+}
+
+model StoryArticle {
+  id            String   @id @default(uuid())
+  storyId       String   @map("story_id")
+  articleId     String   @map("article_id")
+  position      Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  story         Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  article       Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, articleId])
+  @@map("story_articles")
+}
+
+model SavedStory {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  storyId       String   @map("story_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  story         Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@map("saved_stories")
+}
+
+model QALog {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  question        String
+  answer          String
+  context         String?
+  conversationId  String?  @map("conversation_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("qa_logs")
+}
+
+model BriefingCache {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  topic         String
+  mode          String
+  response      String
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, topic, mode])
+  @@map("briefing_cache")
+}
+
+model IngestionLog {
+  id            String   @id @default(uuid())
+  source        String
+  status        String   @default("processing")
+  count         Int      @default(0)
+  error         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("ingestion_logs")
+}

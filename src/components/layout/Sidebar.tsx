@@ -1,20 +1,19 @@
 "use client";
 
-import { Sparkles, Compass, User, Settings, LogOut, Bell, BookOpen, TrendingUp } from "lucide-react";
+import { BookOpen, Edit3, LogOut, Settings, Bell, Sparkles, TrendingUp } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 interface SidebarProps {
-  activeNav: 'home' | 'topics' | 'profile';
-  onNavChange: (nav: 'home' | 'topics' | 'profile') => void;
+  activeNav: 'home' | 'topics';
+  onNavChange: (nav: 'home' | 'topics') => void;
 }
 
 const navItems = [
-  { id: 'home' as const, label: 'For You', icon: Sparkles },
-  { id: 'topics' as const, label: 'Topics', icon: BookOpen },
-  { id: 'profile' as const, label: 'Profile', icon: User },
+  { id: 'home' as const, label: 'For You', icon: Sparkles, href: "/dashboard" },
+  { id: 'topics' as const, label: 'Topics', icon: BookOpen, href: "/topics" },
 ];
 
 const newspaperColors = {
@@ -26,18 +25,46 @@ const newspaperColors = {
 };
 
 export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
-  const { preferences, resetOnboarding } = useUser();
+  const { preferences, logout } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
 
-  const handleLogout = () => {
-    localStorage.removeItem("myet_current_user");
-    resetOnboarding();
+  useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/topics");
+    router.prefetch("/portfolio");
+  }, [router]);
+
+  const effectiveNav: "home" | "topics" = pathname === "/topics" ? "topics" : "home";
+
+  const navigatePrimary = (href: string, nav: "home" | "topics") => {
+    onNavChange(nav);
+
+    if (pathname === href) {
+      const target = document.getElementById("dashboard-feed");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    router.push(href, { scroll: true });
+  };
+
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 
   return (
     <aside className="w-64 flex-shrink-0 border-r border-[#D4CFC4] bg-[#F5F0E6] p-6 space-y-6 hidden lg:block h-screen sticky top-0">
-      <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+      <button
+        onClick={() => navigatePrimary("/dashboard", "home")}
+        className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+      >
         <div 
           className="w-10 h-10 flex items-center justify-center"
           style={{ 
@@ -55,7 +82,7 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
             My ET Dashboard
           </p>
         </div>
-      </Link>
+      </button>
 
       <nav className="space-y-1">
         {navItems.map((item, index) => (
@@ -64,9 +91,9 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            onClick={() => onNavChange(item.id)}
+            onClick={() => navigatePrimary(item.href, item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium ${
-              activeNav === item.id
+              effectiveNav === item.id
                 ? 'bg-[#1A1A1A] text-[#F5F0E6]'
                 : 'text-[#5C5C5C] hover:bg-[#1A1A1A]/10 hover:text-[#1A1A1A]'
             }`}
@@ -78,9 +105,18 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
       </nav>
 
       <div className="pt-4 border-t border-[#D4CFC4]">
-        <p className="text-xs uppercase tracking-wide mb-3 font-medium" style={{ color: newspaperColors.muted }}>
-          Your Interests
-        </p>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs uppercase tracking-wide font-medium" style={{ color: newspaperColors.muted }}>
+            Your Interests
+          </p>
+          <button
+            onClick={() => router.push("/topics")}
+            className="inline-flex items-center gap-1 rounded-full border border-[#D4CFC4] px-3 py-1 text-[11px] font-medium text-[#5C5C5C] hover:border-[#8B4513] hover:text-[#8B4513]"
+          >
+            <Edit3 size={12} />
+            Edit
+          </button>
+        </div>
         <div className="flex flex-wrap gap-2">
           {preferences.selectedInterests.length > 0 ? (
             preferences.selectedInterests.map((interest, i) => (
@@ -113,6 +149,7 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
         
         <motion.button 
           whileHover={{ x: 4 }}
+          onClick={() => router.push('/profile?tab=notifications')}
           className="w-full flex items-center gap-3 px-4 py-3 text-[#5C5C5C] hover:bg-[#1A1A1A]/10 hover:text-[#1A1A1A] rounded-lg transition-all text-sm"
         >
           <Bell size={18} />
@@ -121,6 +158,7 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
         
         <motion.button 
           whileHover={{ x: 4 }}
+          onClick={() => router.push('/portfolio')}
           className="w-full flex items-center gap-3 px-4 py-3 text-[#5C5C5C] hover:bg-[#1A1A1A]/10 hover:text-[#1A1A1A] rounded-lg transition-all text-sm"
         >
           <TrendingUp size={18} />

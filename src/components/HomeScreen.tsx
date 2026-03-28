@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { 
   TrendingUp, 
@@ -31,6 +32,8 @@ import {
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useBriefing } from "@/context/BriefingContext";
+import { apiGetPersonalizedBriefing } from "@/lib/api";
+import { BriefingMode } from "@/lib/types";
 
 interface Topic {
   id: string;
@@ -79,13 +82,50 @@ const insights = [
   { title: "RBI meeting next week", type: "Reminder" },
 ];
 
+interface NewsArticle {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  date: string;
+  category: string;
+  sentiment: string;
+  image?: string;
+}
+
 export default function HomeScreen() {
+  const router = useRouter();
   const { preferences } = useUser();
   const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse, setError } = useBriefing();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
+  const [activeNav, setActiveNav] = useState<'home' | 'topics'>('home');
   const [interactionContent, setInteractionContent] = useState<string | null>(null);
+  const [depthLevel, setDepthLevel] = useState<'simple' | 'detailed'>('detailed');
+  const [simulatedUserType, setSimulatedUserType] = useState<string | null>(null);
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setNewsLoading(true);
+        const res = await fetch('/api/news?topic=business OR finance OR markets&limit=10');
+        if (res.ok) {
+          const data = await res.json();
+          setNewsArticles(data.articles || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch news:', err);
+        setNewsError('Failed to load news');
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+    fetchNews();
+  }, []);
 
   const selectedTopic = briefingState.selectedTopic;
   const isLoading = briefingState.isLoading;
@@ -93,7 +133,19 @@ export default function HomeScreen() {
   const error = briefingState.error;
 
   const userType = preferences.userType || "exploring";
-  const topics = topicTemplates[userType] || topicTemplates.exploring;
+  const topics = newsArticles.length > 0 
+    ? newsArticles.slice(0, 6).map((article, idx) => ({
+        id: article.id || String(idx),
+        title: article.title,
+        subtitle: article.summary?.substring(0, 80) + '...',
+        category: article.category || 'General',
+        time: new Date(article.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ago',
+        hasBriefing: true,
+        readTime: '3 min',
+        icon: TrendingUp,
+        url: article.url,
+      }))
+    : topicTemplates[userType] || topicTemplates.exploring;
 
   const getUserTypeLabel = () => {
     switch (userType) {
@@ -126,12 +178,23 @@ export default function HomeScreen() {
     </div>
   );
 
-  const handleInteraction = async (mode: string) => {
-    setInteractionMode(mode);
+  const handleInteraction = async (mode: BriefingMode) => {
+    const activeMode = mode === "general_view" ? "explain_simply" : mode;
+    setInteractionMode(activeMode);
     setLoading(true);
     setInteractionContent(null);
 
     try {
+      const personalization = await apiGetPersonalizedBriefing(
+        selectedTopic?.title || "general news",
+        activeMode,
+        undefined,
+        depthLevel,
+        simulatedUserType || undefined
+      );
+      
+      const { instructions, userProfile } = personalization;
+
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       const shouldFail = Math.random() < 0.1;
@@ -139,21 +202,68 @@ export default function HomeScreen() {
         throw new Error("AI service temporarily unavailable");
       }
 
-      const contents: Record<string, string> = {
-        explain_simply: "In simple terms: The RBI kept interest rates steady. This means banks will continue offering loans at current rates. It's like a pause button - nothing changes for your EMIs or FD returns right now, but the bank is watching inflation carefully before making any moves.",
-        impact_on_me: userType === "investor" 
-          ? "Your investment impact: Your bank stocks (HDFC, ICICI) may see stability. If you have home loans, your EMI remains unchanged. Consider increasing exposure to rate-sensitive sectors as rate cut chances improve in Q3."
-          : userType === "student"
-          ? "Your impact: As someone learning about finance, this teaches how central banks control inflation. Watch how this affects FD rates your parents might have - they're probably getting around 6.5-7% on savings right now."
-          : userType === "founder"
-          ? "Your business impact: Your startup's loans will stay at current rates. This is good for planning. If you're raising funds, investors will factor in this stable rate environment when valuing your company."
-          : "Your impact: Your loan EMIs stay the same. If you're planning to buy a house or car, now might be a good time to lock in a fixed rate before any potential cuts.",
-        deep_dive: "Extended Analysis: The RBI's decision to maintain status quo reflects careful balancing between supporting growth and controlling inflation. Key factors include: (1) CPI inflation at 5.1%, (2) Global commodity prices post-Russian conflict, (3) US Fed's policy trajectory. Looking ahead, markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%. For portfolio positioning, consider a barbell strategy - mix of defensive rate-sensitive stocks with growth tech exposure."
+      const activeUserType = simulatedUserType || userProfile.userType;
+      
+      const baseContents: Record<string, Record<string, string>> = {
+        explain_simply: {
+          beginner: "In simple terms: The RBI kept interest rates steady. Think of it like a pause button - banks won't change loan rates right now. If you have a home loan, your EMI stays the same. Your fixed deposits will continue earning at current rates.",
+          intermediate: "The RBI maintained status quo on rates. This means banks will keep loan rates unchanged for now. The central bank is watching inflation closely before making any moves. Your existing loans remain unaffected.",
+          advanced: "RBI's MPC kept the repo rate at 6.5% unanimously, signaling a cautious approach. The decision reflects ongoing inflation concerns (CPI at 5.1%) while supporting growth. Rate cuts delayed until Q4 FY26.",
+        },
+        impact_on_me: {
+          investor: "Portfolio Impact: Rate-sensitive sectors (banking, real estate) get relief. If you hold HDFC, ICICI, or Realty stocks, expect stability. Consider increasing allocation to rate-sensitive themes as cut probability increases in Q3.",
+          student: "As someone learning about finance, this shows how central banks manage the economy. Your family's FD rates (~6.5-7%) remain stable. Watch how this decision affects prices of things you buy - stable rates mean less inflation pressure.",
+          founder: "Business Impact: Your startup's loan rates stay constant, aiding financial planning. Investors will factor this stable rate environment when valuing your company. Cost of capital remains predictable for fundraising.",
+          exploring: "If you have a home loan or FD, nothing changes right now. The bank is being careful about inflation. This is generally good for the economy - it means prices might stay stable.",
+        },
+        deep_dive: {
+          beginner: "The RBI kept interest rates unchanged at 6.5%. This decision affects everything from your home loan EMIs to FD returns. The bank is watching inflation (currently at 5.1%) before making any changes. They want to make sure prices don't keep rising too fast.",
+          intermediate: "RBI maintained the repo rate at 6.5% citing persistent inflation risks. Key factors: CPI inflation at 5.1%, global commodity volatility, and US Fed policy trajectory. Market expects potential rate cuts in Q4 FY26 if inflation moderates.",
+          advanced: "RBI's unanimous MPC decision to maintain status quo reflects a delicate balance: supporting growth while containing inflation. Key considerations include: (1) CPI inflation at 5.1% vs target 4%, (2) Global commodity price volatility post-geopolitical events, (3) US Fed's hawkish pause. Implied forward guidance suggests rate cuts delayed to late FY26. Positioning: barbell strategy with rate-sensitive defensives and quality growth.",
+        },
       };
+      
+      let content = baseContents[activeMode]?.[activeUserType] || baseContents[activeMode]?.beginner || "";
+      
+      content += `\n\n---\n📊 Personalized Briefing\n`;
+      content += `Tailored for: ${activeUserType.charAt(0).toUpperCase() + activeUserType.slice(1)} | Depth: ${depthLevel}\n`;
+      content += `Tone: ${instructions.tone} | Focus: ${instructions.focus.join(", ")}\n`;
+      
+      if (activeMode === "impact_on_me") {
+        content += `\n🎯 Your Profile:\n`;
+        content += `- Experience: ${userProfile.experienceLevel}\n`;
+        if (activeUserType === "investor") {
+          content += `- Risk Appetite: ${userProfile.riskAppetite}\n`;
+          content += `- Time Horizon: ${userProfile.timeHorizon}\n`;
+        }
+        content += `- Goal: ${userProfile.goal}\n`;
+      }
+      
+      if (activeMode === "deep_dive") {
+        content += `\n🔮 Future Scenarios:\n`;
+        content += `• Bull case: Inflation drops to 4.5%, RBI cuts rates in Q4 → Bank & realty stocks rally\n`;
+        content += `• Bear case: Inflation stays above 5.5%, Fed tightens → Rate-sensitive sectors underperform\n`;
+        content += `• Base case: Status quo maintained → Range-bound trading in rate-sensitive sectors\n`;
+        
+        content += `\n⚡ Actions to Consider:\n`;
+        if (activeUserType === "investor") {
+          content += `• Review fixed income allocation\n`;
+          content += `• Consider increasing exposure to large-cap banks\n`;
+          content += `• Monitor Q3 FY26 for rate cut signals\n`;
+        } else if (activeUserType === "founder") {
+          content += `• Lock in current loan rates if planning expansion\n`;
+          content += `• Factor stable rate environment in valuations\n`;
+        } else if (activeUserType === "student") {
+          content += `• Track how this affects FD rates your family receives\n`;
+          content += `• Watch inflation numbers monthly\n`;
+        } else {
+          content += `• No immediate action needed\n`;
+          content += `• Stay informed about next RBI meeting\n`;
+        }
+      }
 
-      const content = contents[mode];
       setInteractionContent(content);
-      addAIResponse({ mode, content, timestamp: Date.now() });
+      addAIResponse({ mode: activeMode, content, timestamp: Date.now() });
       setLoading(false);
     } catch (err) {
       setError("Unable to generate insights. Please try again.");
@@ -197,15 +307,11 @@ export default function HomeScreen() {
           <span className="font-medium">Topics</span>
         </button>
         <button 
-          onClick={() => setActiveNav('profile')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-            activeNav === 'profile' 
-              ? 'bg-black text-white' 
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
+          onClick={() => router.push('/profile')}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-gray-600 hover:bg-gray-50"
         >
-          <User size={18} />
-          <span className="font-medium">Profile</span>
+          <Settings size={18} />
+          <span className="font-medium">Settings</span>
         </button>
       </nav>
 
@@ -332,15 +438,16 @@ export default function HomeScreen() {
                 <span className="font-medium">Topics</span>
               </button>
               <button 
-                onClick={() => { setActiveNav('profile'); setMobileMenuOpen(false); selectTopic(null); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
-                  activeNav === 'profile' ? 'bg-black text-white' : 'text-gray-600'
-                }`}
+                onClick={() => { router.push('/portfolio'); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600"
               >
-                <User size={18} />
-                <span className="font-medium">Profile</span>
+                <TrendingUp size={18} />
+                <span className="font-medium">Portfolio</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl">
+              <button 
+                onClick={() => { router.push('/profile'); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 rounded-xl"
+              >
                 <Settings size={18} />
                 <span className="font-medium">Settings</span>
               </button>
@@ -407,13 +514,22 @@ export default function HomeScreen() {
           <span className={`text-xs font-medium ${activeNav === 'topics' ? 'text-black' : ''}`}>Topics</span>
         </button>
         <button 
-          onClick={() => { setActiveNav('profile'); selectTopic(null); }}
-          className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'profile' ? 'text-black' : 'text-gray-400'}`}
+          onClick={() => router.push('/portfolio')}
+          className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400"
         >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'profile' ? 'bg-black' : 'bg-gray-100'}`}>
-            <User size={16} className={activeNav === 'profile' ? 'text-white' : ''} />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100">
+            <TrendingUp size={16} />
           </div>
-          <span className={`text-xs font-medium ${activeNav === 'profile' ? 'text-black' : ''}`}>Profile</span>
+          <span className="text-xs font-medium">Portfolio</span>
+        </button>
+        <button 
+          onClick={() => router.push('/profile')}
+          className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400"
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100">
+            <Settings size={16} />
+          </div>
+          <span className="text-xs font-medium">Settings</span>
         </button>
       </div>
     </nav>
@@ -490,6 +606,63 @@ export default function HomeScreen() {
                   </span>
                 </div>
 
+                {/* Personalization Toggles */}
+                <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Simulate User</span>
+                    <div className="flex gap-1">
+                      {['investor', 'student', 'founder', 'exploring'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setSimulatedUserType(simulatedUserType === type ? null : type)}
+                          className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            simulatedUserType === type 
+                              ? 'bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white' 
+                              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Depth</span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setDepthLevel('simple')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          depthLevel === 'simple' 
+                            ? 'bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white' 
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        Simple
+                      </button>
+                      <button
+                        onClick={() => setDepthLevel('detailed')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          depthLevel === 'detailed' 
+                            ? 'bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white' 
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        Detailed
+                      </button>
+                    </div>
+                  </div>
+                  {(simulatedUserType || depthLevel !== 'detailed') && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <p className="text-xs text-orange-600 font-medium">
+                        {simulatedUserType 
+                          ? `Previewing as: ${simulatedUserType.charAt(0).toUpperCase() + simulatedUserType.slice(1)}`
+                          : `Previewing with: ${depthLevel === 'simple' ? 'Beginner' : 'Default'} depth`
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {/* ACTION BUTTONS */}
                 <div className="flex flex-wrap gap-3 pt-4">
                   <button 
@@ -554,15 +727,20 @@ export default function HomeScreen() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-amber-50 border border-amber-100 rounded-2xl p-5 lg:p-6"
+                    className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-5 lg:p-6 shadow-sm"
                   >
-                    <div className="flex items-center gap-2 text-sm font-medium text-amber-700 mb-3">
-                      <Sparkles size={18} />
-                      {interactionMode === 'explain_simply' && 'Simple Explanation'}
-                      {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
-                      {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-sm font-bold text-orange-700">
+                        <Sparkles size={18} />
+                        {interactionMode === 'explain_simply' && 'Simple Explanation'}
+                        {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
+                        {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
+                      </div>
+                      <span className="px-3 py-1 bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white text-xs font-medium rounded-full">
+                        {simulatedUserType ? `Simulated: ${simulatedUserType}` : `Tailored for ${userType}`}
+                      </span>
                     </div>
-                    <p className="text-gray-700 leading-relaxed">{interactionContent}</p>
+                    <p className="text-gray-800 leading-relaxed whitespace-pre-line">{interactionContent}</p>
                   </motion.div>
                 ) : null}
 
@@ -701,7 +879,7 @@ export default function HomeScreen() {
                   transition={{ delay: index * 0.1 }}
                 >
                   <button
-                    onClick={() => selectTopic(topic)}
+                    onClick={() => selectTopic(topic as any)}
                     className="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-2xl lg:rounded-3xl p-4 lg:p-5 transition-all"
                   >
                     <div className="flex items-start gap-4">

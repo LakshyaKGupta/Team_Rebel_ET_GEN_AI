@@ -1,29 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-
-interface Topic {
-  id: string;
-  title: string;
-  subtitle: string;
-  category: string;
-  time: string;
-  hasBriefing: boolean;
-  readTime: string;
-  icon: React.ElementType;
-}
-
-interface AIResponse {
-  mode: string;
-  content: string;
-  timestamp: number;
-  error?: string;
-}
+import { AIResponse, BriefingMode, Topic } from "@/lib/types";
 
 interface BriefingState {
   selectedTopic: Topic | null;
   isLoading: boolean;
-  interactionMode: string | null;
+  interactionMode: BriefingMode | null;
   aiResponses: AIResponse[];
   lastUpdated: number | null;
   error: string | null;
@@ -33,7 +16,7 @@ interface BriefingContextType {
   state: BriefingState;
   selectTopic: (topic: Topic | null) => void;
   setLoading: (loading: boolean) => void;
-  setInteractionMode: (mode: string | null) => void;
+  setInteractionMode: (mode: BriefingMode | null) => void;
   addAIResponse: (response: AIResponse) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -69,7 +52,7 @@ export function BriefingProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, isLoading, error: null }));
   };
 
-  const setInteractionMode = (interactionMode: string | null) => {
+  const setInteractionMode = (interactionMode: BriefingMode | null) => {
     setState((prev) => ({ ...prev, interactionMode }));
   };
 

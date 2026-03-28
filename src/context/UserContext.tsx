@@ -1,30 +1,57 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
+import { apigetMe, apilogout, apiupdateProfile, apichangePassword, apiUploadAvatar } from "@/lib/api";
 
 type UserType = "investor" | "student" | "founder" | "exploring" | null;
-type Interest = "stocks" | "startups" | "economy" | "global" | "tech" | "finance";
+type Interest = string;
 type Goal = "invest" | "stay_updated" | "learn" | null;
 type NotificationPref = "realtime" | "key_only" | "daily" | "none" | null;
+type ExperienceLevel = "beginner" | "intermediate" | "advanced" | null;
+type RiskAppetite = "conservative" | "moderate" | "aggressive" | null;
+type TimeHorizon = "short" | "medium" | "long" | null;
 
-interface UserPreferences {
+export interface UserPreferences {
   userType: UserType;
   selectedInterests: Interest[];
   goal: Goal;
   notificationPref: NotificationPref;
   hasCompletedOnboarding: boolean;
+  theme?: string;
+  notificationsEnabled?: boolean;
+  emailUpdates?: boolean;
+  experienceLevel?: ExperienceLevel;
+  riskAppetite?: RiskAppetite;
+  timeHorizon?: TimeHorizon;
+}
+
+interface BackendUser {
+  id: string;
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+  createdAt: string;
 }
 
 interface UserContextType {
+  user: BackendUser | null;
   preferences: UserPreferences;
   isLoading: boolean;
-  currentUser: string | null;
+  isAuthenticated: boolean;
   setUserType: (type: UserType) => void;
   setSelectedInterests: (interests: Interest[]) => void;
   setGoal: (goal: Goal) => void;
   setNotificationPref: (pref: NotificationPref) => void;
+  setExperienceLevel: (level: ExperienceLevel) => void;
+  setRiskAppetite: (appetite: RiskAppetite) => void;
+  setTimeHorizon: (horizon: TimeHorizon) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  updateProfile: (data: { name?: string; avatarUrl?: string }) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<void>;
 }
 
 const defaultPreferences: UserPreferences = {
@@ -33,45 +60,50 @@ const defaultPreferences: UserPreferences = {
   goal: null,
   notificationPref: null,
   hasCompletedOnboarding: false,
+  experienceLevel: undefined,
+  riskAppetite: undefined,
+  timeHorizon: undefined,
 };
-
-const STORAGE_KEY = "myet_preferences";
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<BackendUser | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const hasBootstrapped = useRef(false);
 
-  const loadPreferencesForUser = (email: string) => {
-    const allPrefs = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return allPrefs[email] || { ...defaultPreferences };
-  };
-
-  const savePreferencesForUser = (email: string, prefs: UserPreferences) => {
-    const allPrefs = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    allPrefs[email] = prefs;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allPrefs));
+  const refreshUser = async () => {
+    try {
+      const data = await apigetMe();
+      setUser(data.user);
+      setPreferences({
+        userType: data.preferences.userType as UserType,
+        selectedInterests: data.preferences.selectedInterests as Interest[],
+        goal: data.preferences.goal as Goal,
+        notificationPref: data.preferences.notificationPref as NotificationPref,
+        hasCompletedOnboarding: data.preferences.hasCompletedOnboarding,
+        theme: data.preferences.theme,
+        notificationsEnabled: data.preferences.notificationsEnabled,
+        emailUpdates: data.preferences.emailUpdates,
+        experienceLevel: data.preferences.experienceLevel as ExperienceLevel,
+        riskAppetite: data.preferences.riskAppetite as RiskAppetite,
+        timeHorizon: data.preferences.timeHorizon as TimeHorizon,
+      });
+    } catch {
+      setUser(null);
+      setPreferences(defaultPreferences);
+    }
   };
 
   useEffect(() => {
-    const user = localStorage.getItem("myet_current_user");
-    setCurrentUser(user);
-    
-    if (user) {
-      const userPrefs = loadPreferencesForUser(user);
-      setPreferences(userPrefs);
+    if (hasBootstrapped.current) {
+      return;
     }
-    
-    setIsHydrated(true);
+
+    hasBootstrapped.current = true;
+    refreshUser().finally(() => setIsLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (isHydrated && currentUser) {
-      savePreferencesForUser(currentUser, preferences);
-    }
-  }, [preferences, currentUser, isHydrated]);
 
   const setUserType = (userType: UserType) => {
     setPreferences((prev) => ({ ...prev, userType }));
@@ -89,29 +121,71 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setPreferences((prev) => ({ ...prev, notificationPref }));
   };
 
+  const setExperienceLevel = (experienceLevel: ExperienceLevel) => {
+    setPreferences((prev) => ({ ...prev, experienceLevel }));
+  };
+
+  const setRiskAppetite = (riskAppetite: RiskAppetite) => {
+    setPreferences((prev) => ({ ...prev, riskAppetite }));
+  };
+
+  const setTimeHorizon = (timeHorizon: TimeHorizon) => {
+    setPreferences((prev) => ({ ...prev, timeHorizon }));
+  };
+
   const completeOnboarding = () => {
     setPreferences((prev) => ({ ...prev, hasCompletedOnboarding: true }));
   };
 
-  const resetOnboarding = () => {
-    if (currentUser) {
-      savePreferencesForUser(currentUser, defaultPreferences);
-    }
+  const resetOnboarding = async () => {
+    await apilogout();
+    setUser(null);
     setPreferences(defaultPreferences);
+  };
+
+  const logout = async () => {
+    await apilogout();
+    setUser(null);
+    setPreferences(defaultPreferences);
+  };
+
+  const updateProfile = async (data: { name?: string; avatarUrl?: string }) => {
+    const result = await apiupdateProfile(data);
+    if (result.user) {
+      setUser((prev) => prev ? { ...prev, ...result.user } : null);
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    await apichangePassword(currentPassword, newPassword);
+  };
+
+  const uploadAvatar = async (file: File) => {
+    const result = await apiUploadAvatar(file);
+    setUser((prev) => prev ? { ...prev, avatarUrl: result.avatarUrl } : null);
   };
 
   return (
     <UserContext.Provider
       value={{
+        user,
         preferences,
-        isLoading: !isHydrated,
-        currentUser,
+        isLoading,
+        isAuthenticated: !!user,
         setUserType,
         setSelectedInterests,
         setGoal,
         setNotificationPref,
+        setExperienceLevel,
+        setRiskAppetite,
+        setTimeHorizon,
         completeOnboarding,
         resetOnboarding,
+        logout,
+        refreshUser,
+        updateProfile,
+        changePassword,
+        uploadAvatar,
       }}
     >
       {children}

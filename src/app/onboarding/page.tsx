@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   TrendingUp, 
@@ -12,10 +12,6 @@ import {
   Globe,
   Cpu,
   PiggyBank,
-  Bell,
-  Zap,
-  Clock,
-  BellOff,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -25,7 +21,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
-import { UserType, Interest, Goal, NotificationPref } from "@/lib/types";
+import { apisignup, apilogin, apiupdatePreferences } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -52,16 +48,36 @@ const goals = [
 ];
 
 const notificationPrefs = [
-  { id: "realtime" as const, label: "Real-time alerts", icon: Zap, desc: "High frequency" },
-  { id: "key_only" as const, label: "Key updates only", icon: Bell, desc: "Recommended" },
-  { id: "daily" as const, label: "Daily summary", icon: Clock, desc: "Once a day" },
-  { id: "none" as const, label: "No notifications", icon: BellOff, desc: "Manual check" },
+  { id: "realtime" as const, label: "Real-time alerts", desc: "High frequency" },
+  { id: "key_only" as const, label: "Key updates only", desc: "Recommended" },
+  { id: "daily" as const, label: "Daily summary", desc: "Once a day" },
+  { id: "none" as const, label: "No notifications", desc: "Manual check" },
+];
+
+const experienceLevels = [
+  { id: "beginner" as const, label: "Beginner", desc: "New to investing & markets" },
+  { id: "intermediate" as const, label: "Intermediate", desc: "Understand basics, want to learn more" },
+  { id: "advanced" as const, label: "Advanced", desc: "Experienced investor or finance professional" },
+];
+
+const riskAppetites = [
+  { id: "conservative" as const, label: "Conservative", desc: "Prefer stability over high returns" },
+  { id: "moderate" as const, label: "Moderate", desc: "Balance between growth and safety" },
+  { id: "aggressive" as const, label: "Aggressive", desc: "Comfortable with volatility for higher returns" },
+];
+
+const timeHorizons = [
+  { id: "short" as const, label: "Short Term", desc: "Days to months" },
+  { id: "medium" as const, label: "Medium Term", desc: "1-3 years" },
+  { id: "long" as const, label: "Long Term", desc: "3+ years" },
 ];
 
 type AuthMode = "signup" | "login";
 
 export default function Onboarding() {
   const router = useRouter();
+  const { preferences, isAuthenticated, isLoading: userLoading, setUserType, setSelectedInterests, setGoal, setNotificationPref, setExperienceLevel, setRiskAppetite, setTimeHorizon, completeOnboarding, refreshUser } = useUser();
+  
   const [step, setStep] = useState(0);
   const [authMode, setAuthMode] = useState<AuthMode>("signup");
   const [email, setEmail] = useState("");
@@ -69,15 +85,38 @@ export default function Onboarding() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { setUserType, setSelectedInterests, setGoal, setNotificationPref, completeOnboarding, preferences } = useUser();
-  
-  const [userType, setLocalUserType] = useState<UserType>(null);
-  const [selectedInterests, setSelectedInterestsLocal] = useState<Interest[]>([]);
-  const [goal, setGoalLocal] = useState<Goal>(null);
-  const [notificationPref, setNotificationPrefLocal] = useState<NotificationPref>(null);
+  const [userType, setLocalUserType] = useState<string | null>(null);
+  const [selectedInterests, setSelectedInterestsLocal] = useState<string[]>([]);
+  const [goal, setGoalLocal] = useState<string | null>(null);
+  const [notificationPref, setNotificationPrefLocal] = useState<string | null>(null);
+  const [experienceLevel, setExperienceLevelLocal] = useState<string | null>(null);
+  const [riskAppetite, setRiskAppetiteLocal] = useState<string | null>(null);
+  const [timeHorizon, setTimeHorizonLocal] = useState<string | null>(null);
 
-  const toggleInterest = (interest: Interest) => {
+  useEffect(() => {
+    if (!userLoading && isAuthenticated && preferences.hasCompletedOnboarding) {
+      router.replace("/dashboard");
+    }
+  }, [userLoading, isAuthenticated, preferences.hasCompletedOnboarding, router]);
+
+  useEffect(() => {
+    if (!userLoading) {
+      setLocalUserType(preferences.userType);
+      setSelectedInterestsLocal(preferences.selectedInterests);
+      setGoalLocal(preferences.goal);
+      setNotificationPrefLocal(preferences.notificationPref);
+    }
+  }, [userLoading, preferences]);
+
+  if (userLoading) {
+    return (
+      <div className="min-h-screen bg-[#080B14] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#E8501A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const toggleInterest = (interest: string) => {
     setSelectedInterestsLocal(prev => 
       prev.includes(interest) 
         ? prev.filter(i => i !== interest)
@@ -90,6 +129,9 @@ export default function Onboarding() {
     if (step === 2) return selectedInterests.length > 0;
     if (step === 3) return !!goal;
     if (step === 4) return !!notificationPref;
+    if (step === 5) return !!experienceLevel;
+    if (step === 6) return !!riskAppetite;
+    if (step === 7) return !!timeHorizon;
     return true;
   };
 
@@ -98,65 +140,62 @@ export default function Onboarding() {
     setAuthError("");
     setIsLoading(true);
 
-    if (!email || !password) {
-      setAuthError("Please enter email and password");
-      setIsLoading(false);
-      return;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const users = JSON.parse(localStorage.getItem("myet_users") || "[]");
-    
-    if (authMode === "signup") {
-      if (users.find((u: any) => u.email === email)) {
-        setAuthError("Email already exists");
-        setIsLoading(false);
-        return;
+    try {
+      if (authMode === "signup") {
+        await apisignup(email, password);
+        await refreshUser();
+        setStep(1);
+      } else {
+        const data = await apilogin(email, password);
+        await refreshUser();
+        if (data.preferences?.hasCompletedOnboarding) {
+          router.push("/dashboard");
+          return;
+        } else {
+          setStep(1);
+        }
       }
-      const newUser = { email, password, createdAt: new Date().toISOString() };
-      users.push(newUser);
-      localStorage.setItem("myet_users", JSON.stringify(users));
-      localStorage.setItem("myet_current_user", email);
-    } else {
-      const user = users.find((u: any) => u.email === email && u.password === password);
-      if (!user) {
-        setAuthError("Invalid email or password");
-        setIsLoading(false);
-        return;
-      }
-      localStorage.setItem("myet_current_user", email);
-    }
-
-    const allPrefs = JSON.parse(localStorage.getItem("myet_preferences") || "{}");
-    const userPrefs = allPrefs[email];
-    
-    if (userPrefs && userPrefs.hasCompletedOnboarding) {
-      router.push("/dashboard");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Authentication failed");
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    if (userPrefs) {
-      setLocalUserType(userPrefs.userType);
-      setSelectedInterestsLocal(userPrefs.selectedInterests || []);
-      setGoalLocal(userPrefs.goal);
-      setNotificationPrefLocal(userPrefs.notificationPref);
-    }
-
-    setIsLoading(false);
-    setStep(1);
   };
 
-  const handleContinue = () => {
-    if (step === 1) setUserType(userType);
-    if (step === 2) setSelectedInterests(selectedInterests);
-    if (step === 3) setGoal(goal);
-    if (step === 4) setNotificationPref(notificationPref);
+  const handleContinue = async () => {
+    if (step === 1) {
+      setUserType(userType as any);
+      await apiupdatePreferences({ userType: userType || undefined });
+    }
+    if (step === 2) {
+      setSelectedInterests(selectedInterests as any);
+      await apiupdatePreferences({ selectedInterests });
+    }
+    if (step === 3) {
+      setGoal(goal as any);
+      await apiupdatePreferences({ goal: goal || undefined });
+    }
+    if (step === 4) {
+      setNotificationPref(notificationPref as any);
+      await apiupdatePreferences({ notificationPref: notificationPref || undefined });
+    }
+    if (step === 5) {
+      setExperienceLevel(experienceLevel as any);
+      await apiupdatePreferences({ experienceLevel: experienceLevel || undefined });
+    }
+    if (step === 6) {
+      setRiskAppetite(riskAppetite as any);
+      await apiupdatePreferences({ riskAppetite: riskAppetite || undefined });
+    }
+    if (step === 7) {
+      setTimeHorizon(timeHorizon as any);
+      await apiupdatePreferences({ timeHorizon: timeHorizon || undefined });
+    }
     
-    if (step < 4) {
+    if (step < 7) {
       setStep(s => s + 1);
     } else {
+      await apiupdatePreferences({ hasCompletedOnboarding: true });
       completeOnboarding();
       router.push("/dashboard");
     }
@@ -170,17 +209,18 @@ export default function Onboarding() {
     }
   };
 
-  const getSampleContent = () => {
-    if (userType === "investor") {
-      return { title: "RBI Policy Impact", subtitle: "Tailored for Investors", topic: "Economy" };
+  const handleSkipStep = () => {
+    if (step === 1) {
+      setUserType("exploring");
+      setSelectedInterests(["stocks", "economy"]);
+      setGoal("stay_updated");
+      setNotificationPref("key_only");
+      setExperienceLevel("beginner");
+      setRiskAppetite("moderate");
+      setTimeHorizon("medium");
+      completeOnboarding();
+      router.push("/dashboard");
     }
-    if (userType === "student") {
-      return { title: "Understanding Markets", subtitle: "Quick explainer", topic: "Basics" };
-    }
-    if (userType === "founder") {
-      return { title: "Startup Funding Round", subtitle: "Competitor analysis", topic: "Startups" };
-    }
-    return { title: "Today's Top Stories", subtitle: "Curated for you", topic: "General" };
   };
 
   if (step === 0) {
@@ -288,8 +328,8 @@ export default function Onboarding() {
       <div className="fixed top-0 left-0 right-0 h-1 bg-[#0D1220] z-50">
         <motion.div 
           className="h-full bg-gradient-to-r from-[#E8501A] to-[#F0A500]"
-          initial={{ width: "25%" }}
-          animate={{ width: `${step * 25}%` }}
+          initial={{ width: "12.5%" }}
+          animate={{ width: `${step * 12.5}%` }}
           transition={{ duration: 0.3 }}
         />
       </div>
@@ -302,7 +342,7 @@ export default function Onboarding() {
           <ArrowLeft size={18} />
           Back
         </button>
-        <p className="text-sm text-[#7E8BA3]">Step {step} of 4</p>
+        <p className="text-sm text-[#7E8BA3]">Step {step} of 7</p>
       </div>
 
       <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-lg mx-auto w-full">
@@ -344,6 +384,13 @@ export default function Onboarding() {
                   </button>
                 ))}
               </div>
+
+              <button
+                onClick={handleSkipStep}
+                className="w-full text-center text-[#7E8BA3] hover:text-white transition-colors text-sm py-2"
+              >
+                Skip this step
+              </button>
             </motion.div>
           )}
 
@@ -425,7 +472,7 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-3">
-                {notificationPrefs.map(({ id, label, icon: Icon, desc }) => (
+                {notificationPrefs.map(({ id, label, desc }) => (
                   <button
                     key={id}
                     onClick={() => setNotificationPrefLocal(id)}
@@ -435,14 +482,116 @@ export default function Onboarding() {
                         : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
                     }`}
                   >
-                    <div className={`p-3 rounded-xl ${notificationPref === id ? "bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white" : "bg-white/[0.07] text-[#7E8BA3]"}`}>
-                      <Icon size={20} />
-                    </div>
                     <div className="flex-1">
                       <p className="font-medium text-white">{label}</p>
                       <p className="text-[#7E8BA3] text-sm">{desc}</p>
                     </div>
                     {notificationPref === id && <Check size={20} className="text-[#E8501A]" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What's your experience level?</h1>
+                <p className="text-[#7E8BA3] text-lg">This helps us tailor the complexity</p>
+              </div>
+
+              <div className="space-y-3">
+                {experienceLevels.map(({ id, label, desc }) => (
+                  <button
+                    key={id}
+                    onClick={() => setExperienceLevelLocal(id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                      experienceLevel === id 
+                        ? "border-[#E8501A] bg-[#E8501A]/10" 
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-white">{label}</p>
+                      <p className="text-[#7E8BA3] text-sm">{desc}</p>
+                    </div>
+                    {experienceLevel === id && <Check size={20} className="text-[#E8501A]" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 6 && (
+            <motion.div
+              key="step6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What's your risk appetite?</h1>
+                <p className="text-[#7E8BA3] text-lg">This helps us recommend appropriate content</p>
+              </div>
+
+              <div className="space-y-3">
+                {riskAppetites.map(({ id, label, desc }) => (
+                  <button
+                    key={id}
+                    onClick={() => setRiskAppetiteLocal(id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                      riskAppetite === id 
+                        ? "border-[#E8501A] bg-[#E8501A]/10" 
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-white">{label}</p>
+                      <p className="text-[#7E8BA3] text-sm">{desc}</p>
+                    </div>
+                    {riskAppetite === id && <Check size={20} className="text-[#E8501A]" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 7 && (
+            <motion.div
+              key="step7"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What's your time horizon?</h1>
+                <p className="text-[#7E8BA3] text-lg">How long do you typically invest for?</p>
+              </div>
+
+              <div className="space-y-3">
+                {timeHorizons.map(({ id, label, desc }) => (
+                  <button
+                    key={id}
+                    onClick={() => setTimeHorizonLocal(id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
+                      timeHorizon === id 
+                        ? "border-[#E8501A] bg-[#E8501A]/10" 
+                        : "border-white/[0.07] hover:border-[#E8501A]/50 bg-[rgba(255,255,255,0.04)]"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-white">{label}</p>
+                      <p className="text-[#7E8BA3] text-sm">{desc}</p>
+                    </div>
+                    {timeHorizon === id && <Check size={20} className="text-[#E8501A]" />}
                   </button>
                 ))}
               </div>
@@ -461,7 +610,7 @@ export default function Onboarding() {
                   : "bg-white/[0.07] text-[#7E8BA3] cursor-not-allowed"
               }`}
             >
-              {step === 4 ? "Get Started" : "Continue"}
+              {step === 7 ? "Get Started" : "Continue"}
               <ArrowRight size={18} />
             </button>
           </div>

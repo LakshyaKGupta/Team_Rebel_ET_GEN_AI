@@ -10,8 +10,9 @@ import {
   Compass,
   User,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 
 const newspaperColors = {
   paper: "#F5F0E6",
@@ -30,12 +31,7 @@ const navItems = [
 export default function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const user = localStorage.getItem("myet_current_user");
-    setIsLoggedIn(!!user);
-  }, [pathname]);
+  const { isAuthenticated, isLoading } = useUser();
 
   return (
     <>
@@ -105,7 +101,7 @@ export default function Navigation() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {isLoggedIn ? (
+            {!isLoading && isAuthenticated ? (
               <Link 
                 href="/dashboard" 
                 className="hidden sm:flex items-center gap-2 px-5 py-2 font-serif text-sm font-semibold transition-all duration-200"

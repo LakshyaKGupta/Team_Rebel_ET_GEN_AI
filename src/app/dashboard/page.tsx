@@ -1,420 +1,628 @@
 "use client";
 
-import { useState } from "react";
-import { useUser } from "@/context/UserContext";
-import { useBriefing } from "@/context/BriefingContext";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  Bookmark,
+  ChevronRight,
+  History,
+  Layers3,
+  MessageCircle,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
-import ActionCard from "@/components/briefing/ActionCard";
-import SourceList from "@/components/briefing/SourceList";
-import BriefSection from "@/components/briefing/BriefSection";
-import SkeletonLoader from "@/components/briefing/SkeletonLoader";
-import { topicTemplates, sources } from "@/lib/data";
-import { BriefingSection as BriefingSectionType } from "@/lib/types";
-import { Sparkles, Star, ExternalLink, TrendingUp, ArrowRight, Clock, Zap } from "lucide-react";
-import { motion } from "framer-motion";
+import TopicVisual from "@/components/cards/TopicVisual";
+import { useUser } from "@/context/UserContext";
+import {
+  assessPortfolioImpact,
+  getRecentTopicCards,
+  getTopicsForCategory,
+  getTopicsForUser,
+  newsCategories,
+  starterPortfolioAssets,
+} from "@/lib/data";
+import { DemoEngagementState, markTopicsUnread, pushRecentTopic, readPortfolioAssets, writeDemoEngagementState } from "@/lib/demo-state";
 
-const insights = [
-  { title: "Your portfolio is 70% tech stocks", type: "Insight" },
-  { title: "3 new startups in your sector", type: "Alert" },
-  { title: "RBI meeting next week", type: "Reminder" },
-];
+type ReadingListFilter = "saved" | "liked" | "portfolio" | "unread";
 
-const newspaperColors = {
-  paper: "#F5F0E6",
-  ink: "#1A1A1A",
-  accent: "#8B4513",
-  muted: "#5C5C5C",
-  line: "#D4CFC4",
-};
-
-const insightsMap = {
-  investor: { label: "Tailored for Investor", color: "bg-[#F5F0E6] text-[#8B4513]" },
-  student: { label: "Tailored for Student", color: "bg-blue-50 text-blue-700" },
-  founder: { label: "Tailored for Founder", color: "bg-purple-50 text-purple-700" },
-  exploring: { label: "For You", color: "bg-gray-100 text-[#1A1A1A]" },
-};
-
-const shortNewsItems = [
-  { id: 1, headline: "Sensex gains 200 points", summary: "Market rebounds on positive global cues amid foreign investor buying", time: "2h ago" },
-  { id: 2, headline: "RBI may cut rates in Q4", summary: "Central bank signals potential rate reduction as inflation cools", time: "3h ago" },
-  { id: 3, headline: "Tech IPO frenzy continues", summary: "Three more startups file for IPO amid record funding year", time: "4h ago" },
-  { id: 4, headline: "Oil prices drop 5%", summary: "Global crude prices fall on supply surplus concerns", time: "5h ago" },
-  { id: 5, headline: "IT sector reports strong Q3", summary: "Top IT companies beat estimates with 15% revenue growth", time: "6h ago" },
-  { id: 6, headline: "Real estate sees recovery", summary: "Housing sales up 20% in major cities amid strong demand", time: "7h ago" },
-  { id: 7, headline: "Crypto market surges", summary: "Bitcoin crosses $80K as institutional adoption increases", time: "8h ago" },
-  { id: 8, headline: "Auto sales hit record", summary: "Car manufacturers report highest ever monthly sales", time: "9h ago" },
-];
-
-export default function Dashboard() {
+export default function DashboardPage() {
+  const router = useRouter();
   const { preferences } = useUser();
-  const { state: briefingState, selectTopic, setLoading, setInteractionMode, addAIResponse, setError } = useBriefing();
-  const [activeNav, setActiveNav] = useState<'home' | 'topics' | 'profile'>('home');
-  const [interactionContent, setInteractionContent] = useState<string | null>(null);
-  const [sourcesExpanded, setSourcesExpanded] = useState(false);
-
-  const selectedTopic = briefingState.selectedTopic;
-  const isLoading = briefingState.isLoading;
-  const interactionMode = briefingState.interactionMode;
-  const error = briefingState.error;
+  const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
+  const [briefingFeedCategory, setBriefingFeedCategory] = useState("general");
+  const [readingListFilter, setReadingListFilter] = useState<ReadingListFilter>("unread");
+  const [engagement, setEngagement] = useState<DemoEngagementState>({
+    savedIds: [],
+    likedIds: [],
+    dislikedIds: [],
+    recentTopicIds: [],
+    openedIds: [],
+    unreadIds: [],
+    analytics: {},
+    interactions: [],
+  });
+  const [portfolioAssets, setPortfolioAssets] = useState(starterPortfolioAssets);
 
   const userType = preferences.userType || "exploring";
-  const topics = topicTemplates[userType] || topicTemplates.exploring;
-  const userBadge = insightsMap[userType];
+  const topics = useMemo(() => getTopicsForUser(userType), [userType]);
+  const selectedInterests = preferences.selectedInterests || [];
+  const rankedTopics = useMemo(() => {
+    const portfolioTopicIds = new Set(
+      portfolioAssets
+        .map((asset) => assessPortfolioImpact(asset, topics).topic.id)
+        .filter(Boolean),
+    );
 
-  const featuredTopics = topics.slice(0, 3);
+    return [...topics].sort((left, right) => {
+      const leftSignals = engagement.analytics[left.id];
+      const rightSignals = engagement.analytics[right.id];
 
-  const handleInteraction = async (mode: 'explain_simply' | 'impact_on_me' | 'deep_dive') => {
-    setInteractionMode(mode);
-    setLoading(true);
-    setInteractionContent(null);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const shouldFail = Math.random() < 0.1;
-      if (shouldFail) throw new Error("AI service temporarily unavailable");
-      const contents: Record<string, string> = {
-        explain_simply: "In simple terms: The RBI kept interest rates steady. Banks continue offering loans at current rates.",
-        impact_on_me: userType === "investor" 
-          ? "Your investment impact: Bank stocks may see stability. EMI unchanged."
-          : userType === "student" 
-          ? "This teaches how central banks control inflation and affect finances."
-          : "Cost of capital remains stable for planning.",
-        deep_dive: "Extended Analysis: RBI decision balances growth support and inflation control. CPI inflation at 5.1%, global commodity prices, US Fed policy. Rate cuts expected Q4 FY26.",
+      const scoreTopic = (topicId: string, analytics = engagement.analytics[topicId]) => {
+        const liked = engagement.likedIds.includes(topicId) ? 2.3 : 0;
+        const saved = engagement.savedIds.includes(topicId) ? 1.8 : 0;
+        const unread = engagement.unreadIds.includes(topicId) ? 1.2 : 0;
+        const portfolio = portfolioTopicIds.has(topicId) ? 1.6 : 0;
+        const dislike = engagement.dislikedIds.includes(topicId) ? -2.4 : 0;
+        const opened = (analytics?.openedCount || 0) * 0.18;
+        return liked + saved + unread + portfolio + dislike + opened;
       };
-      const content = contents[mode];
-      setInteractionContent(content);
-      addAIResponse({ mode, content, timestamp: Date.now() });
-      setLoading(false);
-    } catch (err) {
-      setError("Unable to generate insights. Please try again.");
-      setLoading(false);
-    }
+
+      return scoreTopic(right.id, rightSignals) - scoreTopic(left.id, leftSignals);
+    });
+  }, [engagement, portfolioAssets, topics]);
+  const portfolioRelatedIds = useMemo(
+    () =>
+      Array.from(
+        new Set(portfolioAssets.map((asset) => assessPortfolioImpact(asset, topics).topic.id).filter(Boolean)),
+      ),
+    [portfolioAssets, topics],
+  );
+  const briefingFeedTopics = getTopicsForCategory(rankedTopics, briefingFeedCategory, selectedInterests).slice(0, 3);
+  const briefingFeedMeta = newsCategories.find((category) => category.id === briefingFeedCategory) || newsCategories[0];
+  const recentTopics = getRecentTopicCards(engagement.recentTopicIds, userType);
+  const savedTopics = topics.filter((topic) => engagement.savedIds.includes(topic.id));
+  const likedTopics = topics.filter((topic) => engagement.likedIds.includes(topic.id));
+  const unreadTopics = topics.filter((topic) => engagement.unreadIds.includes(topic.id));
+  const portfolioTopics = topics.filter((topic) => portfolioRelatedIds.includes(topic.id));
+  const leadTopic = briefingFeedTopics[0] || topics[0] || null;
+  const secondaryTopics = leadTopic ? briefingFeedTopics.filter((topic) => topic.id !== leadTopic.id) : [];
+  const readingListGroups: Record<ReadingListFilter, typeof topics> = {
+    saved: savedTopics,
+    liked: likedTopics,
+    portfolio: portfolioTopics,
+    unread: unreadTopics,
+  };
+  const readingListTopics = readingListGroups[readingListFilter].slice(0, 4);
+  const readingListMeta: Record<ReadingListFilter, { label: string; empty: string }> = {
+    saved: {
+      label: "Saved",
+      empty: "Save stories from the front page or inside a briefing to build a real reading list.",
+    },
+    liked: {
+      label: "Liked",
+      empty: "Likes tell the feed what should appear more often when the ranking tightens.",
+    },
+    portfolio: {
+      label: "Portfolio-related",
+      empty: "Add assets in portfolio and the reading list will pull in stories mapped to those holdings.",
+    },
+    unread: {
+      label: "Unread",
+      empty: "Unread stories stay here until you open them, so the front page remains scannable without losing the queue.",
+    },
   };
 
-  const getBriefingSections = (): BriefingSectionType[] => [
-    { title: "What happened", content: "The Reserve Bank of India (RBI) kept the repo rate unchanged at 6.5% in its latest monetary policy meeting. This decision comes amid ongoing inflation concerns and global economic uncertainty." },
-    { title: "Why it matters", content: "For investors, this means your existing loan EMIs will remain stable. However, the persistent inflation outlook suggests rates may not be cut soon. Fixed deposits continue to offer decent returns around 6.5-7%." },
-    { title: "Impact on you", content: userType === "investor" 
-      ? "Your portfolio exposure to rate-sensitive sectors (banking, real estate) may benefit from rate stability. Consider reviewing your bond allocations and FD maturities." 
-      : userType === "student" 
-      ? "Understanding how RBI decisions affect everyday finances - from loan interest rates to inflation - helps build financial literacy."
-      : userType === "founder"
-      ? "Cost of capital remains stable for now. Plan your fundraising timeline considering the interest rate environment."
-      : "These decisions affect everything from loan EMIs to inflation - understanding them helps you make better financial decisions."
-    },
-    { title: "What you should do", content: "Review your investment portfolio for rate-sensitive assets. If you have floating-rate loans, your EMIs remain unchanged. Consider locking in FDs before any potential rate cuts." },
-    { title: "What might happen next", content: "Watch for RBI's next policy meeting in April. Key indicators to track: inflation trajectory, global commodity prices, and US Fed decisions. Markets expect potential rate cuts in Q4 FY26 if inflation moderates below 5%." },
-  ];
+  const topInterest = selectedInterests[0] || "General";
+  const portfolioRadar = useMemo(
+    () =>
+      portfolioAssets.slice(0, 3).map((asset) => ({
+        asset,
+        assessment: assessPortfolioImpact(asset, topics),
+      })),
+    [portfolioAssets, topics],
+  );
 
-  if (selectedTopic) {
-    return (
-      <div className="min-h-screen bg-[#F5F0E6] flex">
-        {/* Desktop Sidebar - Hidden on mobile */}
-        <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
-        
-        <main className="flex-1 flex flex-col min-h-screen">
-          <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-            {/* Desktop: 2-column layout | Mobile: Single column */}
-            <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
-              {/* Main Content */}
-              <div className="max-w-2xl mx-auto lg:mx-0 px-4 lg:px-6 py-6">
-                <button onClick={() => selectTopic(null)} className="flex items-center gap-2 text-sm text-[#5C5C5C] hover:text-black mb-6">
-                  ← Back to Newsroom
-                </button>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-[#5C5C5C] uppercase tracking-wide">
-                      <span>{selectedTopic.category}</span>
-                      <span>•</span>
-                      <span>{selectedTopic.time}</span>
-                    </div>
-                    <h1 className="text-2xl lg:text-4xl font-semibold">{selectedTopic.title}</h1>
-                    <p className="text-lg lg:text-xl text-[#5C5C5C]">{selectedTopic.subtitle}</p>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${userBadge.color}`}>
-                      {userBadge.label}
-                    </span>
-                  </div>
-                  
-                  {/* Interaction Buttons - Full width on mobile, optimized */}
-                  <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                    <ActionCard mode="explain_simply" isActive={interactionMode === 'explain_simply'} isLoading={isLoading} onClick={() => handleInteraction('explain_simply')} />
-                    <ActionCard mode="impact_on_me" isActive={interactionMode === 'impact_on_me'} isLoading={isLoading} onClick={() => handleInteraction('impact_on_me')} />
-                    <ActionCard mode="deep_dive" isActive={interactionMode === 'deep_dive'} isLoading={isLoading} onClick={() => handleInteraction('deep_dive')} />
-                  </div>
-                  
-                  {error && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 border border-red-100 rounded-2xl p-5">
-                      <p className="text-red-600 font-medium">{error}</p>
-                      <button onClick={() => interactionMode && handleInteraction(interactionMode as 'explain_simply' | 'impact_on_me' | 'deep_dive')} className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-medium hover:bg-red-200 transition-colors">
-                        Try Again
-                      </button>
-                    </motion.div>
-                  )}
-                  
-                  {isLoading ? <SkeletonLoader /> : interactionContent && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#F5F0E6] border border-[#D4CFC4] rounded-2xl p-5 lg:p-6">
-                      <div className="flex items-center gap-2 text-sm font-medium text-[#8B4513] mb-3">
-                        <Sparkles size={18} />
-                        {interactionMode === 'explain_simply' && 'Simple Explanation'}
-                        {interactionMode === 'impact_on_me' && 'Your Personal Impact'}
-                        {interactionMode === 'deep_dive' && 'Deep Dive Analysis'}
-                      </div>
-                      <p className="text-[#1A1A1A] leading-relaxed">{interactionContent}</p>
-                    </motion.div>
-                  )}
-                  
-                  <BriefSection sections={getBriefingSections()} />
-                  
-                  {/* Mobile: Collapsible Sources */}
-                  <div className="lg:hidden pt-6 border-t border-[#D4CFC4]">
-                    <button 
-                      onClick={() => setSourcesExpanded(!sourcesExpanded)}
-                      className="w-full flex items-center justify-between p-4 bg-[#F5F0E6] rounded-xl"
-                    >
-                      <h3 className="font-semibold text-lg">Sources</h3>
-                      <span className="text-[#5C5C5C]">{sourcesExpanded ? '−' : '+'}</span>
-                    </button>
-                    {sourcesExpanded && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="grid grid-cols-2 gap-2 mt-3">
-                          {sources.map((source, i) => (
-                            <div key={i} className="p-3 border border-[#D4CFC4] rounded-xl">
-                              <p className="font-medium text-sm">{source.name}</p>
-                              <p className="text-[#5C5C5C] text-xs">{source.url}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.div>
-              </div>
-              
-              {/* Right Panel - Desktop Only */}
-              <aside className="hidden lg:block w-full p-6 space-y-6 border-l border-[#D4CFC4]">
-                <div>
-                  <h3 className="font-semibold mb-4">Your Insights</h3>
-                  <div className="space-y-3">
-                    {insights.map((insight, i) => (
-                      <div key={i} className="p-4 bg-[#F5F0E6] rounded-xl border border-[#D4CFC4]">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Star size={14} className="text-[#8B4513]" />
-                          <span className="text-xs text-[#8B4513] font-medium">{insight.type}</span>
-                        </div>
-                        <p className="text-sm font-medium">{insight.title}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-4">Sources</h3>
-                  <div className="space-y-2">
-                    {sources.map((source, i) => (
-                      <button key={i} onClick={() => window.open(`https://${source.url}`, '_blank')} className="w-full flex items-center justify-between p-3 hover:bg-[#F5F0E6] rounded-xl cursor-pointer">
-                        <div>
-                          <p className="text-sm font-medium">{source.name}</p>
-                          <p className="text-xs text-[#5C5C5C]">{source.url}</p>
-                        </div>
-                        <ExternalLink size={14} className="text-[#5C5C5C]" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </aside>
-            </div>
-          </div>
-        </main>
-        
-        <BottomNav activeNav={activeNav} onNavChange={(nav) => { setActiveNav(nav); selectTopic(null); }} />
-      </div>
-    );
-  }
+  useEffect(() => {
+    const current = markTopicsUnread(topics.map((topic) => topic.id));
+    setEngagement(current);
+  }, [topics]);
+
+  useEffect(() => {
+    setPortfolioAssets(readPortfolioAssets(starterPortfolioAssets));
+  }, []);
+
+  useEffect(() => {
+    router.prefetch("/topics");
+    router.prefetch("/portfolio");
+    router.prefetch("/dashboard");
+  }, [router]);
+
+  useEffect(() => {
+    briefingFeedTopics.forEach((topic) => {
+      router.prefetch(`/briefing/${topic.id}`);
+    });
+  }, [briefingFeedTopics, router]);
+
+  const updateEngagement = (updater: (current: DemoEngagementState) => DemoEngagementState) => {
+    setEngagement((current) => {
+      const next = updater(current);
+      writeDemoEngagementState(next);
+      return next;
+    });
+  };
+
+  const openTopic = (topicId: string) => {
+    const next = pushRecentTopic(topicId);
+    setEngagement(next);
+    router.push(`/briefing/${topicId}`);
+  };
+
+  const toggleSave = (topicId: string) => {
+    updateEngagement((current) => ({
+      ...current,
+      savedIds: current.savedIds.includes(topicId)
+        ? current.savedIds.filter((id) => id !== topicId)
+        : [...current.savedIds, topicId],
+      analytics: {
+        ...current.analytics,
+        [topicId]: {
+          openedCount: current.analytics[topicId]?.openedCount || 0,
+          savedCount: Math.max(
+            0,
+            (current.analytics[topicId]?.savedCount || 0) + (current.savedIds.includes(topicId) ? -1 : 1),
+          ),
+          likedCount: current.analytics[topicId]?.likedCount || 0,
+          dislikedCount: current.analytics[topicId]?.dislikedCount || 0,
+          ignoredCount: current.analytics[topicId]?.ignoredCount || 0,
+          lastOpenedAt: current.analytics[topicId]?.lastOpenedAt,
+        },
+      },
+      interactions: [
+        {
+          topicId,
+          type: current.savedIds.includes(topicId) ? ("unsave" as const) : ("save" as const),
+          timestamp: Date.now(),
+        },
+        ...current.interactions,
+      ].slice(0, 120),
+    }));
+  };
+
+  const likeTopic = (topicId: string) => {
+    updateEngagement((current) => ({
+      ...current,
+      likedIds: current.likedIds.includes(topicId) ? current.likedIds.filter((id) => id !== topicId) : [...current.likedIds, topicId],
+      dislikedIds: current.dislikedIds.filter((id) => id !== topicId),
+      analytics: {
+        ...current.analytics,
+        [topicId]: {
+          openedCount: current.analytics[topicId]?.openedCount || 0,
+          savedCount: current.analytics[topicId]?.savedCount || 0,
+          likedCount: Math.max(0, (current.analytics[topicId]?.likedCount || 0) + (current.likedIds.includes(topicId) ? -1 : 1)),
+          dislikedCount: Math.max(0, (current.analytics[topicId]?.dislikedCount || 0) - (current.dislikedIds.includes(topicId) ? 1 : 0)),
+          ignoredCount: current.analytics[topicId]?.ignoredCount || 0,
+          lastOpenedAt: current.analytics[topicId]?.lastOpenedAt,
+        },
+      },
+      interactions: [
+        {
+          topicId,
+          type: current.likedIds.includes(topicId) ? ("unlike" as const) : ("like" as const),
+          timestamp: Date.now(),
+        },
+        ...current.interactions,
+      ].slice(0, 120),
+    }));
+  };
+
+  const dislikeTopic = (topicId: string) => {
+    updateEngagement((current) => ({
+      ...current,
+      dislikedIds: current.dislikedIds.includes(topicId)
+        ? current.dislikedIds.filter((id) => id !== topicId)
+        : [...current.dislikedIds, topicId],
+      likedIds: current.likedIds.filter((id) => id !== topicId),
+      analytics: {
+        ...current.analytics,
+        [topicId]: {
+          openedCount: current.analytics[topicId]?.openedCount || 0,
+          savedCount: current.analytics[topicId]?.savedCount || 0,
+          likedCount: Math.max(0, (current.analytics[topicId]?.likedCount || 0) - (current.likedIds.includes(topicId) ? 1 : 0)),
+          dislikedCount: Math.max(
+            0,
+            (current.analytics[topicId]?.dislikedCount || 0) + (current.dislikedIds.includes(topicId) ? -1 : 1),
+          ),
+          ignoredCount: (current.analytics[topicId]?.ignoredCount || 0) + (current.dislikedIds.includes(topicId) ? 0 : 1),
+          lastOpenedAt: current.analytics[topicId]?.lastOpenedAt,
+        },
+      },
+      interactions: [
+        {
+          topicId,
+          type: current.dislikedIds.includes(topicId) ? ("undislike" as const) : ("dislike" as const),
+          timestamp: Date.now(),
+        },
+        ...current.interactions,
+      ].slice(0, 120),
+    }));
+  };
 
   return (
-    <div className="min-h-screen bg-[#F5F0E6] flex">
+    <div className="min-h-screen bg-[#F3EFE7] text-[#1A1A1A] lg:flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
-      <main className="flex-1 flex flex-col min-h-screen">
-        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-          <div className="max-w-2xl mx-auto px-4 lg:px-6">
-            {/* SECTION 1: Personalized Topics */}
-            <section className="py-6 lg:py-8">
-              <motion.h2 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-lg lg:text-xl font-semibold text-[#1A1A1A] mb-4"
-              >
-                For You
-              </motion.h2>
-              {featuredTopics.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-[#5C5C5C]">No topics available. Complete onboarding to get personalized news.</p>
+
+      <main className="flex-1 pb-40 lg:pb-10">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-4 lg:px-6 lg:py-6">
+          <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6" id="dashboard-feed">
+            <div className="flex flex-col gap-4 border-b border-[#E8E1D3] pb-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                    Front Page
+                  </span>
+                  <span className="rounded-full bg-[#EFE7D8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
+                    {briefingFeedMeta.label}
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {featuredTopics.map((topic, index) => (
-                  <motion.button
-                    key={topic.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    onClick={() => selectTopic(topic)}
-                    className="w-full text-left bg-[#F5F0E6] border border-[#D4CFC4] hover:border-[#8B4513] rounded-2xl p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-[#F5F0E6] rounded-2xl flex items-center justify-center">
-                        <topic.icon size={24} className="text-[#1A1A1A]" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-[#5C5C5C] uppercase tracking-wide">{topic.category}</span>
-                          <span className="text-xs text-gray-300">•</span>
-                          <span className="text-xs text-[#5C5C5C]">{topic.time}</span>
-                        </div>
-                        <h3 className="font-semibold text-lg text-[#1A1A1A] mb-1">{topic.title}</h3>
-                        <p className="text-[#5C5C5C] text-sm">{topic.subtitle}</p>
-                      </div>
+                <div>
+                  <h1 className="text-2xl font-semibold leading-tight lg:text-3xl">A personalized business front page.</h1>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5C5C5C]">
+                    Open the biggest story first, scan two strong follow-ups, and keep the utility layer below so the newsroom reads like news, not a control panel.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => router.push("/chat")}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:shadow-lg transition-shadow"
+                >
+                  <MessageCircle size={15} />
+                  Ask AI
+                </button>
+                <button
+                  onClick={() => router.push("/topics")}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1A1A1A] px-4 py-2.5 text-sm font-medium text-white"
+                >
+                  Edit interests
+                  <ArrowRight size={15} />
+                </button>
+                <button
+                  onClick={() => router.push("/portfolio")}
+                  className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-4 py-2.5 text-sm font-medium text-[#1A1A1A]"
+                >
+                  Connect portfolio
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              {newsCategories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setBriefingFeedCategory(category.id)}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    briefingFeedCategory === category.id
+                      ? "bg-[#1A1A1A] text-white"
+                      : "border border-[#DDD4C4] bg-white text-[#5C5C5C]"
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
+              {leadTopic ? (
+                <article className="overflow-hidden rounded-[28px] border border-[#DDD4C4] bg-white shadow-sm">
+                  <button onClick={() => openTopic(leadTopic.id)} className="w-full text-left">
+                    <TopicVisual topic={leadTopic} />
+                  </button>
+
+                  <div className="space-y-4 p-5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                      <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 font-semibold text-[#8B4513]">{leadTopic.category}</span>
+                      <span>{leadTopic.time}</span>
+                      <span>{leadTopic.readTime}</span>
                     </div>
-                  </motion.button>
-                ))}
-              </div>
-              )}
-            </section>
 
-            {/* SECTION 2: Quick Insights */}
-            <section className="py-6 lg:py-8 border-t border-[#D4CFC4]">
-              <motion.h2 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-lg lg:text-xl font-semibold text-[#1A1A1A] mb-4"
-              >
-                Quick Insights
-              </motion.h2>
-              <div className="grid grid-cols-2 gap-3">
-                {insights.map((insight, i) => (
-                  <motion.button
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    onClick={() => selectTopic(topics[0] || null)}
-                    className="p-4 bg-[#F5F0E6] rounded-xl border border-[#D4CFC4] cursor-pointer hover:bg-amber-100 transition-colors duration-200 text-left"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap size={14} className="text-[#8B4513]" />
-                      <span className="text-xs text-[#8B4513] font-medium">{insight.type}</span>
+                    <div className="space-y-2">
+                      <button onClick={() => openTopic(leadTopic.id)} className="text-left">
+                        <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513]">{leadTopic.title}</h2>
+                      </button>
+                      <p className="text-sm leading-6 text-[#5C5C5C]">{leadTopic.summary}</p>
                     </div>
-                    <p className="text-sm font-medium text-[#1A1A1A]">{insight.title}</p>
-                  </motion.button>
-                ))}
-              </div>
-            </section>
 
-            {/* SECTION 3: Short-Form News Feed - Snap Scroll */}
-            <section className="py-6 border-t border-[#D4CFC4]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Briefing Feed</h2>
-                <span className="text-xs text-[#5C5C5C] flex items-center gap-1">
-                  <Clock size={12} />
-                  Updated just now
-                </span>
-              </div>
-              
-              {/* Snap Scroll Container - Mobile Full Width */}
-              <div className="relative -mx-4 lg:mx-0 px-4 lg:px-0">
-                <div className="flex lg:block overflow-x-auto lg:overflow-visible snap-x snap-mandatory scrollbar-hide gap-4 lg:gap-0">
-                  {shortNewsItems.map((news, index) => (
-                    <div 
-                      key={news.id}
-                      className="flex-shrink-0 w-full lg:w-[calc(100%-2rem)] mx-auto snap-center"
-                    >
-                      <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="bg-gradient-to-b from-gray-50 to-white border border-[#D4CFC4] rounded-2xl p-5 lg:p-6 shadow-sm"
-                      >
-                        {/* Card Header */}
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-xs text-[#5C5C5C]">{news.time}</span>
-                          <span className="px-2 py-1 bg-black text-white text-xs font-medium rounded-full">
-                            Brief
-                          </span>
-                        </div>
+                    <div className="rounded-[22px] bg-[#F8F3EB] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Why it matters now</p>
+                      <p className="mt-2 text-sm leading-6 text-[#1A1A1A]">{leadTopic.generalView}</p>
+                    </div>
 
-                        {/* Headline */}
-                        <h3 className="font-semibold text-xl lg:text-2xl mb-3 leading-tight">
-                          {news.headline}
-                        </h3>
-
-                        {/* Summary - Only Highlights */}
-                        <p className="text-gray-600 text-base leading-relaxed mb-6">
-                          {news.summary}
-                        </p>
-
-                        {/* CTA Button */}
-                        <button 
-                          onClick={() => selectTopic(topics[0])}
-                          className="w-full py-3 bg-black text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
+                    <div className="flex items-center justify-between border-t border-[#ECE5D8] pt-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            likeTopic(leadTopic.id);
+                          }}
+                          className={`rounded-full p-2 ${engagement.likedIds.includes(leadTopic.id) ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
                         >
-                          Open Full AI Brief
-                          <ArrowRight size={18} />
+                          <ThumbsUp size={15} />
                         </button>
-                      </motion.div>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            dislikeTopic(leadTopic.id);
+                          }}
+                          className={`rounded-full p-2 ${engagement.dislikedIds.includes(leadTopic.id) ? "bg-red-100 text-red-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                        >
+                          <ThumbsDown size={15} />
+                        </button>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleSave(leadTopic.id);
+                          }}
+                          className={`rounded-full p-2 ${engagement.savedIds.includes(leadTopic.id) ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                        >
+                          <Bookmark size={15} />
+                        </button>
+                      </div>
+
+                      <button onClick={() => openTopic(leadTopic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                        Open briefing
+                        <ArrowRight size={15} />
+                      </button>
                     </div>
-                  ))}
+                  </div>
+                </article>
+              ) : null}
+
+              <div className="grid gap-4">
+                <div className="rounded-[28px] border border-[#DDD4C4] bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Active lane</p>
+                      <h2 className="mt-2 text-lg font-semibold">{briefingFeedMeta.label}</h2>
+                      <p className="mt-1 text-sm leading-6 text-[#5C5C5C]">{briefingFeedMeta.description}</p>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/topics${briefingFeedCategory !== "general" ? `?category=${briefingFeedCategory}` : ""}`)}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF5] px-3 py-2 text-sm font-medium text-[#1A1A1A]"
+                    >
+                      See all
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Scroll Indicators - Only on Desktop */}
-                <div className="hidden lg:flex justify-center gap-2 mt-4">
-                  {shortNewsItems.map((_, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-gray-300" />
-                  ))}
+                {secondaryTopics.map((topic) => (
+                  <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
+                    <button onClick={() => openTopic(topic.id)} className="w-full text-left">
+                      <TopicVisual topic={topic} compact />
+                    </button>
+                    <div className="space-y-3 p-4">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                        <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
+                        <span>{topic.time}</span>
+                      </div>
+                      <button onClick={() => openTopic(topic.id)} className="text-left">
+                        <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h3>
+                      </button>
+                      <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
+                      <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                        Open briefing
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 rounded-[26px] border border-[#E8E1D3] bg-white p-3 md:grid-cols-4 md:p-4">
+              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Portfolio-linked</p>
+                <p className="mt-2 text-2xl font-semibold">{portfolioTopics.length}</p>
+                <p className="mt-1 text-xs text-[#5C5C5C]">Stories directly tied to your tracked assets.</p>
+              </div>
+              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Unread</p>
+                <p className="mt-2 text-2xl font-semibold">{engagement.unreadIds.length}</p>
+                <p className="mt-1 text-xs text-[#5C5C5C]">Stories still waiting in your reading queue.</p>
+              </div>
+              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Saved</p>
+                <p className="mt-2 text-2xl font-semibold">{engagement.savedIds.length}</p>
+                <p className="mt-1 text-xs text-[#5C5C5C]">Stories held back for deeper reading later.</p>
+              </div>
+              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Top interest</p>
+                <p className="mt-2 text-xl font-semibold capitalize">{topInterest}</p>
+                <p className="mt-1 text-xs text-[#5C5C5C]">The strongest lens shaping your front page.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[32px] border border-[#D9CFBE] bg-[#EDE4D4] p-4 shadow-sm lg:p-6">
+            <div className="flex flex-col gap-2 border-b border-[#D9CFBE] pb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8B4513]">Workbench</p>
+              <h2 className="text-2xl font-semibold">Your reading tools and memory live below the front page.</h2>
+              <p className="text-sm leading-6 text-[#5C5C5C]">
+                Keep the top of the dashboard editorial. Use the workbench to manage what you opened, saved, liked, and what matters to your portfolio.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-[#ECE5D8] pb-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Reading list</p>
+                    <h3 className="mt-2 text-xl font-semibold">{readingListMeta[readingListFilter].label}</h3>
+                    <p className="mt-1 text-sm text-[#5C5C5C]">{readingListMeta[readingListFilter].empty}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ["unread", "Unread"],
+                      ["saved", "Saved"],
+                      ["liked", "Liked"],
+                      ["portfolio", "Portfolio-related"],
+                    ] as const).map(([filterId, label]) => (
+                      <button
+                        key={filterId}
+                        onClick={() => setReadingListFilter(filterId)}
+                        className={`rounded-full px-3 py-2 text-sm font-medium ${
+                          readingListFilter === filterId ? "bg-[#1A1A1A] text-white" : "border border-[#DDD4C4] bg-[#FCFAF6] text-[#5C5C5C]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {readingListTopics.length > 0 ? (
+                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {readingListTopics.map((topic) => (
+                      <article key={`${readingListFilter}-${topic.id}`} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
+                        <button onClick={() => openTopic(topic.id)} className="w-full text-left">
+                          <TopicVisual topic={topic} compact />
+                        </button>
+                        <div className="space-y-3 p-4">
+                          <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
+                            <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
+                            <span>{topic.time}</span>
+                          </div>
+                          <button onClick={() => openTopic(topic.id)} className="text-left">
+                            <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h4>
+                          </button>
+                          <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
+                          <div className="flex items-center justify-between">
+                            <button onClick={() => toggleSave(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                              <Bookmark size={14} />
+                              {engagement.savedIds.includes(topic.id) ? "Saved" : "Save"}
+                            </button>
+                            <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#1A1A1A]">
+                              Open
+                              <ArrowRight size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-[22px] bg-[#F8F3EB] p-4">
+                    <p className="text-sm leading-6 text-[#5C5C5C]">{readingListMeta[readingListFilter].empty}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Portfolio radar</p>
+                      <h3 className="mt-2 text-lg font-semibold">Where your holdings meet the news.</h3>
+                    </div>
+                    <button
+                      onClick={() => router.push("/portfolio")}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF6] px-3 py-2 text-sm font-medium text-[#1A1A1A]"
+                    >
+                      Open portfolio
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {portfolioRadar.length > 0 ? (
+                      portfolioRadar.map(({ asset, assessment }) => (
+                        <button
+                          key={asset.id}
+                          onClick={() => router.push(`/briefing/${assessment.topic.id}`)}
+                          className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-left hover:border-[#8B4513]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{asset.name}</p>
+                              <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#5C5C5C]">{asset.symbol}</p>
+                            </div>
+                            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
+                              {assessment.confidence} confidence
+                            </span>
+                          </div>
+                          <p className="mt-3 text-sm font-medium text-[#1A1A1A]">{assessment.topic.title}</p>
+                          <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">{assessment.rationale}</p>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-sm leading-6 text-[#5C5C5C]">
+                        Connect assets in portfolio and the dashboard will pull the most relevant mapped stories into this radar.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <History size={16} className="text-[#8B4513]" />
+                    <h3 className="text-lg font-semibold">Previously Opened</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {recentTopics.length > 0 ? (
+                      recentTopics.map((topic) => (
+                        <button
+                          key={topic.id}
+                          onClick={() => openTopic(topic.id)}
+                          className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-3 text-left hover:border-[#8B4513]"
+                        >
+                          <p className="text-sm font-semibold">{topic.title}</p>
+                          <p className="mt-1 text-xs text-[#5C5C5C]">
+                            {topic.category} • {topic.time}
+                          </p>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-sm leading-6 text-[#5C5C5C]">
+                        Open a story once and it stays here so you can return without searching the feed again.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Mobile: Tap to read more hint */}
-              <p className="lg:hidden text-center text-xs text-[#5C5C5C] mt-4">
-                Swipe up for more
-              </p>
-            </section>
-          </div>
+              <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center gap-2">
+                  <Layers3 size={16} className="text-[#8B4513]" />
+                  <h3 className="text-lg font-semibold">Saved Queue</h3>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {savedTopics.length > 0 ? (
+                    savedTopics.slice(0, 3).map((topic) => (
+                      <button
+                        key={topic.id}
+                        onClick={() => openTopic(topic.id)}
+                        className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-left hover:border-[#8B4513]"
+                      >
+                        <p className="text-sm font-semibold">{topic.title}</p>
+                        <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm leading-6 text-[#5C5C5C] md:col-span-3">
+                      Saved stories stay here for later reading while the front page stays editorial and uncluttered.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
-      <aside className="hidden lg:block w-80 flex-shrink-0 border-l border-[#D4CFC4] p-6 space-y-6">
-        <div>
-          <h3 className="font-semibold mb-4">Your Insights</h3>
-          <div className="space-y-3">
-            {insights.map((insight, i) => (
-              <div key={i} className="p-4 bg-[#F5F0E6] rounded-xl border border-[#D4CFC4]">
-                <div className="flex items-center gap-2 mb-1">
-                  <Star size={14} className="text-[#8B4513]" />
-                  <span className="text-xs text-[#8B4513] font-medium">{insight.type}</span>
-                </div>
-                <p className="text-sm font-medium">{insight.title}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-4">Sources</h3>
-          <div className="space-y-2">
-            {sources.map((source, i) => (
-              <button key={i} onClick={() => window.open(`https://${source.url}`, '_blank')} className="w-full flex items-center justify-between p-3 hover:bg-[#F5F0E6] rounded-xl cursor-pointer">
-                <div>
-                  <p className="text-sm font-medium">{source.name}</p>
-                  <p className="text-xs text-[#5C5C5C]">{source.url}</p>
-                </div>
-                <ExternalLink size={14} className="text-[#5C5C5C]" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
-      <BottomNav activeNav={activeNav} onNavChange={(nav) => { setActiveNav(nav); selectTopic(null); }} />
+
+      <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
     </div>
   );
 }
