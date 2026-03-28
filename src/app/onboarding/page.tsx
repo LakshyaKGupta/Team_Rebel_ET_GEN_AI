@@ -17,10 +17,18 @@ import {
   Clock,
   BellOff,
   ArrowRight,
-  Check
+  ArrowLeft,
+  Check,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  SkipForward,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { UserType, Interest, Goal, NotificationPref } from "@/lib/types";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const userTypes = [
   { id: "investor" as const, label: "Investor", icon: TrendingUp, desc: "Track markets & portfolio" },
@@ -51,9 +59,19 @@ const notificationPrefs = [
   { id: "none" as const, label: "No notifications", icon: BellOff, desc: "Manual check" },
 ];
 
+type AuthMode = "signup" | "login";
+
 export default function Onboarding() {
-  const [step, setStep] = useState(1);
-  const { setUserType, setSelectedInterests, setGoal, setNotificationPref, completeOnboarding } = useUser();
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [authMode, setAuthMode] = useState<AuthMode>("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { setUserType, setSelectedInterests, setGoal, setNotificationPref, completeOnboarding, preferences } = useUser();
   
   const [userType, setLocalUserType] = useState<UserType>(null);
   const [selectedInterests, setSelectedInterestsLocal] = useState<Interest[]>([]);
@@ -76,6 +94,45 @@ export default function Onboarding() {
     return true;
   };
 
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsLoading(true);
+
+    if (!email || !password) {
+      setAuthError("Please enter email and password");
+      setIsLoading(false);
+      return;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const users = JSON.parse(localStorage.getItem("myet_users") || "[]");
+    
+    if (authMode === "signup") {
+      if (users.find((u: any) => u.email === email)) {
+        setAuthError("Email already exists");
+        setIsLoading(false);
+        return;
+      }
+      const newUser = { email, password, createdAt: new Date().toISOString() };
+      users.push(newUser);
+      localStorage.setItem("myet_users", JSON.stringify(users));
+      localStorage.setItem("myet_current_user", email);
+    } else {
+      const user = users.find((u: any) => u.email === email && u.password === password);
+      if (!user) {
+        setAuthError("Invalid email or password");
+        setIsLoading(false);
+        return;
+      }
+      localStorage.setItem("myet_current_user", email);
+    }
+
+    setIsLoading(false);
+    setStep(1);
+  };
+
   const handleContinue = () => {
     if (step === 1) setUserType(userType);
     if (step === 2) setSelectedInterests(selectedInterests);
@@ -86,6 +143,24 @@ export default function Onboarding() {
       setStep(s => s + 1);
     } else {
       completeOnboarding();
+      router.push("/dashboard");
+    }
+  };
+
+  const handleSkip = () => {
+    setUserType("exploring");
+    setSelectedInterests(["stocks", "economy"]);
+    setGoal("stay_updated");
+    setNotificationPref("key_only");
+    completeOnboarding();
+    router.push("/dashboard");
+  };
+
+  const handleBack = () => {
+    if (step === 1) {
+      setStep(0);
+    } else {
+      setStep(s => s - 1);
     }
   };
 
@@ -102,6 +177,116 @@ export default function Onboarding() {
     return { title: "Today's Top Stories", subtitle: "Curated for you", topic: "General" };
   };
 
+  if (step === 0) {
+    return (
+      <div className="min-h-screen bg-[#080B14] flex flex-col">
+        <div className="pt-6 px-6">
+          <Link href="/" className="text-[#7E8BA3] hover:text-white transition-colors text-sm flex items-center gap-2">
+            <ArrowLeft size={16} /> Back to home
+          </Link>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-md mx-auto w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8"
+          >
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                {authMode === "signup" ? "Create your account" : "Welcome back"}
+              </h1>
+              <p className="text-[#7E8BA3]">
+                {authMode === "signup" ? "Start your personalized newsroom" : "Sign in to continue"}
+              </p>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="text-sm text-[#7E8BA3] mb-2 block">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E8BA3]" size={18} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/[0.07] border border-white/[0.07] text-white placeholder-[#7E8BA3] focus:outline-none focus:border-[#E8501A] transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-[#7E8BA3] mb-2 block">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E8BA3]" size={18} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-11 pr-12 py-3 rounded-xl bg-white/[0.07] border border-white/[0.07] text-white placeholder-[#7E8BA3] focus:outline-none focus:border-[#E8501A] transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7E8BA3] hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {authError && (
+                <p className="text-red-400 text-sm">{authError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white transition-all hover:opacity-90 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    {authMode === "signup" ? "Create Account" : "Sign In"}
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="text-center">
+              <p className="text-[#7E8BA3]">
+                {authMode === "signup" ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button
+                  onClick={() => {
+                    setAuthMode(authMode === "signup" ? "login" : "signup");
+                    setAuthError("");
+                  }}
+                  className="text-[#E8501A] hover:underline"
+                >
+                  {authMode === "signup" ? "Sign in" : "Sign up"}
+                </button>
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.07]">
+              <button
+                onClick={handleSkip}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium border border-white/[0.07] text-[#7E8BA3] hover:text-white hover:border-white/20 transition-all"
+              >
+                <SkipForward size={18} />
+                Continue without account
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#080B14] flex flex-col">
       <div className="fixed top-0 left-0 right-0 h-1 bg-[#0D1220] z-50">
@@ -113,8 +298,15 @@ export default function Onboarding() {
         />
       </div>
 
-      <div className="pt-6 px-6">
-        <p className="text-sm text-[#7E8BA3] text-center">Step {step} of 4</p>
+      <div className="pt-4 px-4 flex justify-between items-center">
+        <button 
+          onClick={handleBack}
+          className="text-[#7E8BA3] hover:text-white transition-colors flex items-center gap-2"
+        >
+          <ArrowLeft size={18} />
+          Back
+        </button>
+        <p className="text-sm text-[#7E8BA3]">Step {step} of 4</p>
       </div>
 
       <div className="flex-1 flex flex-col justify-center px-6 py-8 max-w-lg mx-auto w-full">
@@ -128,8 +320,8 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight text-white">Let&apos;s personalize your experience</h1>
-                <p className="text-[#7E8BA3] text-lg">This takes less than 30 seconds</p>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">Who are you?</h1>
+                <p className="text-[#7E8BA3] text-lg">This helps us personalize your news</p>
               </div>
 
               <div className="space-y-3">
@@ -156,6 +348,13 @@ export default function Onboarding() {
                   </button>
                 ))}
               </div>
+
+              <button
+                onClick={handleSkip}
+                className="w-full text-center text-[#7E8BA3] hover:text-white transition-colors text-sm py-2"
+              >
+                Skip this step
+              </button>
             </motion.div>
           )}
 
@@ -169,6 +368,7 @@ export default function Onboarding() {
             >
               <div className="space-y-2">
                 <h1 className="text-3xl font-semibold tracking-tight text-white">What do you care about?</h1>
+                <p className="text-[#7E8BA3]">Select at least one</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -261,26 +461,18 @@ export default function Onboarding() {
           )}
         </AnimatePresence>
 
-        {step < 4 && (
-          <div className="mt-8 flex justify-between items-center">
-            {step > 1 && (
-              <button 
-                onClick={() => setStep(s => s - 1)}
-                className="text-[#7E8BA3] hover:text-white transition-colors"
-              >
-                Back
-              </button>
-            )}
+        {step > 0 && (
+          <div className="mt-8">
             <button
               onClick={handleContinue}
               disabled={!canProceed()}
-              className={`ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+              className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-medium transition-all ${
                 canProceed() 
                   ? "bg-gradient-to-r from-[#E8501A] to-[#F0A500] text-white" 
                   : "bg-white/[0.07] text-[#7E8BA3] cursor-not-allowed"
               }`}
             >
-              Continue
+              {step === 4 ? "Get Started" : "Continue"}
               <ArrowRight size={18} />
             </button>
           </div>
