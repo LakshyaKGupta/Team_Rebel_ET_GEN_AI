@@ -6,3 +6,4 @@ export { default as UseCasesSection } from "./UseCasesSection";
 export { default as CTASection } from "./CTASection";
 export { default as Footer } from "./Footer";
 export { default as BackgroundEffects } from "./BackgroundEffects";
+export { default as LandingPage } from "./LandingPage";
