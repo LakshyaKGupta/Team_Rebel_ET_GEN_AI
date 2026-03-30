@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { UserPreferences } from './UserContext';
 
 export interface ChatMessage {
   id: string;
@@ -13,7 +14,7 @@ interface ChatContextType {
   messages: ChatMessage[];
   loading: boolean;
   error: string | null;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, userPreferences?: UserPreferences) => Promise<void>;
   clearChat: () => void;
 }
 
@@ -24,7 +25,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, userPreferences?: UserPreferences) => {
     setError(null);
     setLoading(true);
 
@@ -39,10 +40,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setMessages((prev) => [...prev, userMessage]);
 
     try {
-      // Get user profile from localStorage or context
-      const userProfileStr = localStorage.getItem('userProfile') || '{}';
-      const userProfile = JSON.parse(userProfileStr);
-
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,7 +50,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               role: msg.role,
               content: msg.content,
             })),
-          userProfile,
+          userProfile: userPreferences || {},
         }),
       });
 

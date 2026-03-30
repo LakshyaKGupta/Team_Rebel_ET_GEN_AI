@@ -2,10 +2,12 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { useChat } from '@/context/ChatContext';
+import { useUser } from '@/context/UserContext';
 import { MessageCircle, Send, X, Loader } from 'lucide-react';
 
 export function ChatBotWidget() {
   const { messages, loading, error, sendMessage, clearChat } = useChat();
+  const { preferences } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -31,7 +33,9 @@ export function ChatBotWidget() {
 
     const userInput = input;
     setInput('');
-    await sendMessage(userInput);
+    
+    // Pass user preferences to the chat
+    await sendMessage(userInput, preferences);
   };
 
   const handleClear = () => {
@@ -59,7 +63,10 @@ export function ChatBotWidget() {
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-t-2xl flex justify-between items-center">
             <div className="flex items-center gap-2">
               <MessageCircle size={20} />
-              <h3 className="font-semibold">News Assistant</h3>
+              <div>
+                <h3 className="font-semibold">News Assistant</h3>
+                <p className="text-xs opacity-90">Powered by AI</p>
+              </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -76,8 +83,12 @@ export function ChatBotWidget() {
               <div className="h-full flex items-center justify-center text-center">
                 <div>
                   <MessageCircle size={40} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-600 mb-2">Ask me about news, markets, or investments</p>
-                  <p className="text-sm text-gray-500">Personalized for your profile</p>
+                  <p className="text-gray-600 mb-2 font-medium">Ask me about news & markets</p>
+                  <p className="text-sm text-gray-500">
+                    {preferences?.selectedInterests?.length > 0 
+                      ? `Your interests: ${preferences.selectedInterests.join(', ')}`
+                      : 'Personalized for your profile'}
+                  </p>
                 </div>
               </div>
             )}
@@ -134,7 +145,7 @@ export function ChatBotWidget() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask a question..."
+                placeholder="Ask about news, markets..."
                 disabled={loading}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-gray-100"
               />
