@@ -11,6 +11,7 @@ import {
   MessageCircle,
   ThumbsDown,
   ThumbsUp,
+  RefreshCw,
 } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
@@ -28,12 +29,25 @@ import { DemoEngagementState, markTopicsUnread, pushRecentTopic, readPortfolioAs
 
 type ReadingListFilter = "saved" | "liked" | "portfolio" | "unread";
 
+interface LiveNewsArticle {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  date: string;
+  image?: string;
+  category?: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { preferences } = useUser();
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
   const [briefingFeedCategory, setBriefingFeedCategory] = useState("general");
   const [readingListFilter, setReadingListFilter] = useState<ReadingListFilter>("unread");
+  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
+  const [liveNewsLoading, setLiveNewsLoading] = useState(true);
   const [engagement, setEngagement] = useState<DemoEngagementState>({
     savedIds: [],
     likedIds: [],
@@ -139,6 +153,97 @@ export default function DashboardPage() {
     router.prefetch("/portfolio");
     router.prefetch("/dashboard");
   }, [router]);
+
+  const categoryTopicMap: Record<string, string> = {
+    general: "", // Will be personalized based on interests
+    markets: "stock market Sensex Nifty BSE trading shares",
+    economy: "economy GDP inflation RBI interest rate budget fiscal",
+    tech: "tech AI technology startup software digital",
+    startups: "startup funding venture unicorn investment",
+    banking: "bank loan credit NBFC finance",
+  };
+
+  const getSearchQuery = (): string => {
+    if (briefingFeedCategory === "general") {
+      if (selectedInterests.length > 0) {
+        return selectedInterests.slice(0, 3).join(" OR ");
+      }
+      return "business finance economy";
+    }
+    return categoryTopicMap[briefingFeedCategory] || briefingFeedCategory;
+  };
+
+  useEffect(() => {
+    const fetchLiveNews = async () => {
+      setLiveNewsLoading(true);
+      try {
+        const query = getSearchQuery();
+        const res = await fetch(`/api/news?topic=${encodeURIComponent(query)}&category=${briefingFeedCategory}`);
+        const data = await res.json();
+        console.log("News API response:", data);
+        if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
+          const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
+            ...article,
+            id: `live-${index}-${Date.now()}`,
+          }));
+          setLiveNews(articlesWithIds);
+          localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
+        } else {
+          console.log("No articles found, data:", data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch live news:", error);
+      } finally {
+        setLiveNewsLoading(false);
+      }
+    };
+    fetchLiveNews();
+  }, [briefingFeedCategory, selectedInterests]);
+
+  // Auto-refresh news every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const fetchNewNews = async () => {
+        try {
+          const query = getSearchQuery();
+          const res = await fetch(`/api/news?topic=${encodeURIComponent(query)}&category=${briefingFeedCategory}`);
+          const data = await res.json();
+          if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
+            const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
+              ...article,
+              id: `live-${index}-${Date.now()}`,
+            }));
+            setLiveNews(articlesWithIds);
+          }
+        } catch (error) {
+          console.error("Auto-refresh failed:", error);
+        }
+      };
+      fetchNewNews();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [briefingFeedCategory, selectedInterests]);
+
+  const refreshNews = async () => {
+    setLiveNewsLoading(true);
+    try {
+      const query = getSearchQuery();
+      const res = await fetch(`/api/news?topic=${encodeURIComponent(query)}&category=${briefingFeedCategory}`);
+      const data = await res.json();
+      if (data.articles && Array.isArray(data.articles)) {
+        const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
+          ...article,
+          id: `live-${index}-${Date.now()}`,
+        }));
+        setLiveNews(articlesWithIds);
+        localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
+      }
+    } catch (error) {
+      console.error("Failed to refresh news:", error);
+    } finally {
+      setLiveNewsLoading(false);
+    }
+  };
 
   useEffect(() => {
     briefingFeedTopics.forEach((topic) => {
@@ -277,6 +382,14 @@ export default function DashboardPage() {
 
               <div className="flex flex-wrap gap-3">
                 <button
+                  onClick={refreshNews}
+                  disabled={liveNewsLoading}
+                  className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-4 py-2.5 text-sm font-medium text-[#1A1A1A] disabled:opacity-50"
+                >
+                  <RefreshCw size={15} className={liveNewsLoading ? "animate-spin" : ""} />
+                  Refresh
+                </button>
+                <button
                   onClick={() => router.push("/chat")}
                   className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:shadow-lg transition-shadow"
                 >
@@ -317,7 +430,61 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
-              {leadTopic ? (
+              {liveNewsLoading ? (
+                <div className="flex items-center justify-center rounded-[28px] border border-[#DDD4C4] bg-white p-12">
+                  <RefreshCw size={32} className="animate-spin text-[#8B4513]" />
+                </div>
+              ) : liveNews[0] ? (
+                <article className="overflow-hidden rounded-[28px] border border-[#DDD4C4] bg-white shadow-sm">
+                  <div className="h-64 w-full overflow-hidden bg-gray-100">
+                    {liveNews[0].image ? (
+                      <img src={liveNews[0].image} alt={liveNews[0].title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-gray-400">
+                        <span className="text-sm">No image available</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4 p-5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                      <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 font-semibold text-[#8B4513]">{liveNews[0].source}</span>
+                      <span>{liveNews[0].date}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <button onClick={() => router.push(`/briefing/${liveNews[0].id}`)} className="text-left">
+                        <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513]">{liveNews[0].title}</h2>
+                      </button>
+                      <p className="text-sm leading-6 text-[#5C5C5C]">{liveNews[0].summary}</p>
+                    </div>
+
+                    <button
+                      onClick={() => router.push(`/briefing/${liveNews[0].id}`)}
+                      className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]"
+                    >
+                      Open full briefing
+                      <ArrowRight size={15} />
+                    </button>
+
+                    <div className="flex items-center justify-between border-t border-[#ECE5D8] pt-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => refreshNews()}
+                          className="rounded-full bg-[#F5F0E6] p-2 text-[#5C5C5C]"
+                        >
+                          <RefreshCw size={15} />
+                        </button>
+                      </div>
+
+                      <button onClick={refreshNews} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                        Get new story
+                        <RefreshCw size={15} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ) : leadTopic ? (
                 <article className="overflow-hidden rounded-[28px] border border-[#DDD4C4] bg-white shadow-sm">
                   <button onClick={() => openTopic(leadTopic.id)} className="w-full text-left">
                     <TopicVisual topic={leadTopic} />
@@ -386,41 +553,76 @@ export default function DashboardPage() {
                 <div className="rounded-[28px] border border-[#DDD4C4] bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Active lane</p>
-                      <h2 className="mt-2 text-lg font-semibold">{briefingFeedMeta.label}</h2>
-                      <p className="mt-1 text-sm leading-6 text-[#5C5C5C]">{briefingFeedMeta.description}</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Live News</p>
+                      <h2 className="mt-2 text-lg font-semibold">Latest Headlines</h2>
+                      <p className="mt-1 text-sm leading-6 text-[#5C5C5C]">Real-time business news powered by NewsAPI</p>
                     </div>
                     <button
-                      onClick={() => router.push(`/topics${briefingFeedCategory !== "general" ? `?category=${briefingFeedCategory}` : ""}`)}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF5] px-3 py-2 text-sm font-medium text-[#1A1A1A]"
+                      onClick={refreshNews}
+                      disabled={liveNewsLoading}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF5] px-3 py-2 text-sm font-medium text-[#1A1A1A] disabled:opacity-50"
                     >
-                      See all
-                      <ChevronRight size={15} />
+                      <RefreshCw size={15} className={liveNewsLoading ? "animate-spin" : ""} />
+                      Refresh
                     </button>
                   </div>
                 </div>
 
-                {secondaryTopics.map((topic) => (
-                  <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
-                    <button onClick={() => openTopic(topic.id)} className="w-full text-left">
-                      <TopicVisual topic={topic} compact />
-                    </button>
-                    <div className="space-y-3 p-4">
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                        <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
-                        <span>{topic.time}</span>
+                {liveNewsLoading ? (
+                  <div className="flex items-center justify-center rounded-[24px] border border-[#DDD4C4] bg-white p-8">
+                    <RefreshCw size={24} className="animate-spin text-[#8B4513]" />
+                  </div>
+                ) : liveNews.length > 1 ? (
+                  liveNews.slice(1, 4).map((article, index) => (
+                    <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
+                      <div className="h-32 w-full overflow-hidden bg-gray-100">
+                        {article.image ? (
+                          <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-400">
+                            <span className="text-sm">No image</span>
+                          </div>
+                        )}
                       </div>
-                      <button onClick={() => openTopic(topic.id)} className="text-left">
-                        <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h3>
+                      <div className="space-y-3 p-4">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                          <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
+                          <span>{article.date}</span>
+                        </div>
+                        <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
+                          <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{article.title}</h3>
+                        </button>
+                        <p className="text-sm leading-6 text-[#5C5C5C]">{article.summary}</p>
+                        <button onClick={() => router.push(`/briefing/${article.id}`)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                          Open briefing
+                          <ArrowRight size={15} />
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  secondaryTopics.map((topic) => (
+                    <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
+                      <button onClick={() => openTopic(topic.id)} className="w-full text-left">
+                        <TopicVisual topic={topic} compact />
                       </button>
-                      <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
-                      <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                        Open briefing
-                        <ArrowRight size={15} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                      <div className="space-y-3 p-4">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                          <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
+                          <span>{topic.time}</span>
+                        </div>
+                        <button onClick={() => openTopic(topic.id)} className="text-left">
+                          <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h3>
+                        </button>
+                        <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
+                        <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                          Open briefing
+                          <ArrowRight size={15} />
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </div>
             <div className="mt-5 grid gap-3 rounded-[26px] border border-[#E8E1D3] bg-white p-3 md:grid-cols-4 md:p-4">
@@ -447,6 +649,75 @@ export default function DashboardPage() {
             </div>
           </section>
 
+          <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6">
+            <div className="flex flex-col gap-2 border-b border-[#E8E1D3] pb-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                    In-Depth Briefings
+                  </span>
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold">Featured Stories with Full Analysis</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5C5C5C]">
+                  These stories include story arcs, impact analysis for different user types (students, founders, investors), sources, and key takeaways. Click to open the full briefing.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push("/topics")}
+                className="inline-flex items-center gap-2 rounded-full bg-[#1A1A1A] px-4 py-2.5 text-sm font-medium text-white"
+              >
+                View all topics
+                <ArrowRight size={15} />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {rankedTopics.slice(0, 6).map((topic) => (
+                <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
+                  <button onClick={() => openTopic(topic.id)} className="w-full text-left">
+                    <TopicVisual topic={topic} compact />
+                  </button>
+                  <div className="space-y-3 p-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                      <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
+                      <span>{topic.time}</span>
+                    </div>
+                    <button onClick={() => openTopic(topic.id)} className="text-left">
+                      <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h3>
+                    </button>
+                    <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            likeTopic(topic.id);
+                          }}
+                          className={`rounded-full p-2 ${engagement.likedIds.includes(topic.id) ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                        >
+                          <ThumbsUp size={14} />
+                        </button>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleSave(topic.id);
+                          }}
+                          className={`rounded-full p-2 ${engagement.savedIds.includes(topic.id) ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                        >
+                          <Bookmark size={14} />
+                        </button>
+                      </div>
+                      <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                        Open briefing
+                        <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <section className="rounded-[32px] border border-[#D9CFBE] bg-[#EDE4D4] p-4 shadow-sm lg:p-6">
             <div className="flex flex-col gap-2 border-b border-[#D9CFBE] pb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8B4513]">Workbench</p>
@@ -460,63 +731,53 @@ export default function DashboardPage() {
               <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-3 border-b border-[#ECE5D8] pb-4 lg:flex-row lg:items-end lg:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Reading list</p>
-                    <h3 className="mt-2 text-xl font-semibold">{readingListMeta[readingListFilter].label}</h3>
-                    <p className="mt-1 text-sm text-[#5C5C5C]">{readingListMeta[readingListFilter].empty}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">More Headlines</p>
+                    <h3 className="mt-2 text-xl font-semibold">Latest News</h3>
+                    <p className="mt-1 text-sm text-[#5C5C5C]">Stay updated with the latest business news</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {([
-                      ["unread", "Unread"],
-                      ["saved", "Saved"],
-                      ["liked", "Liked"],
-                      ["portfolio", "Portfolio-related"],
-                    ] as const).map(([filterId, label]) => (
-                      <button
-                        key={filterId}
-                        onClick={() => setReadingListFilter(filterId)}
-                        className={`rounded-full px-3 py-2 text-sm font-medium ${
-                          readingListFilter === filterId ? "bg-[#1A1A1A] text-white" : "border border-[#DDD4C4] bg-[#FCFAF6] text-[#5C5C5C]"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    onClick={refreshNews}
+                    disabled={liveNewsLoading}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-[#FCFAF6] px-4 py-2 text-sm font-medium text-[#1A1A1A] disabled:opacity-50"
+                  >
+                    <RefreshCw size={15} className={liveNewsLoading ? "animate-spin" : ""} />
+                    Load more
+                  </button>
                 </div>
 
-                {readingListTopics.length > 0 ? (
+                {liveNewsLoading ? (
+                  <div className="mt-4 flex items-center justify-center py-8">
+                    <RefreshCw size={24} className="animate-spin text-[#8B4513]" />
+                  </div>
+                ) : liveNews.length > 0 ? (
                   <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {readingListTopics.map((topic) => (
-                      <article key={`${readingListFilter}-${topic.id}`} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
-                        <button onClick={() => openTopic(topic.id)} className="w-full text-left">
-                          <TopicVisual topic={topic} compact />
-                        </button>
+                    {liveNews.slice(0, 8).map((article, index) => (
+                      <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
+                        <div className="h-36 w-full overflow-hidden bg-gray-100">
+                          {article.image ? (
+                            <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-gray-400">
+                              <span className="text-sm">No image</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="space-y-3 p-4">
                           <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
-                            <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
-                            <span>{topic.time}</span>
+                            <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
+                            <span>{article.date}</span>
                           </div>
-                          <button onClick={() => openTopic(topic.id)} className="text-left">
-                            <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h4>
+                          <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
+                            <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title}</h4>
                           </button>
-                          <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
-                          <div className="flex items-center justify-between">
-                            <button onClick={() => toggleSave(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                              <Bookmark size={14} />
-                              {engagement.savedIds.includes(topic.id) ? "Saved" : "Save"}
-                            </button>
-                            <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#1A1A1A]">
-                              Open
-                              <ArrowRight size={14} />
-                            </button>
-                          </div>
+                          <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary}</p>
                         </div>
                       </article>
                     ))}
                   </div>
                 ) : (
                   <div className="mt-4 rounded-[22px] bg-[#F8F3EB] p-4">
-                    <p className="text-sm leading-6 text-[#5C5C5C]">{readingListMeta[readingListFilter].empty}</p>
+                    <p className="text-sm leading-6 text-[#5C5C5C]">No news available. Click load more to refresh.</p>
                   </div>
                 )}
               </div>

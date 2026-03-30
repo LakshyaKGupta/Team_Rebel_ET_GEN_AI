@@ -29,7 +29,7 @@ import {
   writeCachedBriefing,
   writeDemoEngagementState,
 } from "@/lib/demo-state";
-import { BriefingMode } from "@/lib/types";
+import { BriefingMode, StoryArcPhase, StoryArcPlayer, StoryArcUpdate, StoryArcEntity, StoryArcPrediction, StoryArcSentimentDriver, StoryArcSentimentPoint, StoryArcScenario, StoryArcContrarian } from "@/lib/types";
 
 type WorkspaceTab = "overview" | "personal" | "story_arc" | "sources";
 
@@ -157,6 +157,9 @@ export default function BriefingDetailPage() {
   const [isPersonalLoading, setIsPersonalLoading] = useState(false);
   const [personalError, setPersonalError] = useState<string | null>(null);
   const [portfolioAssets, setPortfolioAssets] = useState(starterPortfolioAssets);
+  const [liveBriefing, setLiveBriefing] = useState<any>(null);
+  const [isLiveLoading, setIsLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
 
   const topicId = params.id as string;
   const userType = preferences.userType || "exploring";
@@ -170,7 +173,25 @@ export default function BriefingDetailPage() {
         .filter(({ assessment }) => assessment.topic.id === topicId),
     [portfolioAssets, topicId, topics],
   );
-  const storyArc = topic?.storyArc;
+  const effectiveTopic = topic || (liveBriefing ? {
+    id: liveBriefing.id,
+    title: liveBriefing.title,
+    subtitle: liveBriefing.subtitle,
+    summary: liveBriefing.summary,
+    generalView: liveBriefing.generalView,
+    explainSimply: liveBriefing.explainSimply,
+    keyTakeaways: liveBriefing.keyTakeaways,
+    impactByUserType: liveBriefing.impactByUserType,
+    category: liveBriefing.category || "business",
+    time: liveBriefing.time,
+    readTime: liveBriefing.readTime,
+    image: { gradient: "", alt: "" },
+    sources: liveBriefing.sources || [],
+    storyArc: liveBriefing.storyArc,
+    isLiveNews: true,
+  } : null);
+
+  const storyArc = effectiveTopic?.storyArc;
   const recentTopics = useMemo(
     () => getRecentTopicCards(recentTopicIds.filter((id) => id !== topicId), userType).slice(0, 3),
     [recentTopicIds, topicId, userType],
@@ -190,6 +211,9 @@ export default function BriefingDetailPage() {
     return null;
   }, [storyArc]);
   const sourceAgreementSummary = useMemo(() => {
+    if (effectiveTopic?.isLiveNews) {
+      return "Primary source from original article.";
+    }
     if (!topic) {
       return "Sources are not available for this story.";
     }
@@ -222,6 +246,56 @@ export default function BriefingDetailPage() {
     setLikedIds(current.likedIds);
     setDislikedIds(current.dislikedIds);
     setRecentTopicIds(current.recentTopicIds);
+
+    if (topicId.startsWith("live-")) {
+      const cachedLive = localStorage.getItem(`live-briefing-${topicId}`);
+      if (cachedLive) {
+        setLiveBriefing(JSON.parse(cachedLive));
+        return;
+      }
+
+      const storedNews = localStorage.getItem("last-live-news");
+      if (storedNews) {
+        const newsArticles = JSON.parse(storedNews);
+        const article = newsArticles.find((a: any) => a.id === topicId);
+        console.log("Looking for article with ID:", topicId, "Found:", article);
+        if (article) {
+          setIsLiveLoading(true);
+          setLiveError(null);
+          fetch("/api/generate-briefing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(article),
+          })
+            .then((res) => {
+              console.log("API response status:", res.status);
+              return res.json();
+            })
+            .then((data) => {
+              console.log("API response data:", data);
+              if (data.briefing) {
+                setLiveBriefing(data.briefing);
+                localStorage.setItem(`live-briefing-${topicId}`, JSON.stringify(data.briefing));
+              } else {
+                setLiveError(data.error || "Failed to generate briefing");
+              }
+            })
+            .catch((err) => {
+              console.error("API error:", err);
+              setLiveError("Failed to generate briefing");
+            })
+            .finally(() => setIsLiveLoading(false));
+        } else {
+          console.log("Article not found in localStorage, checking cached briefing");
+          const cachedBriefing = localStorage.getItem(`live-briefing-${topicId}`);
+          if (cachedBriefing) {
+            setLiveBriefing(JSON.parse(cachedBriefing));
+          } else {
+            setLiveError("Article not found. It may have expired. Please go back and try another story.");
+          }
+        }
+      }
+    }
   }, [topicId]);
 
   useEffect(() => {
@@ -256,7 +330,9 @@ export default function BriefingDetailPage() {
     });
   }, [relatedTopics, router]);
 
-  if (!topic) {
+  const isLiveNewsArticle = topicId.startsWith("live-");
+
+  if (!topic && !liveBriefing && !isLiveLoading && !isLiveNewsArticle) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F5F0E6]">
         <div className="rounded-2xl border border-[#D4CFC4] bg-white p-6 text-center">
@@ -269,25 +345,60 @@ export default function BriefingDetailPage() {
     );
   }
 
+  if (isLiveLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F0E6]">
+        <div className="rounded-2xl border border-[#D4CFC4] bg-white p-6 text-center">
+          <p className="text-lg font-semibold">Generating briefing...</p>
+          <p className="mt-2 text-sm text-[#5C5C5C]">Creating full analysis with story arc, impact, and sources</p>
+          <Link href="/dashboard" className="mt-3 inline-flex text-sm font-medium text-[#8B4513]">
+            Back to dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLiveNewsArticle && !liveBriefing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F0E6]">
+        <div className="rounded-2xl border border-[#D4CFC4] bg-white p-6 text-center">
+          {liveError ? (
+            <>
+              <p className="text-lg font-semibold text-red-600">Error loading article</p>
+              <p className="mt-2 text-sm text-[#5C5C5C]">{liveError}</p>
+            </>
+          ) : (
+            <p className="text-lg font-semibold">Loading article...</p>
+          )}
+          <Link href="/dashboard" className="mt-3 inline-flex text-sm font-medium text-[#8B4513]">
+            Back to dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const persistEngagement = (nextSavedIds: string[], nextLikedIds: string[], nextDislikedIds: string[]) => {
+    if (!currentId) return;
     const current = readDemoEngagementState();
     const nextSavedCount = Math.max(
       0,
-      nextSavedIds.includes(topic.id)
-        ? (current.analytics[topic.id]?.savedCount || 0) + (current.savedIds.includes(topic.id) ? 0 : 1)
-        : (current.analytics[topic.id]?.savedCount || 0) - (current.savedIds.includes(topic.id) ? 1 : 0),
+      nextSavedIds.includes(currentId)
+        ? (current.analytics[currentId]?.savedCount || 0) + (current.savedIds.includes(currentId) ? 0 : 1)
+        : (current.analytics[currentId]?.savedCount || 0) - (current.savedIds.includes(currentId) ? 1 : 0),
     );
     const nextLikedCount = Math.max(
       0,
-      nextLikedIds.includes(topic.id)
-        ? (current.analytics[topic.id]?.likedCount || 0) + (current.likedIds.includes(topic.id) ? 0 : 1)
-        : (current.analytics[topic.id]?.likedCount || 0) - (current.likedIds.includes(topic.id) ? 1 : 0),
+      nextLikedIds.includes(currentId)
+        ? (current.analytics[currentId]?.likedCount || 0) + (current.likedIds.includes(currentId) ? 0 : 1)
+        : (current.analytics[currentId]?.likedCount || 0) - (current.likedIds.includes(currentId) ? 1 : 0),
     );
     const nextDislikedCount = Math.max(
       0,
-      nextDislikedIds.includes(topic.id)
-        ? (current.analytics[topic.id]?.dislikedCount || 0) + (current.dislikedIds.includes(topic.id) ? 0 : 1)
-        : (current.analytics[topic.id]?.dislikedCount || 0) - (current.dislikedIds.includes(topic.id) ? 1 : 0),
+      nextDislikedIds.includes(currentId)
+        ? (current.analytics[currentId]?.dislikedCount || 0) + (current.dislikedIds.includes(currentId) ? 0 : 1)
+        : (current.analytics[currentId]?.dislikedCount || 0) - (current.dislikedIds.includes(currentId) ? 1 : 0),
     );
 
     writeDemoEngagementState({
@@ -297,28 +408,28 @@ export default function BriefingDetailPage() {
       dislikedIds: nextDislikedIds,
       analytics: {
         ...current.analytics,
-        [topic.id]: {
-          openedCount: current.analytics[topic.id]?.openedCount || 1,
+        [currentId]: {
+          openedCount: current.analytics[currentId]?.openedCount || 1,
           savedCount: nextSavedCount,
           likedCount: nextLikedCount,
           dislikedCount: nextDislikedCount,
-          ignoredCount: current.analytics[topic.id]?.ignoredCount || 0,
-          lastOpenedAt: current.analytics[topic.id]?.lastOpenedAt || Date.now(),
+          ignoredCount: current.analytics[currentId]?.ignoredCount || 0,
+          lastOpenedAt: current.analytics[currentId]?.lastOpenedAt || Date.now(),
         },
       },
       interactions: [
         {
-          topicId: topic.id,
+          topicId: currentId,
           type:
-            current.savedIds.includes(topic.id) !== nextSavedIds.includes(topic.id)
-              ? nextSavedIds.includes(topic.id)
+            current.savedIds.includes(currentId) !== nextSavedIds.includes(currentId)
+              ? nextSavedIds.includes(currentId)
                 ? ("save" as const)
                 : ("unsave" as const)
-              : current.likedIds.includes(topic.id) !== nextLikedIds.includes(topic.id)
-                ? nextLikedIds.includes(topic.id)
+              : current.likedIds.includes(currentId) !== nextLikedIds.includes(currentId)
+                ? nextLikedIds.includes(currentId)
                   ? ("like" as const)
                   : ("unlike" as const)
-                : nextDislikedIds.includes(topic.id)
+                : nextDislikedIds.includes(currentId)
                   ? ("dislike" as const)
                   : ("undislike" as const),
           timestamp: Date.now(),
@@ -333,25 +444,40 @@ export default function BriefingDetailPage() {
     setRecentTopicIds(current.recentTopicIds);
   };
 
+  const currentId = effectiveTopic?.id || "";
+
   const toggleSave = () => {
-    const nextSavedIds = savedIds.includes(topic.id) ? savedIds.filter((id) => id !== topic.id) : [...savedIds, topic.id];
+    if (!currentId) return;
+    const nextSavedIds = savedIds.includes(currentId) ? savedIds.filter((id) => id !== currentId) : [...savedIds, currentId];
     persistEngagement(nextSavedIds, likedIds, dislikedIds);
   };
 
   const likeTopic = () => {
-    const nextLikedIds = likedIds.includes(topic.id) ? likedIds.filter((id) => id !== topic.id) : [...likedIds, topic.id];
-    const nextDislikedIds = dislikedIds.filter((id) => id !== topic.id);
+    if (!currentId) return;
+    const nextLikedIds = likedIds.includes(currentId) ? likedIds.filter((id) => id !== currentId) : [...likedIds, currentId];
+    const nextDislikedIds = dislikedIds.filter((id) => id !== currentId);
     persistEngagement(savedIds, nextLikedIds, nextDislikedIds);
   };
 
   const dislikeTopic = () => {
-    const nextDislikedIds = dislikedIds.includes(topic.id) ? dislikedIds.filter((id) => id !== topic.id) : [...dislikedIds, topic.id];
-    const nextLikedIds = likedIds.filter((id) => id !== topic.id);
+    if (!currentId) return;
+    const nextDislikedIds = dislikedIds.includes(currentId) ? dislikedIds.filter((id) => id !== currentId) : [...dislikedIds, currentId];
+    const nextLikedIds = likedIds.filter((id) => id !== currentId);
     persistEngagement(savedIds, nextLikedIds, nextDislikedIds);
   };
 
   const loadPersonalNarrative = async () => {
-    if (!topic || personalNarrative || isPersonalLoading) {
+    if (personalNarrative || isPersonalLoading) {
+      return;
+    }
+
+    if (effectiveTopic?.isLiveNews && liveBriefing?.impactByUserType) {
+      const userImpact = liveBriefing.impactByUserType[userType] || liveBriefing.impactByUserType.exploring;
+      setPersonalNarrative(userImpact);
+      return;
+    }
+
+    if (!topic) {
       return;
     }
 
@@ -429,28 +555,31 @@ export default function BriefingDetailPage() {
             <div className="grid gap-5 p-5 lg:grid-cols-[0.98fr_1.02fr] lg:p-6">
               <div className="space-y-5">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                  <span className="rounded-full bg-[#F5F0E6] px-2.5 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
+                  <span className="rounded-full bg-[#F5F0E6] px-2.5 py-1 font-semibold text-[#8B4513]">{effectiveTopic?.category}</span>
+                  {effectiveTopic?.isLiveNews && (
+                    <span className="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-700">Live News</span>
+                  )}
                   <span className="inline-flex items-center gap-1">
                     <Clock3 size={12} />
-                    {topic.time}
+                    {effectiveTopic?.time}
                   </span>
-                  <span>{topic.readTime}</span>
+                  <span>{effectiveTopic?.readTime}</span>
                 </div>
 
                 <div className="space-y-3">
-                  <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">{topic.title}</h1>
-                  <p className="max-w-3xl text-base leading-7 text-[#5C5C5C]">{topic.subtitle}</p>
+                  <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">{effectiveTopic?.title}</h1>
+                  <p className="max-w-3xl text-base leading-7 text-[#5C5C5C]">{effectiveTopic?.subtitle}</p>
                 </div>
 
                 <div className="rounded-[24px] bg-[#F8F3EB] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">One-line thesis</p>
-                  <p className="mt-2 text-sm leading-7 text-[#1A1A1A]">{topic.generalView}</p>
+                  <p className="mt-2 text-sm leading-7 text-[#1A1A1A]">{effectiveTopic?.generalView}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={likeTopic}
-                    className={`rounded-full px-4 py-2 text-sm font-medium ${likedIds.includes(topic.id) ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                    className={`rounded-full px-4 py-2 text-sm font-medium ${likedIds.includes(effectiveTopic?.id || "") ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
                   >
                     <span className="inline-flex items-center gap-2">
                       <ThumbsUp size={15} />
@@ -459,7 +588,7 @@ export default function BriefingDetailPage() {
                   </button>
                   <button
                     onClick={dislikeTopic}
-                    className={`rounded-full px-4 py-2 text-sm font-medium ${dislikedIds.includes(topic.id) ? "bg-red-100 text-red-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                    className={`rounded-full px-4 py-2 text-sm font-medium ${dislikedIds.includes(effectiveTopic?.id || "") ? "bg-red-100 text-red-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
                   >
                     <span className="inline-flex items-center gap-2">
                       <ThumbsDown size={15} />
@@ -468,27 +597,37 @@ export default function BriefingDetailPage() {
                   </button>
                   <button
                     onClick={toggleSave}
-                    className={`rounded-full px-4 py-2 text-sm font-medium ${savedIds.includes(topic.id) ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
+                    className={`rounded-full px-4 py-2 text-sm font-medium ${savedIds.includes(effectiveTopic?.id || "") ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
                   >
                     <span className="inline-flex items-center gap-2">
                       <Bookmark size={15} />
-                      {savedIds.includes(topic.id) ? "Saved" : "Save"}
+                      {savedIds.includes(effectiveTopic?.id || "") ? "Saved" : "Save"}
                     </span>
                   </button>
                   <button
-                    onClick={() => navigator.share?.({ title: topic.title, text: topic.subtitle })}
+                    onClick={() => {
+                      if (effectiveTopic?.isLiveNews && liveBriefing?.url) {
+                        window.open(liveBriefing.url, "_blank");
+                      } else {
+                        navigator.share?.({ title: effectiveTopic?.title, text: effectiveTopic?.subtitle });
+                      }
+                    }}
                     className="rounded-full bg-[#F5F0E6] px-4 py-2 text-sm font-medium text-[#5C5C5C]"
                   >
                     <span className="inline-flex items-center gap-2">
-                      <Share2 size={15} />
-                      Share
+                      {effectiveTopic?.isLiveNews ? <ExternalLink size={15} /> : <Share2 size={15} />}
+                      {effectiveTopic?.isLiveNews ? "Read Source" : "Share"}
                     </span>
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-[26px] border border-[#E7DCC8] bg-[#FCFAF6] p-3">
-                <TopicVisual topic={topic} />
+              <div className="rounded-[26px] border border-[#E7DCC8] bg-[#FCFAF6] p-3 overflow-hidden">
+                {effectiveTopic?.isLiveNews && liveBriefing?.image ? (
+                  <img src={liveBriefing.image} alt={effectiveTopic.title} className="h-52 w-full object-cover rounded-xl" />
+                ) : topic ? (
+                  <TopicVisual topic={topic} />
+                ) : null}
               </div>
             </div>
           </section>
@@ -519,11 +658,11 @@ export default function BriefingDetailPage() {
                   <div className="space-y-4">
                     <div className="rounded-[24px] bg-[#F8F3EB] p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Summary</p>
-                      <p className="mt-2 text-sm leading-7">{topic.summary}</p>
+                      <p className="mt-2 text-sm leading-7">{effectiveTopic?.summary}</p>
                     </div>
                     <div className="rounded-[24px] bg-[#F8F3EB] p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Explain simply</p>
-                      <p className="mt-2 text-sm leading-7">{topic.explainSimply}</p>
+                      <p className="mt-2 text-sm leading-7">{effectiveTopic?.explainSimply}</p>
                     </div>
                   </div>
 
@@ -542,7 +681,7 @@ export default function BriefingDetailPage() {
                     </div>
                     <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Why this belongs in your feed</p>
-                      <p className="mt-2 text-sm leading-7 text-[#4F4A43]">{overviewFitNote}</p>
+                      <p className="mt-2 text-sm leading-7 text-[#4F4A43]">{effectiveTopic?.generalView}</p>
                       <div className="mt-4 rounded-2xl bg-white p-3">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Next step</p>
                         <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{overviewNextRead}</p>
@@ -552,8 +691,8 @@ export default function BriefingDetailPage() {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
-                  {topic.keyTakeaways.map((takeaway) => (
-                    <div key={takeaway} className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
+                  {(effectiveTopic?.keyTakeaways || []).map((takeaway: string, index: number) => (
+                    <div key={index} className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                       <p className="text-sm leading-6 text-[#1A1A1A]">{takeaway}</p>
                     </div>
                   ))}
@@ -567,7 +706,7 @@ export default function BriefingDetailPage() {
                   <div className="space-y-4">
                     <div className="rounded-[24px] bg-[#F8F3EB] p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Why it matters to you</p>
-                      <p className="mt-2 text-sm leading-7">{topic.impactByUserType[userType] || topic.impactByUserType.exploring}</p>
+                      <p className="mt-2 text-sm leading-7">{(effectiveTopic as any)?.impactByUserType?.[userType] || (effectiveTopic as any)?.impactByUserType?.exploring || "Impact analysis is being generated..."}</p>
                     </div>
 
                     <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
@@ -616,7 +755,7 @@ export default function BriefingDetailPage() {
                           onClick={toggleSave}
                           className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A]"
                         >
-                          {savedIds.includes(topic.id) ? "Keep saved" : "Save this story"}
+                          {savedIds.includes(effectiveTopic?.id || "") ? "Keep saved" : "Save this story"}
                         </button>
                         <button
                           onClick={() => router.push("/portfolio")}
@@ -645,7 +784,7 @@ export default function BriefingDetailPage() {
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Timeline</p>
                         <div className="mt-3 space-y-3">
-                          {storyArc.phases.map((phase, index) => (
+                          {storyArc.phases.map((phase: StoryArcPhase, index: number) => (
                             <div key={`${phase.label}-${phase.time}`} className="rounded-2xl bg-white p-3">
                               <div className="flex items-start gap-3">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-xs font-semibold text-white">
@@ -670,7 +809,7 @@ export default function BriefingDetailPage() {
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Updates over time</p>
                         <div className="mt-3 space-y-3">
-                          {(storyArc.updates || []).map((update) => (
+                          {(storyArc.updates || []).map((update: StoryArcUpdate) => (
                             <div key={`${update.time}-${update.title}`} className="rounded-2xl bg-white p-3">
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold">{update.title}</p>
@@ -684,7 +823,7 @@ export default function BriefingDetailPage() {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-3">
-                      {storyArc.players.map((player) => (
+                      {storyArc.players.map((player: StoryArcPlayer) => (
                         <div key={player.name} className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                           <div className="flex items-center justify-between gap-3">
                             <p className="text-sm font-semibold">{player.name}</p>
@@ -702,7 +841,7 @@ export default function BriefingDetailPage() {
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Sentiment shifts</p>
                         <div className="mt-3 space-y-3">
-                          {storyArc.sentiment.map((point) => {
+                          {storyArc.sentiment.map((point: StoryArcSentimentPoint) => {
                             const normalizedWidth = `${((point.score + 2) / 4) * 100}%`;
                             const toneColor = point.score > 0 ? "bg-green-500" : point.score < 0 ? "bg-red-500" : "bg-[#8B4513]";
                             return (
@@ -724,7 +863,7 @@ export default function BriefingDetailPage() {
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Why sentiment changed</p>
                         <div className="mt-3 space-y-3">
-                          {(storyArc.sentimentDrivers || []).map((driver) => (
+                          {(storyArc.sentimentDrivers || []).map((driver: StoryArcSentimentDriver) => (
                             <div key={driver.label} className="rounded-2xl bg-white p-3">
                               <p className="text-sm font-semibold">{driver.label}</p>
                               <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{driver.reason}</p>
@@ -738,7 +877,7 @@ export default function BriefingDetailPage() {
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Contrarian views</p>
                         <div className="mt-3 space-y-3">
-                          {storyArc.contrarian.map((perspective) => (
+                          {storyArc.contrarian.map((perspective: StoryArcContrarian) => (
                             <div key={perspective.title} className="rounded-2xl bg-white p-3">
                               <p className="text-sm font-semibold">{perspective.title}</p>
                               <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{perspective.body}</p>
@@ -750,7 +889,7 @@ export default function BriefingDetailPage() {
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Scenario probabilities</p>
                         <div className="mt-3 space-y-3">
-                          {(storyArc.scenarios || []).map((scenario) => (
+                          {(storyArc.scenarios || []).map((scenario: StoryArcScenario) => (
                             <div key={scenario.title} className="rounded-2xl bg-white p-3">
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold">{scenario.title}</p>
@@ -779,14 +918,14 @@ export default function BriefingDetailPage() {
               <div className="mt-5 space-y-4">
                 <div className="rounded-[24px] bg-[#F8F3EB] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Source agreement</p>
-                  <p className="mt-2 text-sm leading-7">{sourceAgreementSummary}</p>
+                  <p className="mt-2 text-sm leading-7">{effectiveTopic?.isLiveNews ? "Primary source from original article." : sourceAgreementSummary}</p>
                 </div>
 
                 <div className="space-y-3">
-                  {topic.sources.map((source) => (
+                  {(effectiveTopic?.sources || []).map((source: any, index: number) => (
                     <button
-                      key={`${topic.id}-${source.url}`}
-                      onClick={() => window.open(`https://${source.url}`, "_blank", "noopener,noreferrer")}
+                      key={`${effectiveTopic?.id}-${source.url}-${index}`}
+                      onClick={() => window.open(source.url?.startsWith('http') ? source.url : `https://${source.url}`, "_blank", "noopener,noreferrer")}
                       className="flex w-full items-start justify-between rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4 text-left hover:border-[#8B4513]"
                     >
                       <div>
@@ -825,7 +964,7 @@ export default function BriefingDetailPage() {
               <h3 className="text-lg font-semibold">Tracked entities</h3>
             </div>
             <div className="space-y-3">
-              {(storyArc?.trackedEntities || []).slice(0, 4).map((entity) => (
+              {(storyArc?.trackedEntities || []).slice(0, 4).map((entity: StoryArcEntity) => (
                 <div key={`${entity.kind}-${entity.name}`} className="rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold">{entity.name}</p>

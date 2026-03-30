@@ -24,11 +24,12 @@ import {
 } from "./types";
 
 export const newsCategories: TopicCategory[] = [
-  { id: "general", label: "General", description: "Broad stories aligned to your profile and interests." },
-  { id: "markets", label: "Markets", description: "Stocks, flows, valuations, and money movement." },
-  { id: "economy", label: "Economy", description: "Rates, policy, inflation, and macro shifts." },
-  { id: "tech", label: "Tech", description: "AI, product platforms, and digital infrastructure." },
-  { id: "startups", label: "Startups", description: "Funding, competition, and company building." },
+  { id: "general", label: "For You", description: "Personalized based on your interests." },
+  { id: "markets", label: "Markets", description: "Stocks, Sensex, Nifty, and trading." },
+  { id: "economy", label: "Economy", description: "GDP, inflation, RBI, and policy." },
+  { id: "tech", label: "Tech", description: "AI, startups, and technology." },
+  { id: "startups", label: "Startups", description: "Funding, unicorns, and ventures." },
+  { id: "banking", label: "Banking", description: "Banks, loans, and finance." },
 ];
 
 export const interestLibrary = [

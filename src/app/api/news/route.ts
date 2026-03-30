@@ -59,32 +59,95 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const topic = searchParams.get("topic") || "business OR finance";
-    const limit = parseInt(searchParams.get("limit") || "10", 10);
-    const country = searchParams.get("country") || "in";
+    let topic = searchParams.get("topic") || "business";
+    const category = searchParams.get("category") || "general";
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+
+    // Clean up the topic query
+    topic = topic.replace(/ OR /g, " ");
+    
+    let searchQuery = topic;
+    
+    // Map category to more specific search terms
+    const categorySearchTerms: Record<string, string> = {
+      markets: "stock market Sensex Nifty trading BSE NSE shares IPO",
+      economy: "economy India GDP inflation RBI interest rate budget fiscal policy",
+      tech: "tech AI technology software digital India startup",
+      startups: "startup India funding venture capital unicorn investment",
+      banking: "banking India NBFC loan credit finance HDFC SBI ICICI",
+      general: topic || "business finance economy India"
+    };
+
+    if (category !== "general" && categorySearchTerms[category]) {
+      searchQuery = categorySearchTerms[category];
+    } else if (category === "general" && topic) {
+      // For general, search for user's interests
+      searchQuery = topic;
+    } else {
+      searchQuery = "India business finance economy";
+    }
+
+    console.log("Searching for:", searchQuery);
 
     const response = await fetchFromNewsAPI('everything', {
-      q: topic,
+      q: searchQuery,
       language: 'en',
       sortBy: 'publishedAt',
       pageSize: limit.toString(),
     });
 
-    const articles = (response.articles || []).map((article: any, index: number) => ({
-      id: `newsapi-${index}-${Date.now()}`,
-      title: article.title || 'No title',
-      summary: article.description || article.content || '',
-      source: article.source?.name || 'Unknown',
-      url: article.url || '#',
-      date: article.publishedAt || new Date().toISOString(),
-      image: article.urlToImage || null,
-      category: categorizeArticle(article.title || '', article.description || ''),
-      sentiment: determineSentiment(article.title || '', article.description || ''),
-    }));
+    let articles = (response.articles || []).map((article: any, index: number) => {
+      const title = article.title || '';
+      const desc = article.description || article.content || '';
+      return {
+        id: `newsapi-${index}-${Date.now()}`,
+        title: title,
+        summary: desc,
+        source: article.source?.name || 'Unknown',
+        url: article.url || '#',
+        date: article.publishedAt || new Date().toISOString(),
+        image: article.urlToImage || null,
+        category: categorizeArticle(title, desc),
+        sentiment: determineSentiment(title, desc),
+      };
+    });
+
+    // If specific category requested, filter to show only matching articles
+    if (category !== "general") {
+      articles = articles.filter((article: any) => {
+        const articleCategory = article.category;
+        if (category === "tech" && (articleCategory === "tech" || articleCategory === "startups")) return true;
+        if (category === "startups" && articleCategory === "startups") return true;
+        if (category === "markets" && articleCategory === "markets") return true;
+        if (category === "economy" && articleCategory === "economy") return true;
+        if (category === "banking" && articleCategory === "banking") return true;
+        return false;
+      });
+      
+      // If no exact matches, include all but mark them
+      if (articles.length < 3) {
+        articles = (response.articles || []).map((article: any, index: number) => {
+          const title = article.title || '';
+          const desc = article.description || article.content || '';
+          return {
+            id: `newsapi-${index}-${Date.now()}`,
+            title: title,
+            summary: desc,
+            source: article.source?.name || 'Unknown',
+            url: article.url || '#',
+            date: article.publishedAt || new Date().toISOString(),
+            image: article.urlToImage || null,
+            category: categorizeArticle(title, desc),
+            sentiment: determineSentiment(title, desc),
+          };
+        });
+      }
+    }
 
     return NextResponse.json({
-      topic,
-      articles,
+      topic: searchQuery,
+      category,
+      articles: articles.slice(0, limit),
       count: articles.length,
       source: 'newsapi',
       timestamp: new Date().toISOString(),

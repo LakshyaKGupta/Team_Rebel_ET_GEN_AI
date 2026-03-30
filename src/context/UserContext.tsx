@@ -75,7 +75,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const data = await apigetMe();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const res = await fetch("/api/auth/me", { 
+        credentials: "include",
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // If not authenticated (401), that's fine - just set defaults
+      if (res.status === 401) {
+        setUser(null);
+        setPreferences(defaultPreferences);
+        return;
+      }
+      
+      if (!res.ok) {
+        throw new Error("Failed to fetch user");
+      }
+
+      const data = await res.json();
       setUser(data.user);
       setPreferences({
         userType: data.preferences.userType as UserType,
@@ -90,7 +111,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         riskAppetite: data.preferences.riskAppetite as RiskAppetite,
         timeHorizon: data.preferences.timeHorizon as TimeHorizon,
       });
-    } catch {
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
       setUser(null);
       setPreferences(defaultPreferences);
     }

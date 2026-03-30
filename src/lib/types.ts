@@ -53,6 +53,7 @@ export interface Topic {
   relatedAssets?: string[];
   sentiment?: TopicSentiment;
   storyArc?: StoryArc;
+  isLiveNews?: boolean;
 }
 
 export interface StoryArcPhase {
