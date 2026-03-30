@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, RefreshCw, Bookmark, MessageCircle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Bookmark, MessageCircle, ChevronDown } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
 import { newsCategories } from "@/lib/data";
@@ -18,6 +18,9 @@ interface LiveNewsArticle {
   category?: string;
 }
 
+const ARTICLES_PER_PAGE = 20;
+const PAGINATION_BUFFER = 5; // Start loading when 5 articles from bottom
+
 export default function NewsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,11 +29,16 @@ export default function NewsPage() {
 
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
   const [category, setCategory] = useState(initialCategory);
-  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
+  const [allNews, setAllNews] = useState<LiveNewsArticle[]>([]);
+  const [displayedNews, setDisplayedNews] = useState<LiveNewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [displayCount, setDisplayCount] = useState(ARTICLES_PER_PAGE);
   const [selectedInterests] = useState(
     initialInterests ? initialInterests.split(",") : []
   );
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   const categoryTopicMap: Record<string, string> = {
     general: "", // Will be personalized based on interests
@@ -51,13 +59,15 @@ export default function NewsPage() {
     return categoryTopicMap[category] || category;
   };
 
+  // Fetch news articles
   useEffect(() => {
     const fetchNews = async () => {
       setLoading(true);
+      setDisplayCount(ARTICLES_PER_PAGE);
       try {
         const query = getSearchQuery();
         const res = await fetch(
-          `/api/news?topic=${encodeURIComponent(query)}&category=${category}`
+          `/api/news?topic=${encodeURIComponent(query)}&category=${category}&limit=100`
         );
         const data = await res.json();
         if (data.articles && Array.isArray(data.articles)) {
@@ -67,7 +77,9 @@ export default function NewsPage() {
               id: `live-${index}-${Date.now()}`,
             })
           );
-          setLiveNews(articlesWithIds);
+          setAllNews(articlesWithIds);
+          setDisplayedNews(articlesWithIds.slice(0, ARTICLES_PER_PAGE));
+          setHasMore(articlesWithIds.length > ARTICLES_PER_PAGE);
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -78,6 +90,40 @@ export default function NewsPage() {
 
     fetchNews();
   }, [category, selectedInterests]);
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore && displayCount < allNews.length) {
+        loadMoreArticles();
+      }
+    }, { threshold: 0.1 });
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, displayCount, allNews.length]);
+
+  const loadMoreArticles = useCallback(async () => {
+    setLoadingMore(true);
+    // Simulate network delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const newCount = displayCount + ARTICLES_PER_PAGE;
+    setDisplayedNews(allNews.slice(0, newCount));
+    setDisplayCount(newCount);
+    setHasMore(newCount < allNews.length);
+    
+    setLoadingMore(false);
+  }, [displayCount, allNews]);
+
+  const loadAll = useCallback(() => {
+    setDisplayedNews(allNews);
+    setDisplayCount(allNews.length);
+    setHasMore(false);
+  }, [allNews]);
 
   const briefingFeedMeta =
     newsCategories.find((c) => c.id === category) || newsCategories[0];
@@ -157,67 +203,108 @@ export default function NewsPage() {
                 <div className="flex items-center justify-center py-12">
                   <RefreshCw size={32} className="animate-spin text-[#8B4513]" />
                 </div>
-              ) : liveNews.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {liveNews.map((article, index) => (
-                    <article
-                      key={article.id || index}
-                      className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="h-48 w-full overflow-hidden bg-gray-100">
-                        {article.image ? (
-                          <img
-                            src={article.image}
-                            alt={article.title}
-                            className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-gray-400">
-                            <span className="text-sm">No image</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-3 p-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 text-[11px] font-semibold text-[#8B4513]">
-                            {article.source}
-                          </span>
-                          <span className="text-xs text-[#5C5C5C]">
-                            {new Date(article.date).toLocaleDateString()}
-                          </span>
+              ) : displayedNews.length > 0 ? (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {displayedNews.map((article, index) => (
+                      <article
+                        key={article.id || index}
+                        className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="h-48 w-full overflow-hidden bg-gray-100">
+                          {article.image ? (
+                            <img
+                              src={article.image}
+                              alt={article.title}
+                              className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-gray-400">
+                              <span className="text-sm">No image</span>
+                            </div>
+                          )}
                         </div>
-                        <button
-                          onClick={() => {
-                            // Store article for briefing page to use
-                            const newsData = liveNews;
-                            localStorage.setItem("last-live-news", JSON.stringify(newsData));
-                            router.push(`/briefing/${article.id}`);
-                          }}
-                          className="text-left group"
-                        >
-                          <h3 className="text-base font-semibold leading-snug text-[#1A1A1A] group-hover:text-[#8B4513] transition-colors line-clamp-3">
-                            {article.title}
-                          </h3>
-                        </button>
-                        <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-3">
-                          {article.summary}
-                        </p>
-                        <button
-                          onClick={() => {
-                            // Store article for briefing page to use
-                            const newsData = liveNews;
-                            localStorage.setItem("last-live-news", JSON.stringify(newsData));
-                            router.push(`/briefing/${article.id}`);
-                          }}
-                          className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513] hover:text-[#1A1A1A] transition-colors"
-                        >
-                          Read more
-                          <span className="text-xs">→</span>
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                        <div className="space-y-3 p-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 text-[11px] font-semibold text-[#8B4513]">
+                              {article.source}
+                            </span>
+                            <span className="text-xs text-[#5C5C5C]">
+                              {new Date(article.date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              // Store article for briefing page to use
+                              const newsData = allNews;
+                              localStorage.setItem("last-live-news", JSON.stringify(newsData));
+                              router.push(`/briefing/${article.id}`);
+                            }}
+                            className="text-left group"
+                          >
+                            <h3 className="text-base font-semibold leading-snug text-[#1A1A1A] group-hover:text-[#8B4513] transition-colors line-clamp-3">
+                              {article.title}
+                            </h3>
+                          </button>
+                          <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-3">
+                            {article.summary}
+                          </p>
+                          <button
+                            onClick={() => {
+                              // Store article for briefing page to use
+                              const newsData = allNews;
+                              localStorage.setItem("last-live-news", JSON.stringify(newsData));
+                              router.push(`/briefing/${article.id}`);
+                            }}
+                            className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513] hover:text-[#1A1A1A] transition-colors"
+                          >
+                            Read more
+                            <span className="text-xs">→</span>
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  {/* Loading more indicator and load more button */}
+                  {hasMore && (
+                    <div className="mt-8 flex flex-col items-center gap-4">
+                      {loadingMore && (
+                        <div className="flex items-center gap-2 text-[#8B4513]">
+                          <RefreshCw size={20} className="animate-spin" />
+                          <span className="text-sm font-medium">Loading more...</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={loadMoreArticles}
+                        disabled={loadingMore}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-6 py-3 text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F3EB] disabled:opacity-50 transition-colors"
+                      >
+                        Load More Articles
+                        <ChevronDown size={16} />
+                      </button>
+                      <button
+                        onClick={loadAll}
+                        className="text-sm font-medium text-[#8B4513] hover:text-[#1A1A1A] transition-colors"
+                      >
+                        Load all {allNews.length} articles
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Intersection observer target for infinite scroll */}
+                  <div ref={observerTarget} className="mt-8 h-1 bg-transparent" />
+
+                  {/* Results summary */}
+                  <div className="mt-6 rounded-[22px] bg-[#F8F3EB] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
+                      Results
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">
+                      Showing {displayedNews.length} of {allNews.length} articles in {briefingFeedMeta.label} category
+                    </p>
+                  </div>
+                </>
               ) : (
                 <div className="rounded-[24px] border border-[#DDD4C4] bg-white p-8 text-center">
                   <p className="text-sm text-[#5C5C5C]">
