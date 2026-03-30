@@ -3,6 +3,39 @@ import { verifyToken } from "@/lib/auth";
 
 const NEWSAPI_KEY = process.env.NEWSAPI_KEY;
 const NEWSAPI_BASE = "https://newsapi.org/v2";
+const CACHE_TTL_SECONDS = parseInt(process.env.NEWS_CACHE_TTL_SECONDS || "300", 10); // 5 minutes default
+
+// In-memory cache for news articles
+const newsCache = new Map<string, { data: any; timestamp: number }>();
+
+function getCacheKey(topic: string, category: string, limit: number): string {
+  return `${topic}|${category}|${limit}`;
+}
+
+function getFromCache(key: string): any | null {
+  const cached = newsCache.get(key);
+  if (!cached) return null;
+  
+  const age = (Date.now() - cached.timestamp) / 1000;
+  if (age > CACHE_TTL_SECONDS) {
+    newsCache.delete(key);
+    return null;
+  }
+  
+  console.log(`[Cache HIT] ${key} (age: ${Math.round(age)}s)`);
+  return cached.data;
+}
+
+function setCache(key: string, data: any): void {
+  newsCache.set(key, { data, timestamp: Date.now() });
+  console.log(`[Cache SET] ${key}`);
+  
+  // Prevent unbounded cache growth
+  if (newsCache.size > 100) {
+    const firstKey = newsCache.keys().next().value;
+    if (firstKey) newsCache.delete(firstKey);
+  }
+}
 
 async function fetchFromNewsAPI(endpoint: string, params: Record<string, string>) {
   const url = new URL(`${NEWSAPI_BASE}/${endpoint}`);
@@ -66,6 +99,13 @@ export async function GET(request: NextRequest) {
     // Clean up the topic query
     topic = topic.replace(/ OR /g, " ");
     
+    // Check cache first
+    const cacheKey = getCacheKey(topic, category, limit);
+    const cachedData = getFromCache(cacheKey);
+    if (cachedData) {
+      return NextResponse.json(cachedData);
+    }
+    
     let searchQuery = topic;
     
     // Map category to more specific search terms
@@ -81,13 +121,12 @@ export async function GET(request: NextRequest) {
     if (category !== "general" && categorySearchTerms[category]) {
       searchQuery = categorySearchTerms[category];
     } else if (category === "general" && topic) {
-      // For general, search for user's interests
       searchQuery = topic;
     } else {
       searchQuery = "India business finance economy";
     }
 
-    console.log("Searching for:", searchQuery);
+    console.log(`[API CALL] Searching for: ${searchQuery}`);
 
     const response = await fetchFromNewsAPI('everything', {
       q: searchQuery,
@@ -144,14 +183,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const result = {
       topic: searchQuery,
       category,
       articles: articles.slice(0, limit),
       count: articles.length,
       source: 'newsapi',
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Cache the result
+    setCache(cacheKey, result);
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("News fetch error:", error);
     return NextResponse.json(
