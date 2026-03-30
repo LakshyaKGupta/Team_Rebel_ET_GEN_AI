@@ -187,7 +187,12 @@ export default function NewsPage() {
                           </span>
                         </div>
                         <button
-                          onClick={() => router.push(`/briefing/${article.id}`)}
+                          onClick={() => {
+                            // Store article for briefing page to use
+                            const newsData = liveNews;
+                            localStorage.setItem("last-live-news", JSON.stringify(newsData));
+                            router.push(`/briefing/${article.id}`);
+                          }}
                           className="text-left group"
                         >
                           <h3 className="text-base font-semibold leading-snug text-[#1A1A1A] group-hover:text-[#8B4513] transition-colors line-clamp-3">
@@ -198,7 +203,12 @@ export default function NewsPage() {
                           {article.summary}
                         </p>
                         <button
-                          onClick={() => router.push(`/briefing/${article.id}`)}
+                          onClick={() => {
+                            // Store article for briefing page to use
+                            const newsData = liveNews;
+                            localStorage.setItem("last-live-news", JSON.stringify(newsData));
+                            router.push(`/briefing/${article.id}`);
+                          }}
                           className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513] hover:text-[#1A1A1A] transition-colors"
                         >
                           Read more

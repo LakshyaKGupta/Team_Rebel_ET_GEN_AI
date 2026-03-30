@@ -453,14 +453,23 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <button onClick={() => router.push(`/briefing/${liveNews[0].id}`)} className="text-left">
+                      <button 
+                        onClick={() => {
+                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                          router.push(`/briefing/${liveNews[0].id}`);
+                        }} 
+                        className="text-left"
+                      >
                         <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513]">{liveNews[0].title}</h2>
                       </button>
                       <p className="text-sm leading-6 text-[#5C5C5C]">{liveNews[0].summary}</p>
                     </div>
 
                     <button
-                      onClick={() => router.push(`/briefing/${liveNews[0].id}`)}
+                      onClick={() => {
+                        localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                        router.push(`/briefing/${liveNews[0].id}`);
+                      }}
                       className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]"
                     >
                       Open full briefing
@@ -585,20 +594,32 @@ export default function DashboardPage() {
                              </div>
                            )}
                          </div>
-                         <div className="space-y-3 p-4">
-                           <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                             <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
-                             <span>{article.date}</span>
-                           </div>
-                           <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
-                             <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{article.title}</h3>
-                           </button>
-                           <p className="text-sm leading-6 text-[#5C5C5C]">{article.summary}</p>
-                           <button onClick={() => router.push(`/briefing/${article.id}`)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                             Open briefing
-                             <ArrowRight size={15} />
-                           </button>
-                         </div>
+                          <div className="space-y-3 p-4">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                              <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
+                              <span>{article.date}</span>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                                router.push(`/briefing/${article.id}`);
+                              }} 
+                              className="text-left"
+                            >
+                              <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{article.title}</h3>
+                            </button>
+                            <p className="text-sm leading-6 text-[#5C5C5C]">{article.summary}</p>
+                            <button 
+                              onClick={() => {
+                                localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                                router.push(`/briefing/${article.id}`);
+                              }} 
+                              className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]"
+                            >
+                              Open briefing
+                              <ArrowRight size={15} />
+                            </button>
+                          </div>
                        </article>
                      ))}
                      <button
@@ -774,16 +795,22 @@ export default function DashboardPage() {
                                </div>
                              )}
                            </div>
-                           <div className="space-y-3 p-4">
-                             <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
-                               <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
-                               <span>{article.date}</span>
-                             </div>
-                             <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
-                               <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title}</h4>
-                             </button>
-                             <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary}</p>
-                           </div>
+                            <div className="space-y-3 p-4">
+                              <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
+                                <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
+                                <span>{article.date}</span>
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                                  router.push(`/briefing/${article.id}`);
+                                }} 
+                                className="text-left"
+                              >
+                                <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title}</h4>
+                              </button>
+                              <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary}</p>
+                            </div>
                          </article>
                        ))}
                      </div>
