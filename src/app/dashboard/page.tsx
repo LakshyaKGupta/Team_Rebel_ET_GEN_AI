@@ -48,6 +48,8 @@ export default function DashboardPage() {
   const [readingListFilter, setReadingListFilter] = useState<ReadingListFilter>("unread");
   const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
   const [liveNewsLoading, setLiveNewsLoading] = useState(true);
+  const [displayedNewsCount, setDisplayedNewsCount] = useState(3);
+  const [displayedMoreNewsCount, setDisplayedMoreNewsCount] = useState(8);
   const [engagement, setEngagement] = useState<DemoEngagementState>({
     savedIds: [],
     likedIds: [],
@@ -573,34 +575,47 @@ export default function DashboardPage() {
                     <RefreshCw size={24} className="animate-spin text-[#8B4513]" />
                   </div>
                 ) : liveNews.length > 1 ? (
-                  liveNews.slice(1, 4).map((article, index) => (
-                    <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
-                      <div className="h-32 w-full overflow-hidden bg-gray-100">
-                        {article.image ? (
-                          <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-gray-400">
-                            <span className="text-sm">No image</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-3 p-4">
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                          <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
-                          <span>{article.date}</span>
-                        </div>
-                        <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
-                          <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{article.title}</h3>
-                        </button>
-                        <p className="text-sm leading-6 text-[#5C5C5C]">{article.summary}</p>
-                        <button onClick={() => router.push(`/briefing/${article.id}`)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                          Open briefing
-                          <ArrowRight size={15} />
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                ) : (
+                   <>
+                     {liveNews.slice(1, displayedNewsCount).map((article, index) => (
+                       <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
+                         <div className="h-32 w-full overflow-hidden bg-gray-100">
+                           {article.image ? (
+                             <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
+                           ) : (
+                             <div className="flex h-full w-full items-center justify-center text-gray-400">
+                               <span className="text-sm">No image</span>
+                             </div>
+                           )}
+                         </div>
+                         <div className="space-y-3 p-4">
+                           <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                             <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
+                             <span>{article.date}</span>
+                           </div>
+                           <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
+                             <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{article.title}</h3>
+                           </button>
+                           <p className="text-sm leading-6 text-[#5C5C5C]">{article.summary}</p>
+                           <button onClick={() => router.push(`/briefing/${article.id}`)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                             Open briefing
+                             <ArrowRight size={15} />
+                           </button>
+                         </div>
+                       </article>
+                     ))}
+                     {displayedNewsCount < liveNews.length && (
+                       <button
+                         onClick={() => setDisplayedNewsCount(displayedNewsCount + 3)}
+                         className="w-full rounded-[24px] border border-[#DDD4C4] bg-white p-4 text-center hover:bg-[#F8F3EB] transition-colors"
+                       >
+                         <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                           View More News
+                           <ArrowRight size={15} />
+                         </div>
+                       </button>
+                     )}
+                   </>
+                 ) : (
                   secondaryTopics.map((topic) => (
                     <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
                       <button onClick={() => openTopic(topic.id)} className="w-full text-left">
@@ -750,32 +765,45 @@ export default function DashboardPage() {
                     <RefreshCw size={24} className="animate-spin text-[#8B4513]" />
                   </div>
                 ) : liveNews.length > 0 ? (
-                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {liveNews.slice(0, 8).map((article, index) => (
-                      <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
-                        <div className="h-36 w-full overflow-hidden bg-gray-100">
-                          {article.image ? (
-                            <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-gray-400">
-                              <span className="text-sm">No image</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="space-y-3 p-4">
-                          <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
-                            <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
-                            <span>{article.date}</span>
-                          </div>
-                          <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
-                            <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title}</h4>
-                          </button>
-                          <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
+                   <>
+                     <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                       {liveNews.slice(0, displayedMoreNewsCount).map((article, index) => (
+                         <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
+                           <div className="h-36 w-full overflow-hidden bg-gray-100">
+                             {article.image ? (
+                               <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
+                             ) : (
+                               <div className="flex h-full w-full items-center justify-center text-gray-400">
+                                 <span className="text-sm">No image</span>
+                               </div>
+                             )}
+                           </div>
+                           <div className="space-y-3 p-4">
+                             <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
+                               <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
+                               <span>{article.date}</span>
+                             </div>
+                             <button onClick={() => router.push(`/briefing/${article.id}`)} className="text-left">
+                               <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title}</h4>
+                             </button>
+                             <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary}</p>
+                           </div>
+                         </article>
+                       ))}
+                     </div>
+                     {displayedMoreNewsCount < liveNews.length && (
+                       <button
+                         onClick={() => setDisplayedMoreNewsCount(displayedMoreNewsCount + 8)}
+                         className="mt-4 w-full rounded-[22px] border border-[#DDD4C4] bg-[#F8F3EB] p-4 text-center hover:bg-[#F0E9D9] transition-colors"
+                       >
+                         <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                           Load More Headlines
+                           <ArrowRight size={15} />
+                         </div>
+                       </button>
+                     )}
+                   </>
+                 ) : (
                   <div className="mt-4 rounded-[22px] bg-[#F8F3EB] p-4">
                     <p className="text-sm leading-6 text-[#5C5C5C]">No news available. Click load more to refresh.</p>
                   </div>
