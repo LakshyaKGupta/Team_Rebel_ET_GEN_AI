@@ -48,8 +48,6 @@ export default function DashboardPage() {
   const [readingListFilter, setReadingListFilter] = useState<ReadingListFilter>("unread");
   const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
   const [liveNewsLoading, setLiveNewsLoading] = useState(true);
-  const [displayedNewsCount, setDisplayedNewsCount] = useState(3);
-  const [displayedMoreNewsCount, setDisplayedMoreNewsCount] = useState(8);
   const [engagement, setEngagement] = useState<DemoEngagementState>({
     savedIds: [],
     likedIds: [],
@@ -576,7 +574,7 @@ export default function DashboardPage() {
                   </div>
                 ) : liveNews.length > 1 ? (
                    <>
-                     {liveNews.slice(1, displayedNewsCount).map((article, index) => (
+                     {liveNews.slice(1, 4).map((article, index) => (
                        <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
                          <div className="h-32 w-full overflow-hidden bg-gray-100">
                            {article.image ? (
@@ -603,17 +601,15 @@ export default function DashboardPage() {
                          </div>
                        </article>
                      ))}
-                     {displayedNewsCount < liveNews.length && (
-                       <button
-                         onClick={() => setDisplayedNewsCount(displayedNewsCount + 3)}
-                         className="w-full rounded-[24px] border border-[#DDD4C4] bg-white p-4 text-center hover:bg-[#F8F3EB] transition-colors"
-                       >
-                         <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                           View More News
-                           <ArrowRight size={15} />
-                         </div>
-                       </button>
-                     )}
+                     <button
+                       onClick={() => router.push(`/news?category=${briefingFeedCategory}&interests=${selectedInterests.join(",")}`)}
+                       className="rounded-[24px] border border-[#DDD4C4] bg-white p-4 text-center hover:bg-[#F8F3EB] transition-colors"
+                     >
+                       <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                         View More News
+                         <ArrowRight size={15} />
+                       </div>
+                     </button>
                    </>
                  ) : (
                   secondaryTopics.map((topic) => (
@@ -767,7 +763,7 @@ export default function DashboardPage() {
                 ) : liveNews.length > 0 ? (
                    <>
                      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                       {liveNews.slice(0, displayedMoreNewsCount).map((article, index) => (
+                       {liveNews.slice(0, 8).map((article, index) => (
                          <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
                            <div className="h-36 w-full overflow-hidden bg-gray-100">
                              {article.image ? (
@@ -791,17 +787,15 @@ export default function DashboardPage() {
                          </article>
                        ))}
                      </div>
-                     {displayedMoreNewsCount < liveNews.length && (
-                       <button
-                         onClick={() => setDisplayedMoreNewsCount(displayedMoreNewsCount + 8)}
-                         className="mt-4 w-full rounded-[22px] border border-[#DDD4C4] bg-[#F8F3EB] p-4 text-center hover:bg-[#F0E9D9] transition-colors"
-                       >
-                         <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                           Load More Headlines
-                           <ArrowRight size={15} />
-                         </div>
-                       </button>
-                     )}
+                     <button
+                       onClick={() => router.push(`/news?category=general&interests=${selectedInterests.join(",")}`)}
+                       className="mt-4 w-full rounded-[22px] border border-[#DDD4C4] bg-[#F8F3EB] p-4 text-center hover:bg-[#F0E9D9] transition-colors"
+                     >
+                       <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
+                         Load More Headlines
+                         <ArrowRight size={15} />
+                       </div>
+                     </button>
                    </>
                  ) : (
                   <div className="mt-4 rounded-[22px] bg-[#F8F3EB] p-4">
