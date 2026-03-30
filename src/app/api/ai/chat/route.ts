@@ -100,8 +100,10 @@ async function fetchRelevantNews(query: string, userProfile: UserProfile): Promi
     const interests = userProfile?.selectedInterests?.join(' OR ') || 'business finance';
     const searchQuery = `${query} ${interests}`.substring(0, 100);
 
+    // Use absolute URL for server-side fetch
+    const baseUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
     const res = await fetch(
-      `/api/news?topic=${encodeURIComponent(searchQuery)}&limit=3`,
+      `${baseUrl}/api/news?topic=${encodeURIComponent(searchQuery)}&limit=3`,
       { headers: { 'Content-Type': 'application/json' } }
     );
 
