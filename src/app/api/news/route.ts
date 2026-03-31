@@ -3,24 +3,21 @@ import { NextRequest, NextResponse } from "next/server";
 const NEWSAPI_KEY = process.env.NEWSAPI_KEY || "0a76f021c7d34b479aab99358193cc9b";
 
 const categoryQueries: Record<string, string> = {
-  markets: "BSE NSE stock market Sensex Nifty trading shares India",
-  economy: "India economy GDP inflation RBI interest rate budget fiscal",
-  tech: "technology AI startup India funding unicorn tech company",
-  startups: "Indian startup funding venture capital unicorn investment",
-  banking: "bank loan credit finance HDFC SBI ICICI banking India",
-  general: "India business economy finance breaking news",
+  markets: "BSE OR NSE OR Sensex OR Nifty OR stock market OR shares trading",
+  economy: "India economy OR GDP OR inflation OR RBI OR interest rate OR budget",
+  tech: "India technology OR AI OR startup OR funding OR unicorn OR tech company",
+  startups: "startup funding OR venture capital OR unicorn OR investment India",
+  banking: "bank OR loan OR credit OR HDFC OR SBI OR ICICI OR finance India",
+  general: "India business OR economy OR finance OR stock market OR breaking news",
 };
-
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 60000;
 
 function categorizeArticle(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
-  if (text.match(/stock|market|sensex|nifty|bse|nse|trading|shares|ipo|fii|dii/)) return 'markets';
-  if (text.match(/economy|gdp|inflation|rbi|rate|fiscal|budget|rupee|export/)) return 'economy';
-  if (text.match(/tech|ai|software|digital|google|microsoft|apple|meta|startup/)) return 'tech';
-  if (text.match(/startup|funding|venture|unicorn|founder|ipo|investment/)) return 'startups';
-  if (text.match(/bank|loan|credit|hdfc|sbi|icici|nbfc|finance|emi/)) return 'banking';
+  if (text.match(/bse|nse|sensex|nifty|stock market|trading|shares|ipo|fii|dii|share market/)) return 'markets';
+  if (text.match(/economy|gdp|inflation|rbi|rate|fiscal|budget|rupee|export|import|trade/)) return 'economy';
+  if (text.match(/tech|ai|software|digital|google|microsoft|apple|meta|startup|app|platform/)) return 'tech';
+  if (text.match(/startup|funding|venture|unicorn|founder|investment|ipo|raise/)) return 'startups';
+  if (text.match(/bank|loan|credit|hdfc|sbi|icici|nbfc|finance|emi|fd|banking/)) return 'banking';
   return 'general';
 }
 
@@ -45,23 +42,15 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || "general";
     const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 50);
 
-    const cacheKey = category;
-    const cached = cache.get(cacheKey);
-    const now = Date.now();
-    
-    if (cached && now - cached.timestamp < CACHE_TTL) {
-      console.log('Returning cached news for:', category);
-      return NextResponse.json({
-        ...cached.data,
-        cached: true,
-      }, { headers: { 'Cache-Control': 'public, s-maxage=30' } });
-    }
-
     const query = categoryQueries[category] || categoryQueries.general;
-    console.log('Fetching news for:', category);
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - 3);
+    const fromStr = fromDate.toISOString().split('T')[0];
 
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=50&apiKey=${NEWSAPI_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 120 } });
+    console.log('Fetching news for:', category, 'from:', fromStr);
+
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&from=${fromStr}&pageSize=50&apiKey=${NEWSAPI_KEY}`;
+    const res = await fetch(url, { cache: 'no-store' });
     
     if (!res.ok) {
       console.log('NewsAPI failed:', res.status);
@@ -72,9 +61,9 @@ export async function GET(request: NextRequest) {
     console.log('NewsAPI got', data.articles?.length || 0, 'articles');
 
     const articles = (data.articles || [])
-      .filter((a: any) => a.title && a.title !== '[Removed]')
+      .filter((a: any) => a.title && a.title !== '[Removed]' && a.publishedAt)
       .map((a: any, i: number) => ({
-        id: `na-${i}`,
+        id: `na-${Date.now()}-${i}`,
         title: a.title || '',
         summary: a.description || '',
         source: a.source?.name || 'NewsAPI',
@@ -85,22 +74,20 @@ export async function GET(request: NextRequest) {
         category: categorizeArticle(a.title || '', a.description || ''),
       }));
 
+    articles.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+
     const withImg = articles.filter(a => a.image);
     const noImg = articles.filter(a => !a.image);
     const final = [...withImg, ...noImg].slice(0, limit);
 
     console.log('Final articles:', final.length, '(with images:', withImg.length, ')');
 
-    const result = {
+    return NextResponse.json({
       category,
       articles: final,
       count: final.length,
       timestamp: new Date().toISOString(),
-    };
-
-    cache.set(cacheKey, { data: result, timestamp: now });
-
-    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, s-maxage=30' } });
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('News error:', error);
     return NextResponse.json({ error: "Failed to fetch news", articles: [] }, { status: 200 });
