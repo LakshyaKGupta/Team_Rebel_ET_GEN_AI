@@ -2,7 +2,6 @@
 // GET, POST, DELETE handlers for email digest configuration
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +10,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    const { prisma } = await import('@/lib/prisma');
+    
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -73,6 +74,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const { prisma } = await import('@/lib/prisma');
+    
     const body = await request.json();
     const { userId, frequency, sendTime, topics, includePortfolio, includeAnalytics, timezone } = body;
 
@@ -156,6 +159,8 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const { prisma } = await import('@/lib/prisma');
+    
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 

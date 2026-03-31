@@ -2,7 +2,6 @@
 // GET, POST handlers for portfolio and holdings
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { calculateHoldingPerformance, calculatePortfolioSummary, HoldingPerformance } from '@/lib/portfolio-utils';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +24,8 @@ interface Holding {
  */
 export async function GET(request: NextRequest) {
   try {
+    const { prisma } = await import('@/lib/prisma');
+    
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const portfolioId = searchParams.get('portfolioId');
@@ -91,6 +92,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const { prisma } = await import('@/lib/prisma');
+    
     const body = await request.json();
     const { userId, portfolioId, symbol, name, quantity, purchasePrice, currentPrice, sector } = body;
 

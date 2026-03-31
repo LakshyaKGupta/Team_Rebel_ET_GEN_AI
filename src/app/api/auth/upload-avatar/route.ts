@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -10,6 +9,8 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export async function POST(request: NextRequest) {
   try {
+    const { prisma } = await import("@/lib/prisma");
+    
     const token = request.cookies.get("auth-token")?.value;
 
     if (!token) {

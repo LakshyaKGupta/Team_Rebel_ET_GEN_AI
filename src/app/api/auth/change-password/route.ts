@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const { prisma } = await import("@/lib/prisma");
+    
     const token = request.cookies.get("auth-token")?.value;
 
     if (!token) {
