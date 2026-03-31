@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, Bell, Check, ExternalLink, Loader2, Plus, Refres
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
 import { useNotifications } from "@/context/NotificationContext";
+import { useBriefing } from "@/context/BriefingContext";
 import {
   getTopicsForUser,
   interestLibrary,
@@ -32,6 +33,7 @@ export default function TopicsPage() {
   const router = useRouter();
   const { preferences, setSelectedInterests } = useUser();
   const { unreadCount, checkNewsForInterests } = useNotifications();
+  const { setCurrentArticle } = useBriefing();
   const [selectedCategory, setSelectedCategory] = useState("general");
   const [isEditingInterests, setIsEditingInterests] = useState(false);
   const [customInterest, setCustomInterest] = useState("");
@@ -315,7 +317,7 @@ export default function TopicsPage() {
                       </div>
                       <button
                         onClick={() => {
-                          sessionStorage.setItem(`briefing-${article.id}`, JSON.stringify(article));
+                          setCurrentArticle(article);
                           router.push(`/briefing/${article.id}`);
                         }}
                         className="w-full text-left"
@@ -329,7 +331,7 @@ export default function TopicsPage() {
                       </p>
                       <button
                         onClick={() => {
-                          sessionStorage.setItem(`briefing-${article.id}`, JSON.stringify(article));
+                          setCurrentArticle(article);
                           router.push(`/briefing/${article.id}`);
                         }}
                         className="inline-flex items-center gap-1 text-xs font-medium text-[#8B4513] hover:underline"

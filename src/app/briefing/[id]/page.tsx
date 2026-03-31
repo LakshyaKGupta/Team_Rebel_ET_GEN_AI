@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
+import { useBriefing } from "@/context/BriefingContext";
 import { assessPortfolioImpact, getRecentTopicCards, getTopicById, getTopicsForUser, starterPortfolioAssets } from "@/lib/data";
 import { apiGetPersonalizedBriefing } from "@/lib/api";
 import {
@@ -147,6 +148,7 @@ export default function BriefingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { preferences } = useUser();
+  const { state, setCurrentArticle } = useBriefing();
 
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [likedIds, setLikedIds] = useState<string[]>([]);
@@ -249,18 +251,15 @@ export default function BriefingDetailPage() {
     setRecentTopicIds(current.recentTopicIds);
 
     if (topicId.startsWith("live-") || topicId.startsWith("topic-news-")) {
-      // Check sessionStorage first (from dashboard/topics)
-      const sessionKey = `briefing-${topicId}`;
-      const sessionArticle = sessionStorage.getItem(sessionKey);
-      
-      if (sessionArticle) {
-        const article = JSON.parse(sessionArticle);
+      // Check context first (from dashboard/topics via setCurrentArticle)
+      const contextArticle = state.currentArticle;
+      if (contextArticle && contextArticle.id === topicId) {
         setIsLiveLoading(true);
         setLiveError(null);
         fetch("/api/generate-briefing", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(article),
+          body: JSON.stringify(contextArticle),
         })
           .then((res) => res.json())
           .then((data) => {
@@ -275,7 +274,40 @@ export default function BriefingDetailPage() {
             setLiveError("Failed to generate briefing");
           })
           .finally(() => setIsLiveLoading(false));
+        setCurrentArticle(null);
         return;
+      }
+
+      // Fallback to sessionStorage
+      const sessionKey = `briefing-${topicId}`;
+      const sessionArticle = sessionStorage.getItem(sessionKey);
+      if (sessionArticle) {
+        try {
+          const article = JSON.parse(sessionArticle);
+          setIsLiveLoading(true);
+          setLiveError(null);
+          fetch("/api/generate-briefing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(article),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.briefing) {
+                setLiveBriefing(data.briefing);
+              } else {
+                setLiveError(data.error || "Failed to generate briefing");
+              }
+            })
+            .catch((err) => {
+              console.error("API error:", err);
+              setLiveError("Failed to generate briefing");
+            })
+            .finally(() => setIsLiveLoading(false));
+          return;
+        } catch (e) {
+          console.error("Failed to parse session article:", e);
+        }
       }
 
       // Fallback to localStorage
@@ -317,7 +349,7 @@ export default function BriefingDetailPage() {
         router.push("/dashboard");
       }
     }
-  }, [topicId]);
+  }, [topicId, state.currentArticle]);
 
   useEffect(() => {
     setPortfolioAssets(readPortfolioAssets(starterPortfolioAssets));

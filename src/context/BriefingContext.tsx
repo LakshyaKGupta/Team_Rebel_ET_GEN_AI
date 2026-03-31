@@ -3,6 +3,17 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { AIResponse, BriefingMode, Topic } from "@/lib/types";
 
+interface LiveArticle {
+  id: string;
+  title: string;
+  summary: string;
+  source?: string;
+  url?: string;
+  date?: string;
+  image?: string;
+  category?: string;
+}
+
 interface BriefingState {
   selectedTopic: Topic | null;
   isLoading: boolean;
@@ -10,6 +21,7 @@ interface BriefingState {
   aiResponses: AIResponse[];
   lastUpdated: number | null;
   error: string | null;
+  currentArticle: LiveArticle | null;
 }
 
 interface BriefingContextType {
@@ -22,6 +34,7 @@ interface BriefingContextType {
   clearError: () => void;
   clearResponses: () => void;
   reset: () => void;
+  setCurrentArticle: (article: LiveArticle | null) => void;
 }
 
 const initialState: BriefingState = {
@@ -31,6 +44,7 @@ const initialState: BriefingState = {
   aiResponses: [],
   lastUpdated: null,
   error: null,
+  currentArticle: null,
 };
 
 const BriefingContext = createContext<BriefingContextType | undefined>(undefined);
@@ -80,6 +94,10 @@ export function BriefingProvider({ children }: { children: ReactNode }) {
     setState(initialState);
   };
 
+  const setCurrentArticle = (article: LiveArticle | null) => {
+    setState((prev) => ({ ...prev, currentArticle: article }));
+  };
+
   return (
     <BriefingContext.Provider
       value={{
@@ -92,6 +110,7 @@ export function BriefingProvider({ children }: { children: ReactNode }) {
         clearError,
         clearResponses,
         reset,
+        setCurrentArticle,
       }}
     >
       {children}
