@@ -248,18 +248,13 @@ export default function BriefingDetailPage() {
     setDislikedIds(current.dislikedIds);
     setRecentTopicIds(current.recentTopicIds);
 
-    if (topicId.startsWith("live-")) {
-      const cachedLive = localStorage.getItem(`live-briefing-${topicId}`);
-      if (cachedLive) {
-        setLiveBriefing(JSON.parse(cachedLive));
-        return;
-      }
-
-      // Check for individual article key first
-      const articleKey = `live-article-${topicId}`;
-      const storedArticle = localStorage.getItem(articleKey);
-      if (storedArticle) {
-        const article = JSON.parse(storedArticle);
+    if (topicId.startsWith("live-") || topicId.startsWith("topic-news-")) {
+      // Check sessionStorage first (from dashboard/topics)
+      const sessionKey = `briefing-${topicId}`;
+      const sessionArticle = sessionStorage.getItem(sessionKey);
+      
+      if (sessionArticle) {
+        const article = JSON.parse(sessionArticle);
         setIsLiveLoading(true);
         setLiveError(null);
         fetch("/api/generate-briefing", {
@@ -271,7 +266,6 @@ export default function BriefingDetailPage() {
           .then((data) => {
             if (data.briefing) {
               setLiveBriefing(data.briefing);
-              localStorage.setItem(`live-briefing-${topicId}`, JSON.stringify(data.briefing));
             } else {
               setLiveError(data.error || "Failed to generate briefing");
             }
@@ -284,7 +278,13 @@ export default function BriefingDetailPage() {
         return;
       }
 
-      // Fallback to searching in last-live-news
+      // Fallback to localStorage
+      const cachedLive = localStorage.getItem(`live-briefing-${topicId}`);
+      if (cachedLive) {
+        setLiveBriefing(JSON.parse(cachedLive));
+        return;
+      }
+
       const storedNews = localStorage.getItem("last-live-news");
       if (storedNews) {
         const newsArticles = JSON.parse(storedNews);
@@ -301,7 +301,6 @@ export default function BriefingDetailPage() {
             .then((data) => {
               if (data.briefing) {
                 setLiveBriefing(data.briefing);
-                localStorage.setItem(`live-briefing-${topicId}`, JSON.stringify(data.briefing));
               } else {
                 setLiveError(data.error || "Failed to generate briefing");
               }
@@ -352,7 +351,7 @@ export default function BriefingDetailPage() {
     });
   }, [relatedTopics, router]);
 
-  const isLiveNewsArticle = topicId.startsWith("live-");
+  const isLiveNewsArticle = topicId.startsWith("live-") || topicId.startsWith("topic-news-");
 
   if (!topic && !liveBriefing && !isLiveLoading && !isLiveNewsArticle) {
     return (

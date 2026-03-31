@@ -315,9 +315,7 @@ export default function TopicsPage() {
                       </div>
                       <button
                         onClick={() => {
-                          const articleKey = `live-article-${article.id}`;
-                          localStorage.setItem(articleKey, JSON.stringify(article));
-                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                          sessionStorage.setItem(`briefing-${article.id}`, JSON.stringify(article));
                           router.push(`/briefing/${article.id}`);
                         }}
                         className="w-full text-left"
@@ -331,9 +329,7 @@ export default function TopicsPage() {
                       </p>
                       <button
                         onClick={() => {
-                          const articleKey = `live-article-${article.id}`;
-                          localStorage.setItem(articleKey, JSON.stringify(article));
-                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                          sessionStorage.setItem(`briefing-${article.id}`, JSON.stringify(article));
                           router.push(`/briefing/${article.id}`);
                         }}
                         className="inline-flex items-center gap-1 text-xs font-medium text-[#8B4513] hover:underline"
