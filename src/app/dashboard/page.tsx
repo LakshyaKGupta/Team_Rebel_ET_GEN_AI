@@ -41,49 +41,6 @@ interface LiveNewsArticle {
   category?: string;
 }
 
-const mockNewsByCategory: Record<string, LiveNewsArticle[]> = {
-  markets: [
-    { id: "m1", title: "Sensex Surges 500 Points on FII Buying", summary: "Foreign investors poured Rs 5,000 crore into Indian equities today, pushing markets to new highs.", source: "ET Markets", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800", category: "markets" },
-    { id: "m2", title: "Nifty 50 Hits Record High of 25,000", summary: "India's benchmark index crossed the psychological 25,000 mark for the first time.", source: "MoneyControl", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800", category: "markets" },
-    { id: "m3", title: "IPO Market Sees Record Fundraising in 2024", summary: "Indian companies raised over Rs 1 lakh crore through IPOs this year.", source: "Business Today", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800", category: "markets" },
-    { id: "m4", title: "Banking Stocks Lead Market Rally", summary: "Public sector bank stocks surged up to 8% on strong quarterly results.", source: "Financial Express", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=800", category: "markets" },
-  ],
-  economy: [
-    { id: "e1", title: "India GDP Growth Exceeds 7% in Q3", summary: "India remains the fastest-growing major economy with 7.2% GDP growth.", source: "Livemint", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800", category: "economy" },
-    { id: "e2", title: "RBI Holds Interest Rates Steady at 6.5%", summary: "The central bank maintained status quo on rates for the sixth consecutive time.", source: "ET Economy", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=800", category: "economy" },
-    { id: "e3", title: "Inflation Falls to 4-Month Low of 4.85%", summary: "Retail inflation in India dropped below 5% for the first time since August.", source: "NDTV Profit", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800", category: "economy" },
-    { id: "e4", title: "Union Budget 2025: Key Tax Proposals Expected", summary: "Finance minister to present budget next week with focus on fiscal consolidation.", source: "The Hindu BusinessLine", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800", category: "economy" },
-  ],
-  tech: [
-    { id: "t1", title: "Infosys Wins $2.5 Billion AI Contract from US Firm", summary: "India's IT major secures one of its largest deals with generative AI services.", source: "ET Tech", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800", category: "tech" },
-    { id: "t2", title: "Google Announces $10B Investment in India", summary: "Tech giant to set up AI research labs and data centers across India.", source: "TechCrunch India", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?w=800", category: "tech" },
-    { id: "t3", title: "Tata Group Launches AI-Powered Manufacturing Units", summary: "Tata Motors deploys AI and robotics in its new electric vehicle plant.", source: "Business Standard", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800", category: "tech" },
-    { id: "t4", title: "WhatsApp Launches UPI Payments for 100M Users", summary: "Meta's messaging platform enables seamless payments across India.", source: "Gadgets 360", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=800", category: "tech" },
-  ],
-  startups: [
-    { id: "s1", title: "Flipkart Co-founder Raises $500M for New Venture", summary: "Sachin Bansal launches electric vehicle startup with massive funding.", source: "YourStory", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800", category: "startups" },
-    { id: "s2", title: "Razorpay Valued at $5 Billion in New Round", summary: "Payments startup becomes India's latest unicorn with latest funding.", source: "VCCircle", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800", category: "startups" },
-    { id: "s3", title: "Government Launches Rs 10,000 Cr Startup Fund", summary: "Startup India 2.0 announced with focus on deep tech and AI ventures.", source: "Inc42", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800", category: "startups" },
-    { id: "s4", title: "Ola Electric Files for Rs 5,000 Cr IPO", summary: "Bhavish Aggarwal's EV company files draft papers with SEBI.", source: "MoneyControl", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800", category: "startups" },
-  ],
-  banking: [
-    { id: "b1", title: "HDFC Bank Posts 20% Rise in Q3 Net Profit", summary: "India's largest private lender beats estimates with strong loan growth.", source: "ET Money", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800", category: "banking" },
-    { id: "b2", title: "SBI Links FD Rates to Repo Rate from Next Month", summary: "State Bank changes deposit pricing to align with RBI policy.", source: "The Economic Times", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800", category: "banking" },
-    { id: "b3", title: "RBI Fines Paytm Payments Bank Rs 5 Crore", summary: "Regulator cites KYC violations and data security concerns.", source: "NDTV", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800", category: "banking" },
-    { id: "b4", title: "Digital Lending Platforms See 50% Surge in Loans", summary: "BNPL and instant loan apps gain traction among young borrowers.", source: "Business Today", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800", category: "banking" },
-  ],
-  general: [
-    { id: "g1", title: "India Announces New Trade Agreement with EU", summary: "Historic free trade deal to boost exports by $50 billion annually.", source: "The Hindu", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800", category: "general" },
-    { id: "g2", title: "Air India Places Order for 500 Airbus Aircraft", summary: "Tata group airline signs largest ever deal in aviation history.", source: "NDTV", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800", category: "general" },
-    { id: "g3", title: "India Launches Chandrayaan-4 Moon Mission", summary: "ISRO successfully sends spacecraft to land on lunar south pole.", source: "Times of India", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800", category: "general" },
-    { id: "g4", title: "Reliance Announces Rs 1 Lakh Crore Green Energy Push", summary: "Mukesh Ambani commits to net-zero operations by 2035.", source: "Business Standard", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=800", category: "general" },
-  ],
-};
-
-const getMockNews = (category: string): LiveNewsArticle[] => {
-  return mockNewsByCategory[category] || mockNewsByCategory.general;
-};
-
 export default function DashboardPage() {
   const router = useRouter();
   const { preferences } = useUser();
@@ -92,8 +49,8 @@ export default function DashboardPage() {
   const [briefingFeedCategory, setBriefingFeedCategory] = useState("general");
   const [activeQuickFilter, setActiveQuickFilter] = useState<ReadingListFilter | null>(null);
   const [expandReadingList, setExpandReadingList] = useState(false);
-  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>(getMockNews("general"));
-  const [liveNewsLoading, setLiveNewsLoading] = useState(false);
+  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
+  const [liveNewsLoading, setLiveNewsLoading] = useState(true);
   const [engagement, setEngagement] = useState<DemoEngagementState>({
     savedIds: [],
     likedIds: [],
@@ -242,6 +199,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchLiveNews = async () => {
       try {
+        setLiveNewsLoading(true);
         const res = await fetch(`/api/news?category=${briefingFeedCategory}&t=${Date.now()}`);
         const data = await res.json();
         if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
@@ -252,11 +210,13 @@ export default function DashboardPage() {
           setLiveNews(articlesWithIds);
           localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
         } else {
-          setLiveNews(getMockNews(briefingFeedCategory));
+          setLiveNews([]);
         }
       } catch (error) {
         console.error("Failed to fetch live news:", error);
-        setLiveNews(getMockNews(briefingFeedCategory));
+        setLiveNews([]);
+      } finally {
+        setLiveNewsLoading(false);
       }
     };
     fetchLiveNews();
@@ -264,6 +224,7 @@ export default function DashboardPage() {
 
   const refreshNews = async () => {
     try {
+      setLiveNewsLoading(true);
       const res = await fetch(`/api/news?category=${briefingFeedCategory}&t=${Date.now()}`);
       const data = await res.json();
       if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
@@ -274,11 +235,13 @@ export default function DashboardPage() {
         setLiveNews(articlesWithIds);
         localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
       } else {
-        setLiveNews(getMockNews(briefingFeedCategory));
+        setLiveNews([]);
       }
     } catch (error) {
       console.error("Failed to refresh news:", error);
-      setLiveNews(getMockNews(briefingFeedCategory));
+      setLiveNews([]);
+    } finally {
+      setLiveNewsLoading(false);
     }
   };
 
@@ -400,12 +363,22 @@ export default function DashboardPage() {
                           <span>{article.date || 'Recently'}</span>
                         </div>
                         <div className="space-y-2">
-                          <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="text-left w-full">
+                          <button onClick={() => { 
+                            const articleKey = `live-article-${article.id}`;
+                            localStorage.setItem(articleKey, JSON.stringify(article));
+                            localStorage.setItem("last-live-news", JSON.stringify(liveNews)); 
+                            router.push(`/briefing/${article.id}`); 
+                          }} className="text-left w-full">
                             <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513] line-clamp-3">{article.title || 'Untitled'}</h2>
                           </button>
                           <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-3">{article.summary || 'No description available.'}</p>
                         </div>
-                        <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]">
+                        <button onClick={() => { 
+                          const articleKey = `live-article-${article.id}`;
+                          localStorage.setItem(articleKey, JSON.stringify(article));
+                          localStorage.setItem("last-live-news", JSON.stringify(liveNews)); 
+                          router.push(`/briefing/${article.id}`); 
+                        }} className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]">
                           Open full briefing <ArrowRight size={15} />
                         </button>
                         {idx === 0 && (

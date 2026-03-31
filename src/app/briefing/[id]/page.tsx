@@ -255,11 +255,40 @@ export default function BriefingDetailPage() {
         return;
       }
 
+      // Check for individual article key first
+      const articleKey = `live-article-${topicId}`;
+      const storedArticle = localStorage.getItem(articleKey);
+      if (storedArticle) {
+        const article = JSON.parse(storedArticle);
+        setIsLiveLoading(true);
+        setLiveError(null);
+        fetch("/api/generate-briefing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(article),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.briefing) {
+              setLiveBriefing(data.briefing);
+              localStorage.setItem(`live-briefing-${topicId}`, JSON.stringify(data.briefing));
+            } else {
+              setLiveError(data.error || "Failed to generate briefing");
+            }
+          })
+          .catch((err) => {
+            console.error("API error:", err);
+            setLiveError("Failed to generate briefing");
+          })
+          .finally(() => setIsLiveLoading(false));
+        return;
+      }
+
+      // Fallback to searching in last-live-news
       const storedNews = localStorage.getItem("last-live-news");
       if (storedNews) {
         const newsArticles = JSON.parse(storedNews);
         const article = newsArticles.find((a: any) => a.id === topicId);
-        console.log("Looking for article with ID:", topicId, "Found:", article);
         if (article) {
           setIsLiveLoading(true);
           setLiveError(null);
@@ -268,12 +297,8 @@ export default function BriefingDetailPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(article),
           })
-            .then((res) => {
-              console.log("API response status:", res.status);
-              return res.json();
-            })
+            .then((res) => res.json())
             .then((data) => {
-              console.log("API response data:", data);
               if (data.briefing) {
                 setLiveBriefing(data.briefing);
                 localStorage.setItem(`live-briefing-${topicId}`, JSON.stringify(data.briefing));
@@ -287,12 +312,7 @@ export default function BriefingDetailPage() {
             })
             .finally(() => setIsLiveLoading(false));
         } else {
-          const cachedBriefing = localStorage.getItem(`live-briefing-${topicId}`);
-          if (cachedBriefing) {
-            setLiveBriefing(JSON.parse(cachedBriefing));
-          } else {
-            router.push("/dashboard");
-          }
+          router.push("/dashboard");
         }
       } else {
         router.push("/dashboard");
