@@ -48,16 +48,17 @@ export default function TopicsPage() {
 
   // Fetch real news
   useEffect(() => {
-    setVisibleCount(9); // Reset visible count when category changes
+    setVisibleCount(9);
+    let mounted = true;
     const fetchNews = async () => {
       setNewsLoading(true);
       try {
-        const res = await fetch(`/api/news?category=${selectedCategory}&t=${Date.now()}`);
+        const res = await fetch(`/api/news?category=${selectedCategory}`);
         const data = await res.json();
-        if (data.articles && data.articles.length > 0) {
+        if (mounted && data.articles && data.articles.length > 0) {
           const articlesWithIds = data.articles.map((a: any, i: number) => ({
             ...a,
-            id: `topic-news-${i}-${Date.now()}`,
+            id: `topic-news-${i}`,
           }));
           setLiveNews(articlesWithIds);
           checkNewsForInterests(articlesWithIds);
@@ -65,10 +66,11 @@ export default function TopicsPage() {
       } catch (error) {
         console.error("Failed to fetch news:", error);
       } finally {
-        setNewsLoading(false);
+        if (mounted) setNewsLoading(false);
       }
     };
     fetchNews();
+    return () => { mounted = false; };
   }, [selectedCategory, checkNewsForInterests]);
 
   const refreshNews = async () => {

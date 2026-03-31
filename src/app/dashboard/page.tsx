@@ -197,36 +197,38 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    let mounted = true;
     const fetchLiveNews = async () => {
       try {
         setLiveNewsLoading(true);
-        const res = await fetch(`/api/news?category=${briefingFeedCategory}&t=${Date.now()}`);
+        const res = await fetch(`/api/news?category=${briefingFeedCategory}`);
         const data = await res.json();
-        if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
+        if (mounted && data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
           const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
             ...article,
-            id: `live-${index}-${Date.now()}`,
+            id: `live-${index}`,
           }));
           setLiveNews(articlesWithIds);
           localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
           checkNewsForInterests(articlesWithIds);
-        } else {
+        } else if (mounted) {
           setLiveNews([]);
         }
       } catch (error) {
         console.error("Failed to fetch live news:", error);
-        setLiveNews([]);
+        if (mounted) setLiveNews([]);
       } finally {
-        setLiveNewsLoading(false);
+        if (mounted) setLiveNewsLoading(false);
       }
     };
     fetchLiveNews();
+    return () => { mounted = false; };
   }, [briefingFeedCategory, checkNewsForInterests]);
 
   const refreshNews = async () => {
     try {
       setLiveNewsLoading(true);
-      const res = await fetch(`/api/news?category=${briefingFeedCategory}&t=${Date.now()}`);
+      const res = await fetch(`/api/news?category=${briefingFeedCategory}`);
       const data = await res.json();
       if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
         const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
