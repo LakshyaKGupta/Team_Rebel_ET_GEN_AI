@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GNEWS_API_KEY = process.env.GNEWS_API_KEY || "555f2d1633cd26e01597f96b99f59f63";
+const GNEWS_API_KEY = process.env.GNEWS_API_KEY || "";
 const NEWSAPI_KEY = process.env.NEWSAPI_KEY || "0a76f021c7d34b479aab99358193cc9b";
-const NEWSDATA_KEY = process.env.NEWS_DATA_KEY || "pub_cde61f7fcaac45d78e803b6fad9fd2c4";
+const NEWSDATA_KEY = process.env.NEWS_DATA_KEY || "pub_510e79f0806041749f0b7c774b6212cc";
 
 const categoryQueries: Record<string, string> = {
-  markets: "stock market India Sensex Nifty BSE",
-  economy: "economy GDP inflation RBI India",
-  tech: "technology AI startup India",
-  startups: "startup funding India venture",
-  banking: "banking finance India HDFC SBI",
-  general: "India business economy breaking news",
+  markets: "BSE NSE stock market Sensex Nifty trading shares India",
+  economy: "India economy GDP inflation RBI interest rate budget fiscal",
+  tech: "technology AI startup India funding unicorn tech company",
+  startups: "Indian startup funding venture capital unicorn investment founder",
+  banking: "bank loan credit finance HDFC SBI ICICI RBI banking India",
+  general: "India business economy finance breaking news latest",
 };
 
 function categorizeArticle(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
-  if (text.match(/stock|market|sensex|nifty|bse|trading|shares|ipo/)) return 'markets';
-  if (text.match(/economy|gdp|inflation|rbi|rate|fiscal|budget/)) return 'economy';
-  if (text.match(/tech|ai|software|digital/)) return 'tech';
-  if (text.match(/startup|funding|venture|unicorn|founder/)) return 'startups';
-  if (text.match(/bank|loan|credit|hdfc|sbi|icici/)) return 'banking';
+  if (text.match(/stock|market|sensex|nifty|bse|nse|trading|shares|ipo|fii|dii/)) return 'markets';
+  if (text.match(/economy|gdp|inflation|rbi|rate|fiscal|budget|rupee|export/)) return 'economy';
+  if (text.match(/tech|ai|software|digital|google|microsoft|apple|meta|startup/)) return 'tech';
+  if (text.match(/startup|funding|venture|unicorn|founder|ipo|investment/)) return 'startups';
+  if (text.match(/bank|loan|credit|hdfc|sbi|icici|nbfc|finance|emi/)) return 'banking';
   return 'general';
 }
 
@@ -38,31 +38,10 @@ function timeAgo(dateString: string): string {
   }
 }
 
-async function fetchGNews(query: string): Promise<any[]> {
-  try {
-    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=10&token=${GNEWS_API_KEY}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) { console.log('GNews failed'); return []; }
-    const data = await res.json();
-    console.log('GNews got', data.articles?.length || 0, 'articles');
-    return (data.articles || []).map((a: any, i: number) => ({
-      id: `gn-${Date.now()}-${i}`,
-      title: a.title || '',
-      summary: a.description || '',
-      source: a.source?.name || 'GNews',
-      url: a.url || '#',
-      date: timeAgo(a.publishedAt),
-      rawDate: a.publishedAt,
-      image: a.image || null,
-      category: categorizeArticle(a.title || '', a.description || ''),
-    }));
-  } catch (e) { console.log('GNews error', e); return []; }
-}
-
 async function fetchNewsAPI(query: string): Promise<any[]> {
   try {
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${NEWSAPI_KEY}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=15&apiKey=${NEWSAPI_KEY}`;
+    const res = await fetch(url, { next: { revalidate: 300 } });
     if (!res.ok) { console.log('NewsAPI failed'); return []; }
     const data = await res.json();
     console.log('NewsAPI got', data.articles?.length || 0, 'articles');
@@ -81,9 +60,10 @@ async function fetchNewsAPI(query: string): Promise<any[]> {
 }
 
 async function fetchNewsData(query: string): Promise<any[]> {
+  if (!NEWSDATA_KEY) return [];
   try {
-    const url = `https://newsdata.io/api/1/news?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(query)}&language=en`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const url = `https://newsdata.io/api/1/news?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(query)}&language=en&category=business`;
+    const res = await fetch(url, { next: { revalidate: 300 } });
     if (!res.ok) { console.log('NewsData failed'); return []; }
     const data = await res.json();
     console.log('NewsData got', data.results?.length || 0, 'articles');
@@ -105,27 +85,23 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") || "general";
-    const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 50);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 30);
 
     const query = categoryQueries[category] || categoryQueries.general;
-    console.log('Fetching news for:', category, 'query:', query);
+    console.log('Fetching news for:', category);
 
-    // Fetch from all 3 sources in parallel
-    const [gnews, newsapi, newsdata] = await Promise.all([
-      fetchGNews(query),
+    const [newsapi, newsdata] = await Promise.all([
       fetchNewsAPI(query),
       fetchNewsData(query),
     ]);
 
-    let allArticles = [...gnews, ...newsapi, ...newsdata];
+    let allArticles = [...newsapi, ...newsdata];
     console.log('Total articles before dedup:', allArticles.length);
 
-    // Deduplicate by title
     const unique = allArticles.filter((a, i, arr) => 
       !arr.slice(0, i).some(b => b.title.toLowerCase() === a.title.toLowerCase())
     );
 
-    // Sort by date, put articles with images first
     const withImg = unique.filter(a => a.image).sort((a, b) => 
       new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime()
     );
@@ -140,9 +116,9 @@ export async function GET(request: NextRequest) {
       category,
       articles: final,
       count: final.length,
-      sources: { gnews: gnews.length, newsapi: newsapi.length, newsdata: newsdata.length },
+      sources: { newsapi: newsapi.length, newsdata: newsdata.length },
       timestamp: new Date().toISOString(),
-    }, { headers: { 'Cache-Control': 'no-store' } });
+    }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
   } catch (error) {
     console.error('News error:', error);
     return NextResponse.json({ error: "Failed to fetch news" }, { status: 500 });
