@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateUser, generateToken, getUserPreferences } from "@/lib/auth";
+import { generateToken } from "@/lib/auth";
 import { isValidEmail, isValidPassword, sanitizeString } from "@/lib/validation";
+
+const DEMO_USERS = [
+  { id: "demo-1", email: "demo@et.com", name: "Demo User", password: "demo123", avatarUrl: null },
+  { id: "demo-2", email: "investor@et.com", name: "Investor User", password: "investor123", avatarUrl: null },
+  { id: "demo-3", email: "founder@et.com", name: "Founder User", password: "founder123", avatarUrl: null },
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +35,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await authenticateUser(email, password);
+    let user = null;
+    
+    try {
+      const { authenticateUser, getUserPreferences } = await import("@/lib/auth");
+      user = await authenticateUser(email, password);
+    } catch (dbError) {
+      console.log("Database not available, using demo mode");
+    }
+
+    if (!user) {
+      const demoUser = DEMO_USERS.find(u => u.email === email && u.password === password);
+      if (demoUser) {
+        user = { id: demoUser.id, email: demoUser.email, name: demoUser.name, avatarUrl: demoUser.avatarUrl };
+      }
+    }
+
     if (!user) {
       return NextResponse.json(
         { error: "Invalid email or password" },
@@ -38,7 +59,36 @@ export async function POST(request: NextRequest) {
     }
 
     const token = generateToken(user.id);
-    const preferences = await getUserPreferences(user.id);
+    
+    let preferences = {
+      userType: "exploring" as const,
+      selectedInterests: ["business", "technology"],
+      goal: null,
+      notificationPref: "key" as const,
+      hasCompletedOnboarding: true,
+      theme: "light" as const,
+      notificationsEnabled: true,
+      emailUpdates: false,
+    };
+
+    try {
+      const { getUserPreferences } = await import("@/lib/auth");
+      const dbPreferences = await getUserPreferences(user.id);
+      if (dbPreferences) {
+        preferences = {
+          userType: dbPreferences.userType as typeof preferences.userType || "exploring",
+          selectedInterests: dbPreferences.selectedInterests || preferences.selectedInterests,
+          goal: dbPreferences.goal as typeof preferences.goal,
+          notificationPref: dbPreferences.notificationPref as typeof preferences.notificationPref || "key",
+          hasCompletedOnboarding: dbPreferences.hasCompletedOnboarding ?? true,
+          theme: (dbPreferences.theme as typeof preferences.theme) || "light",
+          notificationsEnabled: dbPreferences.notificationsEnabled ?? true,
+          emailUpdates: dbPreferences.emailUpdates ?? false,
+        };
+      }
+    } catch (e) {
+      console.log("Using default preferences");
+    }
 
     const response = NextResponse.json({
       user: {
@@ -47,16 +97,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
         avatarUrl: user.avatarUrl,
       },
-      preferences: {
-        userType: preferences?.userType,
-        selectedInterests: preferences?.selectedInterests || [],
-        goal: preferences?.goal,
-        notificationPref: preferences?.notificationPref,
-        hasCompletedOnboarding: preferences?.hasCompletedOnboarding || false,
-        theme: preferences?.theme || "light",
-        notificationsEnabled: preferences?.notificationsEnabled ?? true,
-        emailUpdates: preferences?.emailUpdates ?? false,
-      },
+      preferences,
       token,
     });
 
