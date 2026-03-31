@@ -197,6 +197,16 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    const cachedNews = localStorage.getItem(`cached-news-${briefingFeedCategory}`);
+    if (cachedNews) {
+      try {
+        setLiveNews(JSON.parse(cachedNews));
+        setLiveNewsLoading(false);
+      } catch (e) {
+        console.error("Failed to parse cached news:", e);
+      }
+    }
+
     let mounted = true;
     const fetchLiveNews = async () => {
       try {
@@ -209,6 +219,7 @@ export default function DashboardPage() {
             id: `live-${index}`,
           }));
           setLiveNews(articlesWithIds);
+          localStorage.setItem(`cached-news-${briefingFeedCategory}`, JSON.stringify(articlesWithIds));
           localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
         } else if (mounted) {
           setLiveNews([]);
