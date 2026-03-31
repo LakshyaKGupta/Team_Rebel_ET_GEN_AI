@@ -10,3 +10,4 @@ build/
 
 /src/generated/prisma
 dev.db
+.vercel

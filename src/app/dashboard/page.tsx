@@ -168,9 +168,9 @@ export default function DashboardPage() {
       case "portfolio":
         return liveNews.filter(a => a.image && 
           portfolioAssets.some(p => 
-            (a.title || '').toLowerCase().includes((p.ticker || '').toLowerCase()) || 
+            (a.title || '').toLowerCase().includes((p.symbol || '').toLowerCase()) || 
             (a.title || '').toLowerCase().includes((p.name || '').toLowerCase().split(' ')[0].toLowerCase()) ||
-            (a.summary || '').toLowerCase().includes((p.ticker || '').toLowerCase())
+            (a.summary || '').toLowerCase().includes((p.symbol || '').toLowerCase())
           )
         );
       case "liked":
@@ -439,9 +439,9 @@ export default function DashboardPage() {
                 <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${activeQuickFilter === "portfolio" ? "text-white/70" : "text-[#8B4513]"}`}>Portfolio-linked</p>
                 <p className={`mt-2 text-2xl font-semibold ${activeQuickFilter === "portfolio" ? "text-white" : ""}`}>{liveNews.filter(a => a.image && 
                   portfolioAssets.some(p => 
-                    (a.title || '').toLowerCase().includes((p.ticker || '').toLowerCase()) || 
+                    (a.title || '').toLowerCase().includes((p.symbol || '').toLowerCase()) || 
                     (a.title || '').toLowerCase().includes((p.name || '').toLowerCase().split(' ')[0].toLowerCase()) ||
-                    (a.summary || '').toLowerCase().includes((p.ticker || '').toLowerCase())
+                    (a.summary || '').toLowerCase().includes((p.symbol || '').toLowerCase())
                   )
                 ).length}</p>
               </button>
@@ -626,9 +626,13 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-3">
                   {portfolioRadar.length > 0 ? portfolioRadar.map(({ asset, assessment }) => (
-                    <div key={asset.ticker} className="flex items-center justify-between rounded-xl bg-[#F8F3EB] p-3">
-                      <div>
-                        <p className="font-semibold">{asset.ticker}</p>
+                    <div key={asset.symbol} className="flex items-center justify-between rounded-xl bg-[#F8F3EB] p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-xs font-bold text-white">
+                          {asset.symbol?.charAt(0) || asset.name?.charAt(0) || "?"}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{asset.symbol}</p>
                         <p className="text-sm text-[#5C5C5C]">{asset.name}</p>
                       </div>
                       <div className="text-right">
