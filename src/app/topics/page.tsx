@@ -72,10 +72,16 @@ export default function TopicsPage() {
     return () => { mounted = false; };
   }, [selectedCategory]);
 
+  useEffect(() => {
+    if (liveNews.length > 0) {
+      checkNewsForInterests(liveNews);
+    }
+  }, [liveNews, checkNewsForInterests]);
+
   const refreshNews = async () => {
     setNewsLoading(true);
     try {
-      const res = await fetch(`/api/news?category=${selectedCategory}&t=${Date.now()}`);
+      const res = await fetch(`/api/news?category=${selectedCategory}`);
       const data = await res.json();
       if (data.articles && data.articles.length > 0) {
         const articlesWithIds = data.articles.map((a: any, i: number) => ({
@@ -83,7 +89,6 @@ export default function TopicsPage() {
           id: `topic-news-${i}-${Date.now()}`,
         }));
         setLiveNews(articlesWithIds);
-        checkNewsForInterests(articlesWithIds);
       }
     } catch (error) {
       console.error("Failed to refresh news:", error);

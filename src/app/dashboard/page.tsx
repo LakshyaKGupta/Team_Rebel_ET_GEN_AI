@@ -224,6 +224,12 @@ export default function DashboardPage() {
     return () => { mounted = false; };
   }, [briefingFeedCategory]);
 
+  useEffect(() => {
+    if (liveNews.length > 0) {
+      checkNewsForInterests(liveNews);
+    }
+  }, [liveNews, checkNewsForInterests]);
+
   const refreshNews = async () => {
     try {
       setLiveNewsLoading(true);
@@ -232,6 +238,7 @@ export default function DashboardPage() {
       if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
         const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
           ...article,
+          id: `live-${index}-${Date.now()}`,
           id: `live-${index}-${Date.now()}`,
         }));
         setLiveNews(articlesWithIds);

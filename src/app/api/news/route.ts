@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") || "general";
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 30);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 50);
 
     const cacheKey = category;
     const cached = cache.get(cacheKey);
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const query = categoryQueries[category] || categoryQueries.general;
     console.log('Fetching news for:', category);
 
-    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWSAPI_KEY}`;
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=50&apiKey=${NEWSAPI_KEY}`;
     const res = await fetch(url, { next: { revalidate: 120 } });
     
     if (!res.ok) {
