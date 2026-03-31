@@ -116,7 +116,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [getUserInterestCategories]);
 
   const checkNewsForInterests = useCallback((articles: Array<{ title: string; summary?: string; source?: string; url?: string; image?: string; category?: string }>) => {
-    if (preferences.notificationPref === "none" || !preferences.notificationsEnabled) return;
+    if (preferences.notificationPref === "none") return;
 
     articles.forEach(article => {
       const articleId = `${article.title.substring(0, 50)}-${Date.now()}`;
