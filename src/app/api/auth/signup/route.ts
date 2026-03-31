@@ -4,6 +4,13 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        { error: "Database not configured", details: "DATABASE_URL is missing" },
+        { status: 500 }
+      );
+    }
+
     const { createUser, generateToken, getUserByEmail } = await import("@/lib/auth");
     const { isValidEmail, isValidPassword, sanitizeString } = await import("@/lib/validation");
     
@@ -67,9 +74,10 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Signup error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
-      { error: "Internal server error", details: message },
+      { error: "Internal server error", details: message, stack },
       { status: 500 }
     );
   }
