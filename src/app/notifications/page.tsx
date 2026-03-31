@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bell, Check, CheckCheck, Trash2, TrendingUp, Star, AlertCircle } from "lucide-react";
+import { ArrowLeft, Bell, Check, CheckCheck, Trash2, TrendingUp, Star, AlertCircle, ExternalLink, Newspaper } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
 import { useNotifications, Notification } from "@/context/NotificationContext";
@@ -13,11 +13,12 @@ export default function NotificationsPage() {
   const { preferences } = useUser();
   const { notifications, markAsRead, markAllAsRead, clearNotification, clearAll, unreadCount } = useNotifications();
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
-  const [filter, setFilter] = useState<"all" | "unread" | "breaking">("all");
+  const [filter, setFilter] = useState<"all" | "unread" | "news" | "breaking">("all");
 
   const filteredNotifications = notifications.filter(n => {
     if (filter === "unread") return !n.read;
     if (filter === "breaking") return n.type === "breaking";
+    if (filter === "news") return n.type === "news";
     return true;
   });
 
@@ -29,6 +30,8 @@ export default function NotificationsPage() {
         return <TrendingUp size={18} className="text-green-500" />;
       case "topic":
         return <Star size={18} className="text-yellow-500" />;
+      case "news":
+        return <Newspaper size={18} className="text-blue-500" />;
       default:
         return <Bell size={18} className="text-[#8B4513]" />;
     }
@@ -45,6 +48,15 @@ export default function NotificationsPage() {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    if (notification.link) {
+      window.open(notification.link, "_blank");
+    } else if (notification.articleId && notification.articleId.startsWith("live-")) {
+      router.push(`/briefing/${notification.articleId}`);
+    }
   };
 
   return (
@@ -81,11 +93,12 @@ export default function NotificationsPage() {
             {[
               { id: "all", label: "All" },
               { id: "unread", label: "Unread" },
+              { id: "news", label: "News" },
               { id: "breaking", label: "Breaking" },
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setFilter(tab.id as any)}
+                onClick={() => setFilter(tab.id as typeof filter)}
                 className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   filter === tab.id ? "bg-[#1A1A1A] text-white" : "border border-[#DDD4C4] bg-white text-[#5C5C5C]"
                 }`}
@@ -100,7 +113,7 @@ export default function NotificationsPage() {
               <Bell size={48} className="mx-auto mb-4 text-[#DDD4C4]" />
               <p className="text-lg font-semibold">No notifications</p>
               <p className="mt-2 text-sm text-[#5C5C5C]">
-                {filter === "unread" ? "You're all caught up!" : "We'll notify you about important updates."}
+                {filter === "unread" ? "You're all caught up!" : filter === "news" ? "No news notifications yet. News matching your interests will appear here." : "We'll notify you about important updates."}
               </p>
             </div>
           ) : (
@@ -115,39 +128,76 @@ export default function NotificationsPage() {
                   }`}
                 >
                   <div className="flex gap-3">
+                    {notification.image && (
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                        <img 
+                          src={notification.image} 
+                          alt="" 
+                          className="h-full w-full object-cover"
+                          onError={(e) => e.currentTarget.style.display = 'none'}
+                        />
+                      </div>
+                    )}
                     <div className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                       notification.read ? "bg-[#F5F0E6]" : "bg-[#F8F3EB]"
-                    }`}>
+                    }`} style={{ display: notification.image ? 'none' : 'flex' }}>
                       {getIcon(notification.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className={`font-semibold ${notification.read ? "text-[#5C5C5C]" : "text-[#1A1A1A]"}`}>
-                          {notification.title}
-                        </h3>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                              notification.type === 'news' ? 'bg-blue-100 text-blue-700' :
+                              notification.type === 'breaking' ? 'bg-red-100 text-red-700' :
+                              notification.type === 'portfolio' ? 'bg-green-100 text-green-700' :
+                              'bg-[#F4EBDD] text-[#8B4513]'
+                            }`}>
+                              {notification.type === 'news' && <Newspaper size={10} />}
+                              {notification.type === 'breaking' && <AlertCircle size={10} />}
+                              {notification.type === 'portfolio' && <TrendingUp size={10} />}
+                              {notification.type === 'system' && <Bell size={10} />}
+                              {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
+                            </span>
+                          </div>
+                          <h3 className={`mt-1 font-semibold ${notification.read ? "text-[#5C5C5C]" : "text-[#1A1A1A]"}`}>
+                            {notification.title}
+                          </h3>
+                        </div>
                         <span className="text-xs whitespace-nowrap text-[#5C5C5C]">
                           {formatTime(notification.timestamp)}
                         </span>
                       </div>
-                      <p className={`mt-1 text-sm ${notification.read ? "text-[#999]" : "text-[#5C5C5C]"}`}>
+                      <p className={`mt-1 text-sm ${notification.read ? "text-[#999]" : "text-[#5C5C5C]"} line-clamp-2`}>
                         {notification.message}
                       </p>
-                      <div className="mt-3 flex items-center gap-2">
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          onClick={() => handleNotificationClick(notification)}
+                          className="flex items-center gap-1 text-xs font-medium text-[#8B4513] hover:text-[#6B3510]"
+                        >
+                          {notification.link ? (
+                            <>
+                              Read full article <ExternalLink size={12} />
+                            </>
+                          ) : (
+                            "View details"
+                          )}
+                        </button>
                         {!notification.read && (
                           <button
                             onClick={() => markAsRead(notification.id)}
-                            className="flex items-center gap-1 text-xs font-medium text-[#8B4513] hover:text-[#6B3510]"
+                            className="flex items-center gap-1 text-xs font-medium text-[#5C5C5C] hover:text-[#8B4513]"
                           >
-                            <Check size={14} />
-                            Mark as read
+                            <Check size={12} />
+                            Mark read
                           </button>
                         )}
                         <button
                           onClick={() => clearNotification(notification.id)}
-                          className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700"
+                          className="ml-auto flex items-center gap-1 text-xs font-medium text-red-400 hover:text-red-600"
                         >
-                          <Trash2 size={14} />
-                          Delete
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </div>
@@ -170,6 +220,9 @@ export default function NotificationsPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Notification Settings</p>
             <p className="mt-2 text-sm text-[#5C5C5C]">
               Your notification preference is set to: <span className="font-medium capitalize">{preferences.notificationPref || "Key updates"}</span>
+            </p>
+            <p className="mt-1 text-xs text-[#5C5C5C]">
+              Based on your interests: <span className="font-medium">{(preferences.selectedInterests || []).join(", ") || "None selected"}</span>
             </p>
             <button
               onClick={() => router.push("/profile?tab=notifications")}

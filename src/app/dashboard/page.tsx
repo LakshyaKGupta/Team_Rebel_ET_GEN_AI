@@ -44,7 +44,7 @@ interface LiveNewsArticle {
 export default function DashboardPage() {
   const router = useRouter();
   const { preferences } = useUser();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, checkNewsForInterests } = useNotifications();
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
   const [briefingFeedCategory, setBriefingFeedCategory] = useState("general");
   const [activeQuickFilter, setActiveQuickFilter] = useState<ReadingListFilter | null>(null);
@@ -209,6 +209,7 @@ export default function DashboardPage() {
           }));
           setLiveNews(articlesWithIds);
           localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
+          checkNewsForInterests(articlesWithIds);
         } else {
           setLiveNews([]);
         }
@@ -220,7 +221,7 @@ export default function DashboardPage() {
       }
     };
     fetchLiveNews();
-  }, [briefingFeedCategory]);
+  }, [briefingFeedCategory, checkNewsForInterests]);
 
   const refreshNews = async () => {
     try {
@@ -234,6 +235,7 @@ export default function DashboardPage() {
         }));
         setLiveNews(articlesWithIds);
         localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
+        checkNewsForInterests(articlesWithIds);
       } else {
         setLiveNews([]);
       }

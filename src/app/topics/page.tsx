@@ -31,7 +31,7 @@ interface LiveNewsArticle {
 export default function TopicsPage() {
   const router = useRouter();
   const { preferences, setSelectedInterests } = useUser();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, checkNewsForInterests } = useNotifications();
   const [selectedCategory, setSelectedCategory] = useState("general");
   const [isEditingInterests, setIsEditingInterests] = useState(false);
   const [customInterest, setCustomInterest] = useState("");
@@ -60,6 +60,7 @@ export default function TopicsPage() {
             id: `topic-news-${i}-${Date.now()}`,
           }));
           setLiveNews(articlesWithIds);
+          checkNewsForInterests(articlesWithIds);
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -68,7 +69,7 @@ export default function TopicsPage() {
       }
     };
     fetchNews();
-  }, [selectedCategory]);
+  }, [selectedCategory, checkNewsForInterests]);
 
   const refreshNews = async () => {
     setNewsLoading(true);
@@ -81,6 +82,7 @@ export default function TopicsPage() {
           id: `topic-news-${i}-${Date.now()}`,
         }));
         setLiveNews(articlesWithIds);
+        checkNewsForInterests(articlesWithIds);
       }
     } catch (error) {
       console.error("Failed to refresh news:", error);

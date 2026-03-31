@@ -1,17 +1,18 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useUser } from "./UserContext";
 
 export interface Notification {
   id: string;
-  type: "breaking" | "portfolio" | "topic" | "system";
+  type: "breaking" | "portfolio" | "topic" | "system" | "news";
   title: string;
   message: string;
   timestamp: Date;
   read: boolean;
   articleId?: string;
   link?: string;
+  image?: string;
 }
 
 interface NotificationContextType {
@@ -22,13 +23,24 @@ interface NotificationContextType {
   markAllAsRead: () => void;
   clearNotification: (id: string) => void;
   clearAll: () => void;
+  addNewsNotification: (article: { title: string; source?: string; url?: string; image?: string }) => void;
+  checkNewsForInterests: (articles: Array<{ title: string; summary?: string; source?: string; url?: string; image?: string; category?: string }>) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  markets: ["stock", "market", "sensex", "nifty", "bse", "nse", "trading", "shares", "equity", "fii", "dii"],
+  economy: ["gdp", "inflation", "rbi", "interest", "budget", "fiscal", "economy", "tax", "rupee"],
+  tech: ["tech", "ai", "startup", "software", "digital", "google", "microsoft", "meta", "apple", "amazon"],
+  startups: ["startup", "funding", "unicorn", "venture", "investment", "ipo", "fundraise"],
+  banking: ["bank", "loan", "credit", "nbfc", "finance", "hdfc", "sbi", "icici"],
+};
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { preferences } = useUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [seenArticleIds, setSeenArticleIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const saved = localStorage.getItem("et_notifications");
@@ -42,8 +54,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.error("Failed to parse notifications", e);
       }
-    } else {
-      setNotifications(getDefaultNotifications());
+    }
+
+    const savedSeen = localStorage.getItem("et_seen_articles");
+    if (savedSeen) {
+      try {
+        setSeenArticleIds(new Set(JSON.parse(savedSeen)));
+      } catch (e) {
+        console.error("Failed to parse seen articles", e);
+      }
     }
   }, []);
 
@@ -54,60 +73,125 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [notifications]);
 
   useEffect(() => {
+    localStorage.setItem("et_seen_articles", JSON.stringify([...seenArticleIds]));
+  }, [seenArticleIds]);
+
+  const getUserInterestCategories = useCallback((): string[] => {
+    const selectedInterests = preferences.selectedInterests || [];
+    const categories: string[] = [];
+
+    selectedInterests.forEach(interest => {
+      const interestLower = interest.toLowerCase();
+      Object.entries(CATEGORY_KEYWORDS).forEach(([category, keywords]) => {
+        if (keywords.some(keyword => interestLower.includes(keyword)) || category.includes(interestLower)) {
+          if (!categories.includes(category)) {
+            categories.push(category);
+          }
+        }
+      });
+    });
+
+    if (categories.length === 0) {
+      categories.push("general");
+    }
+
+    return categories;
+  }, [preferences.selectedInterests]);
+
+  const isArticleRelevant = useCallback((article: { title: string; summary?: string; category?: string }): boolean => {
+    const userCategories = getUserInterestCategories();
+    const articleText = `${article.title} ${article.summary || ''} ${article.category || ''}`.toLowerCase();
+
+    for (const category of userCategories) {
+      const keywords = CATEGORY_KEYWORDS[category] || [];
+      if (keywords.some(keyword => articleText.includes(keyword))) {
+        return true;
+      }
+      if (category.includes(articleText) || articleText.includes(category)) {
+        return true;
+      }
+    }
+
+    return userCategories.includes("general");
+  }, [getUserInterestCategories]);
+
+  const checkNewsForInterests = useCallback((articles: Array<{ title: string; summary?: string; source?: string; url?: string; image?: string; category?: string }>) => {
     if (preferences.notificationPref === "none" || !preferences.notificationsEnabled) return;
 
-    const interval = setInterval(() => {
-      checkForNewNotifications();
-    }, 60000);
+    articles.forEach(article => {
+      const articleId = `${article.title.substring(0, 50)}-${Date.now()}`;
+      
+      if (seenArticleIds.has(articleId)) return;
+      if (!isArticleRelevant(article)) return;
 
-    return () => clearInterval(interval);
-  }, [preferences]);
+      setSeenArticleIds(prev => new Set([...prev, articleId]));
 
-  const getDefaultNotifications = (): Notification[] => [
-    {
-      id: "welcome",
-      type: "system",
-      title: "Welcome to ET News!",
-      message: "Your personalized news briefing is ready. Start exploring to get AI-powered insights.",
-      timestamp: new Date(Date.now() - 3600000),
-      read: false,
-    },
-    {
-      id: "portfolio-tip",
-      type: "portfolio",
-      title: "Portfolio alerts set up",
-      message: "You'll receive notifications when news affects your portfolio holdings.",
-      timestamp: new Date(Date.now() - 1800000),
-      read: false,
-    },
-  ];
+      const newNotification: Notification = {
+        id: `news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: "news",
+        title: article.source || "News Update",
+        message: article.title,
+        timestamp: new Date(),
+        read: false,
+        articleId: articleId,
+        link: article.url,
+        image: article.image,
+      };
 
-  const checkForNewNotifications = () => {
-    const alerts = generateAlerts();
-    alerts.forEach(alert => {
-      const exists = notifications.find(n => n.id === alert.id);
-      if (!exists) {
-        setNotifications(prev => [alert, ...prev]);
-      }
+      setNotifications(prev => {
+        const exists = prev.find(n => n.message === article.title);
+        if (exists) return prev;
+        return [newNotification, ...prev].slice(0, 50);
+      });
     });
-  };
+  }, [preferences, seenArticleIds, isArticleRelevant]);
 
-  const generateAlerts = (): Notification[] => {
-    const alerts: Notification[] = [];
-    const now = new Date();
+  const addNewsNotification = useCallback((article: { title: string; source?: string; url?: string; image?: string }) => {
+    const articleId = `news-${Date.now()}`;
+    
+    if (seenArticleIds.has(articleId)) return;
 
-    if (Math.random() > 0.7) {
-      alerts.push({
-        id: `alert-${now.getTime()}`,
-        type: "breaking",
-        title: "Breaking: Market Update",
-        message: "Major market movement detected. Check your portfolio for updates.",
-        timestamp: now,
+    setSeenArticleIds(prev => new Set([...prev, articleId]));
+
+    const newNotification: Notification = {
+      id: articleId,
+      type: "news",
+      title: article.source || "News Update",
+      message: article.title,
+      timestamp: new Date(),
+      read: false,
+      link: article.url,
+      image: article.image,
+    };
+
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
+  }, [seenArticleIds]);
+
+  const getDefaultNotifications = (): Notification[] => {
+    const defaults: Notification[] = [
+      {
+        id: "welcome",
+        type: "system",
+        title: "Welcome to ET News!",
+        message: "Your personalized news briefing is ready. Start exploring to get AI-powered insights.",
+        timestamp: new Date(Date.now() - 3600000),
+        read: false,
+      },
+    ];
+
+    const userCategories = getUserInterestCategories();
+    if (userCategories.length > 0 && !userCategories.includes("general")) {
+      defaults.push({
+        id: "preferences-set",
+        type: "system",
+        title: "Notifications Set Up",
+        message: `You'll receive updates on ${userCategories.join(", ")} news based on your interests.`,
+        timestamp: new Date(Date.now() - 1800000),
         read: false,
       });
     }
 
-    return alerts;
+    return defaults;
   };
 
   const addNotification = (notification: Omit<Notification, "id" | "timestamp" | "read">) => {
@@ -117,7 +201,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       timestamp: new Date(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev]);
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
   };
 
   const markAsRead = (id: string) => {
@@ -149,6 +233,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       markAllAsRead,
       clearNotification,
       clearAll,
+      addNewsNotification,
+      checkNewsForInterests,
     }}>
       {children}
     </NotificationContext.Provider>
