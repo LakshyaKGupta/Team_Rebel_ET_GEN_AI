@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+export const dynamic = 'force-dynamic';
+
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export async function POST(request: NextRequest) {

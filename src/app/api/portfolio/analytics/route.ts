@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateHoldingPerformance, calculatePortfolioSummary, HoldingPerformance } from '@/lib/portfolio-utils';
 
+export const dynamic = 'force-dynamic';
+
 interface Holding {
   id: string;
   portfolioId: string;
