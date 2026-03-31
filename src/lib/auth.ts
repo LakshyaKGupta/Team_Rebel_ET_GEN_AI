@@ -1,9 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { prisma } from "./prisma";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -26,6 +24,7 @@ export function verifyToken(token: string): { userId: string } | null {
 }
 
 export async function createUser(email: string, password: string, name?: string) {
+  const { prisma } = await import("./prisma");
   const passwordHash = await hashPassword(password);
   
   const user = await prisma.user.create({
@@ -50,6 +49,7 @@ export async function createUser(email: string, password: string, name?: string)
 }
 
 export async function authenticateUser(email: string, password: string) {
+  const { prisma } = await import("./prisma");
   const user = await prisma.user.findUnique({
     where: { email },
     include: { preferences: true },
@@ -64,6 +64,7 @@ export async function authenticateUser(email: string, password: string) {
 }
 
 export async function getUserById(userId: string) {
+  const { prisma } = await import("./prisma");
   return prisma.user.findUnique({
     where: { id: userId },
     include: { preferences: true },
@@ -71,6 +72,7 @@ export async function getUserById(userId: string) {
 }
 
 export async function getUserByEmail(email: string) {
+  const { prisma } = await import("./prisma");
   return prisma.user.findUnique({
     where: { email },
     include: { preferences: true },
@@ -93,6 +95,7 @@ export async function updateUserPreferences(
     timeHorizon?: string;
   }
 ) {
+  const { prisma } = await import("./prisma");
   return prisma.userPreference.update({
     where: { userId },
     data: {
@@ -112,6 +115,7 @@ export async function updateUserPreferences(
 }
 
 export async function getUserPreferences(userId: string) {
+  const { prisma } = await import("./prisma");
   const prefs = await prisma.userPreference.findUnique({
     where: { userId },
   });
