@@ -61,7 +61,6 @@ export default function TopicsPage() {
             id: `topic-news-${i}`,
           }));
           setLiveNews(articlesWithIds);
-          checkNewsForInterests(articlesWithIds);
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -71,7 +70,7 @@ export default function TopicsPage() {
     };
     fetchNews();
     return () => { mounted = false; };
-  }, [selectedCategory, checkNewsForInterests]);
+  }, [selectedCategory]);
 
   const refreshNews = async () => {
     setNewsLoading(true);

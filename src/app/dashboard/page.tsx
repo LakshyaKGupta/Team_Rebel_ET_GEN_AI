@@ -210,7 +210,6 @@ export default function DashboardPage() {
           }));
           setLiveNews(articlesWithIds);
           localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
-          checkNewsForInterests(articlesWithIds);
         } else if (mounted) {
           setLiveNews([]);
         }
@@ -223,7 +222,7 @@ export default function DashboardPage() {
     };
     fetchLiveNews();
     return () => { mounted = false; };
-  }, [briefingFeedCategory, checkNewsForInterests]);
+  }, [briefingFeedCategory]);
 
   const refreshNews = async () => {
     try {
