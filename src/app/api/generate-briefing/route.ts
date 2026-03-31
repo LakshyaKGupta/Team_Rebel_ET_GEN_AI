@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    const actualSummary = summary || "";
+    const actualSummary = (summary || "").substring(0, 500);
     const category = providedCategory || detectTopicCategory(title, actualSummary);
     const entities = extractKeyEntities(title, actualSummary);
     

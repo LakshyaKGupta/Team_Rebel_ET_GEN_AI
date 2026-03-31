@@ -590,12 +590,12 @@ export default function BriefingDetailPage() {
 
                 <div className="space-y-3">
                   <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">{effectiveTopic?.title}</h1>
-                  <p className="max-w-3xl text-base leading-7 text-[#5C5C5C]">{effectiveTopic?.subtitle}</p>
+                  <p className="max-w-3xl text-base leading-7 text-[#5C5C5C] line-clamp-3">{effectiveTopic?.subtitle}</p>
                 </div>
 
                 <div className="rounded-[24px] bg-[#F8F3EB] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">One-line thesis</p>
-                  <p className="mt-2 text-sm leading-7 text-[#1A1A1A]">{effectiveTopic?.generalView}</p>
+                  <p className="mt-2 text-sm leading-7 text-[#1A1A1A] line-clamp-4">{effectiveTopic?.generalView}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -791,7 +791,7 @@ export default function BriefingDetailPage() {
                           <div className="h-4 w-4/5 rounded bg-white" />
                         </div>
                       ) : (
-                        <p className="mt-2 whitespace-pre-line text-sm leading-7 text-[#4F4A43]">{personalNarrative || "Open this tab to load a more personal interpretation for your profile."}</p>
+                        <p className="mt-2 whitespace-pre-line text-sm leading-7 text-[#4F4A43] line-clamp-6">{personalNarrative || "Open this tab to load a more personal interpretation for your profile."}</p>
                       )}
                       {personalError ? <p className="mt-3 text-xs text-[#8B4513]">{personalError}</p> : null}
                     </div>
