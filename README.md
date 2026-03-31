@@ -1,63 +1,198 @@
 # Team_Rebel_ET_GEN_AI
 
+**Live Demo**: https://team-rebel-et-gen-ai.vercel.app/
+
 AI-Native News Experience - Personalized newsroom + Interactive AI briefings + AI Chatbot
 
-## Project Overview
+## 🚀 Overview
 
-This project aims to revolutionize business news delivery using Gen-AI:
+This project revolutionizes business news delivery using Gen-AI:
+
 - **My ET**: Personalized newsroom based on user interests
-- **News Navigator**: Interactive AI-powered intelligence briefings
+- **News Navigator**: Interactive AI-powered intelligence briefings  
 - **News Assistant**: AI chatbot for answering finance and investment queries powered by Groq
 
-## Key Features
+## ✨ Features
 
-✨ **Personalized Dashboard**: Curated news based on user type and interests
-📰 **Smart Briefings**: AI-generated summaries adapted to your profile
-💬 **AI Chatbot**: Ask questions about markets, investments, and news
-📊 **Portfolio Integration**: Track relevant news for your investments
-🎯 **User Profiles**: Investor, Founder, Student, or Explorer personas
+### Dashboard
+- Personalized news based on your interests (Markets, Economy, Tech, Startups, Banking)
+- Real news from NewsAPI with images
+- Quick filters (Portfolio, Liked, Saved, Interest-based)
+- Cached news for instant loading
 
-## Tech Stack
+### Topics
+- Browse news by category
+- Add custom interests
+- Interest verification
+- Infinite scroll with "View more"
 
-- Frontend: Next.js 14 + Tailwind CSS
-- Backend: Next.js API Routes
-- Database: Prisma + SQLite
-- AI: Groq (free tier for chat)
-- News Data: Static data (integrates GDELT / NewsAPI)
+### Briefing
+- AI-generated summaries for articles
+- Story Arc: Timeline, Updates, Players, Sentiment
+- Personal Impact: "Why it matters to you"
+- Portfolio relevance
 
-## Getting Started
+### Notifications
+- Interest-based news alerts
+- Breaking news notifications
+- Category filters
+
+### AI Chatbot
+- Powered by Groq (free tier)
+- Context-aware responses
+- Article context sharing
+- Floating widget on every page
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 14 + Tailwind CSS + Framer Motion
+- **Backend**: Next.js API Routes
+- **Database**: Prisma + PostgreSQL (Supabase)
+- **AI**: Groq API (free tier for chat)
+- **News Data**: NewsAPI
+
+## 📁 Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── news/          # News API endpoint
+│   │   ├── generate-briefing/  # Briefing generation
+│   │   └── ai/            # AI chat endpoints
+│   ├── dashboard/         # Main dashboard
+│   ├── topics/            # Topics browser
+│   ├── briefing/[id]/    # Article briefing
+│   ├── notifications/     # Notifications page
+│   └── chat/             # Full chat page
+├── components/
+│   ├── layout/           # Sidebar, Navigation
+│   ├── nav/              # BottomNav
+│   └── cards/            # TopicVisual, etc.
+├── context/
+│   ├── UserContext.tsx
+│   ├── NotificationContext.tsx
+│   ├── BriefingContext.tsx
+│   └── ChatContext.tsx
+└── lib/
+    ├── data.ts           # Static data
+    ├── api.ts            # API utilities
+    └── types.ts          # TypeScript types
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Groq API key (free at https://console.groq.com)
+- NewsAPI key (free at https://newsapi.org)
+
+### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/LakshyaKGupta/Team_Rebel_ET_GEN_AI.git
+cd Team_Rebel_ET_GEN_AI
 
 # Install dependencies
-cd Team_Rebel_ET_GEN_AI
 npm install
 
-# Configure environment
-# Copy .env and add your Groq API key
-# See CHATBOT_SETUP.md for detailed instructions
+# Create environment file
+cp .env.example .env.local
+```
 
-# Run development server
+### Environment Variables
+
+Create a `.env.local` file with:
+
+```env
+# Database (Supabase PostgreSQL)
+DATABASE_URL="postgresql://..."
+
+# Authentication
+JWT_SECRET="your-super-secret-jwt-key"
+
+# Groq AI API (free, fast)
+GROQ_API_KEY="gsk_..."
+GROQ_MODEL="llama-3.1-8b-instant"
+
+# News APIs
+NEWSAPI_KEY="your-newsapi-key"
+
+# Frontend
+FRONTEND_ORIGIN="http://localhost:3000"
+```
+
+### Run Development Server
+
+```bash
 npm run dev
 ```
 
-Visit http://localhost:3000 to get started!
+Visit http://localhost:3000
 
-## AI Chatbot Setup
+### Build for Production
 
-The project includes an AI-powered chatbot with:
-- **Free Tier**: Uses Groq API (no credit card required)
-- **Personalized**: Responds based on your user profile
-- **Always Available**: Floating widget on every page
-- **Full Chat Page**: Dedicated interface at `/chat`
+```bash
+npm run build
+npm start
+```
 
-For detailed setup instructions, see [CHATBOT_SETUP.md](CHATBOT_SETUP.md).
+## 📋 Environment Setup
 
-### Quick Start
+### Required APIs
 
-1. Get free API key: https://console.groq.com
-2. Add to `.env`: `GROQ_API_KEY="your-key"`
-3. Start dev server: `npm run dev`
-4. Click the 💬 icon (bottom-right) to chat!
+1. **Groq API** (for AI Chatbot)
+   - Get free key at https://console.groq.com
+   - No credit card required
+   - Free tier: 30 requests/minute
+
+2. **NewsAPI** (for news articles)
+   - Get free key at https://newsapi.org
+   - 100 requests/day on free tier
+   - Limited to 100 results
+
+3. **Database** (optional for full features)
+   - Supabase PostgreSQL recommended
+   - Prisma ORM for database access
+
+## 🎯 User Types
+
+The app supports different personas:
+
+- **Investor**: Focus on markets, portfolio, financial news
+- **Founder**: Startup ecosystem, funding, tech trends
+- **Student**: Learning about business and finance
+- **Professional**: Industry-specific insights
+- **Explorer**: General news discovery
+
+## 📱 Responsive Design
+
+- Desktop: Full sidebar navigation
+- Mobile: Bottom navigation bar
+- Touch-friendly UI elements
+- Optimized for all screen sizes
+
+## 🔒 Security
+
+- JWT-based authentication
+- HTTP-only cookies
+- Server-side validation
+- Protected API routes
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+## 👥 Team
+
+Team Rebel - ET_GEN_AI Hackathon Project
+
+## 🙏 Acknowledgments
+
+- Next.js team for the amazing framework
+- Groq for providing free AI inference
+- NewsAPI for news data
+- Vercel for deployment
