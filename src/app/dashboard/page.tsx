@@ -34,9 +34,9 @@ interface LiveNewsArticle {
   id: string;
   title: string;
   summary: string;
-  source: string;
-  url: string;
-  date: string;
+  source?: string;
+  url?: string;
+  date?: string;
   image?: string;
   category?: string;
 }
@@ -165,24 +165,24 @@ export default function DashboardPage() {
   const getFilteredArticles = () => {
     if (!activeQuickFilter) return [];
     switch (activeQuickFilter) {
-      case "portfolio":
-        return liveNews.filter(a => a.image && 
-          portfolioAssets.some(p => 
-            (a.title || '').toLowerCase().includes((p.symbol || '').toLowerCase()) || 
-            (a.title || '').toLowerCase().includes((p.name || '').toLowerCase().split(' ')[0].toLowerCase()) ||
-            (a.summary || '').toLowerCase().includes((p.symbol || '').toLowerCase())
+      case "saved":
+        return topics.filter((topic) => engagement.savedIds.includes(topic.id));
+      case "liked":
+        return topics.filter((topic) => engagement.likedIds.includes(topic.id));
+      case "portfolio": {
+        const portfolioTopicIds = new Set(
+          portfolioAssets.map((asset) => assessPortfolioImpact(asset, topics).topic.id).filter(Boolean)
+        );
+        return topics.filter((topic) => portfolioTopicIds.has(topic.id));
+      }
+      case "interest":
+        return topics.filter((topic) =>
+          selectedInterests.some(
+            (interest) =>
+              topic.title.toLowerCase().includes(interest.toLowerCase()) ||
+              topic.summary.toLowerCase().includes(interest.toLowerCase())
           )
         );
-      case "liked":
-        return likedTopics;
-      case "saved":
-        return savedTopics;
-      case "interest":
-        return liveNews.filter(a => a.image && 
-          ((a.title || '').toLowerCase().includes(topInterest.toLowerCase()) ||
-          (a.category || '').toLowerCase().includes(topInterest.toLowerCase()) ||
-          (a.summary || '').toLowerCase().includes(topInterest.toLowerCase()))
-        ));
       default:
         return [];
     }
@@ -478,23 +478,21 @@ export default function DashboardPage() {
                           key={item.id}
                           className="overflow-hidden rounded-[20px] border border-[#DDD4C4] bg-white shadow-sm hover:shadow-md transition-shadow"
                         >
-                          {'image' in item && item.image ? (
+                          {'image' in item && typeof item.image === 'string' && item.image ? (
                             <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${item.id}`); }} className="w-full text-left">
                               <div className="h-32 w-full overflow-hidden bg-gray-100">
                                 <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
                               </div>
                             </button>
                           ) : (
-                            <button onClick={() => openTopic(item.id)} className="w-full text-left">
-                              <TopicVisual topic={item} />
-                            </button>
+                            <div className="h-36 w-full overflow-hidden bg-gradient-to-br from-[#F8F3EB] to-[#E8E1D3]" />
                           )}
                           <div className="space-y-2 p-4">
-                            {'image' in item ? (
+                            {'image' in item && typeof (item as any).image === 'string' ? (
                               <>
-                                <p className="text-xs text-[#5C5C5C]">{(item.source || 'News')} • {(item.date || 'Recently')}</p>
+                                <p className="text-xs text-[#5C5C5C]">{(item as any).source || 'News'} • {(item as any).date || 'Recently'}</p>
                                 <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${item.id}`); }} className="text-left w-full">
-                                  <p className="text-sm font-semibold line-clamp-2 hover:text-[#8B4513]">{item.title || 'Untitled'}</p>
+                                  <p className="text-sm font-semibold line-clamp-2 hover:text-[#8B4513]">{(item as any).title || 'Untitled'}</p>
                                 </button>
                               </>
                             ) : (
@@ -590,12 +588,16 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-semibold">Recent</h3>
                 </div>
                 <div className="grid gap-2">
-                  {recentTopics.length > 0 ? recentTopics.map((topic) => (
-                    <button key={topic.id} onClick={() => openTopic(topic.id)} className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-3 text-left hover:border-[#8B4513]">
-                      <p className="text-sm font-semibold">{topic.title}</p>
-                      <p className="mt-1 text-xs text-[#5C5C5C]">{topic.category} • {topic.time}</p>
-                    </button>
-                  )) : <p className="text-sm leading-6 text-[#5C5C5C]">Open a story once and it stays here.</p>}
+                  {recentTopics.length > 0 ? (
+                    recentTopics.map((topic) => (
+                      <button key={topic.id} onClick={() => openTopic(topic.id)} className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-3 text-left hover:border-[#8B4513]">
+                        <p className="text-sm font-semibold">{topic.title}</p>
+                        <p className="mt-1 text-xs text-[#5C5C5C]">{topic.category} • {topic.time}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm leading-6 text-[#5C5C5C]">Open a story once and it stays here.</p>
+                  )}
                 </div>
               </div>
 
@@ -625,22 +627,27 @@ export default function DashboardPage() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {portfolioRadar.length > 0 ? portfolioRadar.map(({ asset, assessment }) => (
-                    <div key={asset.symbol} className="flex items-center justify-between rounded-xl bg-[#F8F3EB] p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-xs font-bold text-white">
-                          {asset.symbol?.charAt(0) || asset.name?.charAt(0) || "?"}
+                  {portfolioRadar.length > 0 ? (
+                    portfolioRadar.map(({ asset, assessment }) => (
+                      <div key={asset.symbol} className="flex items-center justify-between rounded-xl bg-[#F8F3EB] p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1A1A] text-xs font-bold text-white">
+                            {asset.symbol?.charAt(0) || asset.name?.charAt(0) || "?"}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{asset.symbol}</p>
+                            <p className="text-sm text-[#5C5C5C]">{asset.name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold">{asset.symbol}</p>
-                        <p className="text-sm text-[#5C5C5C]">{asset.name}</p>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{assessment.topic.title}</p>
+                          <p className="text-xs text-[#5C5C5C]">{assessment.topic.category}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{assessment.topic.title}</p>
-                        <p className="text-xs text-[#5C5C5C]">{assessment.topic.category}</p>
-                      </div>
-                    </div>
-                  )) : <p className="text-sm leading-6 text-[#5C5C5C]">Add assets to your portfolio to see related news.</p>}
+                    ))
+                  ) : (
+                    <p className="text-sm leading-6 text-[#5C5C5C]">Add assets to your portfolio to see related news.</p>
+                  )}
                 </div>
               </div>
             </div>

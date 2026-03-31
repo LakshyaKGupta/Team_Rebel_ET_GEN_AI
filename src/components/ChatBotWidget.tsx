@@ -35,7 +35,7 @@ export function ChatBotWidget() {
     setInput('');
     
     // Pass user preferences to the chat
-    await sendMessage(userInput, preferences);
+    await sendMessage(userInput);
   };
 
   const handleClear = () => {
