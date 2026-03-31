@@ -1,0 +1,34 @@
+# Database (Supabase PostgreSQL)  
+DATABASE_URL="postgresql://postgres:Laka9721%23%23%40%40@db.akwntjhvielctouxapbl.supabase.co:6543/postgres?sslmode=require"
+
+# Authentication
+JWT_SECRET="your-super-secret-jwt-key-change-in-production"
+JWT_EXPIRES_IN="7d"
+
+# Groq AI API (free, fast)
+GROQ_API_KEY="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"
+GROQ_MODEL="llama-3.1-8b-instant"
+
+# Frontend Configuration
+FRONTEND_ORIGIN="http://localhost:3000"
+FRONTEND_ORIGINS="http://localhost:3000,http://localhost:3001"
+
+# News APIs
+NEWSAPI_KEY="0a76f021c7d34b479aab99358193cc9b"
+GNEWS_API_KEY="555f2d1633cd26e01597f96b99f59f63"
+NEWS_DATA_KEY="pub_510e79f0806041749f0b7c774b6212cc"
+RSS_FEEDS=""
+
+# NER (Named Entity Recognition)
+NER_ENABLED="true"
+NER_MODEL_NAME="en_core_web_sm"
+
+# Ingestion Settings
+INGEST_PROVIDER="live"
+INGEST_AUTO_START="false"
+INGEST_SOURCE="rss"
+INGEST_INTERVAL_MINUTES="30"
+
+# Cache Configuration
+NEWS_CACHE_TTL_SECONDS="60"
+STORY_CACHE_TTL_SECONDS="120"
