@@ -182,7 +182,7 @@ export default function DashboardPage() {
           ((a.title || '').toLowerCase().includes(topInterest.toLowerCase()) ||
           (a.category || '').toLowerCase().includes(topInterest.toLowerCase()) ||
           (a.summary || '').toLowerCase().includes(topInterest.toLowerCase()))
-        );
+        ));
       default:
         return [];
     }
