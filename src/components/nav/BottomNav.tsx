@@ -1,9 +1,9 @@
 "use client";
 
-import { Compass, Settings, Sparkles, TrendingUp } from "lucide-react";
+import { Compass, Settings, Sparkles, TrendingUp, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface BottomNavProps {
   activeNav: 'home' | 'topics';
@@ -26,12 +26,25 @@ const newspaperColors = {
 export default function BottomNav({ activeNav, onNavChange }: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/topics");
     router.prefetch("/portfolio");
+    router.prefetch("/notifications");
   }, [router]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("et_notifications");
+    if (saved) {
+      try {
+        const notifications = JSON.parse(saved);
+        const unread = notifications.filter((n: any) => !n.read).length;
+        setUnreadCount(unread);
+      } catch (e) {}
+    }
+  }, [pathname]);
 
   const effectiveNav: "home" | "topics" = pathname === "/topics" ? "topics" : "home";
 
@@ -86,6 +99,20 @@ export default function BottomNav({ activeNav, onNavChange }: BottomNavProps) {
             </span>
           </button>
         ))}
+        <button
+          onClick={() => router.push('/notifications')}
+          className="flex flex-col items-center gap-1 py-2 px-3 text-[#5C5C5C] relative"
+        >
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-transparent">
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </div>
+          <span className="text-xs font-medium">Alerts</span>
+        </button>
         <button
           onClick={() => router.push('/portfolio')}
           className="flex flex-col items-center gap-1 py-2 px-3 text-[#5C5C5C]"

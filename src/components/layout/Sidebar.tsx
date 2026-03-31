@@ -2,9 +2,10 @@
 
 import { BookOpen, Edit3, LogOut, Settings, Bell, Sparkles, TrendingUp } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import { useNotifications } from "@/context/NotificationContext";
 import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface SidebarProps {
   activeNav: 'home' | 'topics';
@@ -26,6 +27,7 @@ const newspaperColors = {
 
 export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
   const { preferences, logout } = useUser();
+  const { unreadCount } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -33,6 +35,7 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
     router.prefetch("/dashboard");
     router.prefetch("/topics");
     router.prefetch("/portfolio");
+    router.prefetch("/notifications");
   }, [router]);
 
   const effectiveNav: "home" | "topics" = pathname === "/topics" ? "topics" : "home";
@@ -62,7 +65,7 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
   return (
     <aside className="w-64 flex-shrink-0 border-r border-[#D4CFC4] bg-[#F5F0E6] p-6 space-y-6 hidden lg:block h-screen sticky top-0">
       <button
-        onClick={() => navigatePrimary("/dashboard", "home")}
+        onClick={() => router.push("/")}
         className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
       >
         <div 
@@ -149,11 +152,25 @@ export default function Sidebar({ activeNav, onNavChange }: SidebarProps) {
         
         <motion.button 
           whileHover={{ x: 4 }}
-          onClick={() => router.push('/profile?tab=notifications')}
-          className="w-full flex items-center gap-3 px-4 py-3 text-[#5C5C5C] hover:bg-[#1A1A1A]/10 hover:text-[#1A1A1A] rounded-lg transition-all text-sm"
+          onClick={() => router.push('/notifications')}
+          className="w-full flex items-center justify-between px-4 py-3 text-[#5C5C5C] hover:bg-[#1A1A1A]/10 hover:text-[#1A1A1A] rounded-lg transition-all text-sm"
         >
-          <Bell size={18} />
-          <span className="font-medium">Notifications</span>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
+            <span className="font-medium">Notifications</span>
+          </div>
+          {unreadCount > 0 && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+              {unreadCount}
+            </span>
+          )}
         </motion.button>
         
         <motion.button 

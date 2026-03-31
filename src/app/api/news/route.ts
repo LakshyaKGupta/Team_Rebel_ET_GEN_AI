@@ -1,206 +1,150 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
 
-const NEWSAPI_KEY = process.env.NEWSAPI_KEY;
-const NEWSAPI_BASE = "https://newsapi.org/v2";
-const CACHE_TTL_SECONDS = parseInt(process.env.NEWS_CACHE_TTL_SECONDS || "300", 10); // 5 minutes default
+const GNEWS_API_KEY = process.env.GNEWS_API_KEY || "555f2d1633cd26e01597f96b99f59f63";
+const NEWSAPI_KEY = process.env.NEWSAPI_KEY || "0a76f021c7d34b479aab99358193cc9b";
+const NEWSDATA_KEY = process.env.NEWS_DATA_KEY || "pub_cde61f7fcaac45d78e803b6fad9fd2c4";
 
-// In-memory cache for news articles
-const newsCache = new Map<string, { data: any; timestamp: number }>();
-
-function getCacheKey(topic: string, category: string, limit: number): string {
-  return `${topic}|${category}|${limit}`;
-}
-
-function getFromCache(key: string): any | null {
-  const cached = newsCache.get(key);
-  if (!cached) return null;
-  
-  const age = (Date.now() - cached.timestamp) / 1000;
-  if (age > CACHE_TTL_SECONDS) {
-    newsCache.delete(key);
-    return null;
-  }
-  
-  console.log(`[Cache HIT] ${key} (age: ${Math.round(age)}s)`);
-  return cached.data;
-}
-
-function setCache(key: string, data: any): void {
-  newsCache.set(key, { data, timestamp: Date.now() });
-  console.log(`[Cache SET] ${key}`);
-  
-  // Prevent unbounded cache growth
-  if (newsCache.size > 100) {
-    const firstKey = newsCache.keys().next().value;
-    if (firstKey) newsCache.delete(firstKey);
-  }
-}
-
-async function fetchFromNewsAPI(endpoint: string, params: Record<string, string>) {
-  const url = new URL(`${NEWSAPI_BASE}/${endpoint}`);
-  Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
-  
-  const response = await fetch(url.toString(), {
-    headers: {
-      'X-Api-Key': NEWSAPI_KEY || '',
-    },
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || `NewsAPI error: ${response.status}`);
-  }
-  
-  return response.json();
-}
+const categoryQueries: Record<string, string> = {
+  markets: "stock market India Sensex Nifty BSE",
+  economy: "economy GDP inflation RBI India",
+  tech: "technology AI startup India",
+  startups: "startup funding India venture",
+  banking: "banking finance India HDFC SBI",
+  general: "India business economy breaking news",
+};
 
 function categorizeArticle(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
-  if (text.includes('stock') || text.includes('market') || text.includes('sensex') || text.includes('nifty') || text.includes('bse') || text.includes('trading')) {
-    return 'markets';
-  }
-  if (text.includes('economy') || text.includes('gdp') || text.includes('inflation') || text.includes('rbi') || text.includes('rate')) {
-    return 'economy';
-  }
-  if (text.includes('tech') || text.includes('ai') || text.includes('software') || text.includes('startup') || text.includes('digital')) {
-    return 'tech';
-  }
-  if (text.includes('startup') || text.includes('funding') || text.includes('venture') || text.includes('unicorn')) {
-    return 'startups';
-  }
+  if (text.match(/stock|market|sensex|nifty|bse|trading|shares|ipo/)) return 'markets';
+  if (text.match(/economy|gdp|inflation|rbi|rate|fiscal|budget/)) return 'economy';
+  if (text.match(/tech|ai|software|digital/)) return 'tech';
+  if (text.match(/startup|funding|venture|unicorn|founder/)) return 'startups';
+  if (text.match(/bank|loan|credit|hdfc|sbi|icici/)) return 'banking';
   return 'general';
 }
 
-function determineSentiment(title: string, description: string): string {
-  const text = `${title} ${description}`.toLowerCase();
-  const positiveWords = ['rise', 'gain', 'surge', 'grow', 'growth', 'profit', 'bull', 'rally', 'boost', 'positive', 'up'];
-  const negativeWords = ['fall', 'drop', 'decline', 'loss', 'bear', 'crash', 'negative', 'down', 'slump', 'worry'];
-  
-  const positiveCount = positiveWords.filter(w => text.includes(w)).length;
-  const negativeCount = negativeWords.filter(w => text.includes(w)).length;
-  
-  if (positiveCount > negativeCount) return 'positive';
-  if (negativeCount > positiveCount) return 'negative';
-  return 'neutral';
+function timeAgo(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMins = Math.floor((now.getTime() - date.getTime()) / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  } catch {
+    return "Recently";
+  }
+}
+
+async function fetchGNews(query: string): Promise<any[]> {
+  try {
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=10&token=${GNEWS_API_KEY}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) { console.log('GNews failed'); return []; }
+    const data = await res.json();
+    console.log('GNews got', data.articles?.length || 0, 'articles');
+    return (data.articles || []).map((a: any, i: number) => ({
+      id: `gn-${Date.now()}-${i}`,
+      title: a.title || '',
+      summary: a.description || '',
+      source: a.source?.name || 'GNews',
+      url: a.url || '#',
+      date: timeAgo(a.publishedAt),
+      rawDate: a.publishedAt,
+      image: a.image || null,
+      category: categorizeArticle(a.title || '', a.description || ''),
+    }));
+  } catch (e) { console.log('GNews error', e); return []; }
+}
+
+async function fetchNewsAPI(query: string): Promise<any[]> {
+  try {
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${NEWSAPI_KEY}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) { console.log('NewsAPI failed'); return []; }
+    const data = await res.json();
+    console.log('NewsAPI got', data.articles?.length || 0, 'articles');
+    return (data.articles || []).map((a: any, i: number) => ({
+      id: `na-${Date.now()}-${i}`,
+      title: a.title || '',
+      summary: a.description || '',
+      source: a.source?.name || 'NewsAPI',
+      url: a.url || '#',
+      date: timeAgo(a.publishedAt),
+      rawDate: a.publishedAt,
+      image: a.urlToImage || null,
+      category: categorizeArticle(a.title || '', a.description || ''),
+    }));
+  } catch (e) { console.log('NewsAPI error', e); return []; }
+}
+
+async function fetchNewsData(query: string): Promise<any[]> {
+  try {
+    const url = `https://newsdata.io/api/1/news?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(query)}&language=en`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) { console.log('NewsData failed'); return []; }
+    const data = await res.json();
+    console.log('NewsData got', data.results?.length || 0, 'articles');
+    return (data.results || []).slice(0, 10).map((a: any, i: number) => ({
+      id: `nd-${Date.now()}-${i}`,
+      title: a.title || '',
+      summary: a.description || '',
+      source: a.source_id || 'NewsData',
+      url: a.link || '#',
+      date: timeAgo(a.pubDate || a.published_at),
+      rawDate: a.pubDate || a.published_at,
+      image: a.image_url || a.thumbnail || null,
+      category: categorizeArticle(a.title || '', a.description || ''),
+    }));
+  } catch (e) { console.log('NewsData error', e); return []; }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    if (!NEWSAPI_KEY) {
-      return NextResponse.json({ error: "NewsAPI key not configured" }, { status: 500 });
-    }
-
     const { searchParams } = new URL(request.url);
-    let topic = searchParams.get("topic") || "business";
     const category = searchParams.get("category") || "general";
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 50);
 
-    // Clean up the topic query
-    topic = topic.replace(/ OR /g, " ");
-    
-    // Check cache first
-    const cacheKey = getCacheKey(topic, category, limit);
-    const cachedData = getFromCache(cacheKey);
-    if (cachedData) {
-      return NextResponse.json(cachedData);
-    }
-    
-    let searchQuery = topic;
-    
-    // Map category to more specific search terms
-    const categorySearchTerms: Record<string, string> = {
-      markets: "stock market Sensex Nifty trading BSE NSE shares IPO",
-      economy: "economy India GDP inflation RBI interest rate budget fiscal policy",
-      tech: "tech AI technology software digital India startup",
-      startups: "startup India funding venture capital unicorn investment",
-      banking: "banking India NBFC loan credit finance HDFC SBI ICICI",
-      general: topic || "business finance economy India"
-    };
+    const query = categoryQueries[category] || categoryQueries.general;
+    console.log('Fetching news for:', category, 'query:', query);
 
-    if (category !== "general" && categorySearchTerms[category]) {
-      searchQuery = categorySearchTerms[category];
-    } else if (category === "general" && topic) {
-      searchQuery = topic;
-    } else {
-      searchQuery = "India business finance economy";
-    }
+    // Fetch from all 3 sources in parallel
+    const [gnews, newsapi, newsdata] = await Promise.all([
+      fetchGNews(query),
+      fetchNewsAPI(query),
+      fetchNewsData(query),
+    ]);
 
-    console.log(`[API CALL] Searching for: ${searchQuery}`);
+    let allArticles = [...gnews, ...newsapi, ...newsdata];
+    console.log('Total articles before dedup:', allArticles.length);
 
-    const response = await fetchFromNewsAPI('everything', {
-      q: searchQuery,
-      language: 'en',
-      sortBy: 'publishedAt',
-      pageSize: limit.toString(),
-    });
-
-    let articles = (response.articles || []).map((article: any, index: number) => {
-      const title = article.title || '';
-      const desc = article.description || article.content || '';
-      return {
-        id: `newsapi-${index}-${Date.now()}`,
-        title: title,
-        summary: desc,
-        source: article.source?.name || 'Unknown',
-        url: article.url || '#',
-        date: article.publishedAt || new Date().toISOString(),
-        image: article.urlToImage || null,
-        category: categorizeArticle(title, desc),
-        sentiment: determineSentiment(title, desc),
-      };
-    });
-
-    // If specific category requested, filter to show only matching articles
-    if (category !== "general") {
-      articles = articles.filter((article: any) => {
-        const articleCategory = article.category;
-        if (category === "tech" && (articleCategory === "tech" || articleCategory === "startups")) return true;
-        if (category === "startups" && articleCategory === "startups") return true;
-        if (category === "markets" && articleCategory === "markets") return true;
-        if (category === "economy" && articleCategory === "economy") return true;
-        if (category === "banking" && articleCategory === "banking") return true;
-        return false;
-      });
-      
-      // If no exact matches, include all but mark them
-      if (articles.length < 3) {
-        articles = (response.articles || []).map((article: any, index: number) => {
-          const title = article.title || '';
-          const desc = article.description || article.content || '';
-          return {
-            id: `newsapi-${index}-${Date.now()}`,
-            title: title,
-            summary: desc,
-            source: article.source?.name || 'Unknown',
-            url: article.url || '#',
-            date: article.publishedAt || new Date().toISOString(),
-            image: article.urlToImage || null,
-            category: categorizeArticle(title, desc),
-            sentiment: determineSentiment(title, desc),
-          };
-        });
-      }
-    }
-
-    const result = {
-      topic: searchQuery,
-      category,
-      articles: articles.slice(0, limit),
-      count: articles.length,
-      source: 'newsapi',
-      timestamp: new Date().toISOString(),
-    };
-
-    // Cache the result
-    setCache(cacheKey, result);
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("News fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch news" },
-      { status: 500 }
+    // Deduplicate by title
+    const unique = allArticles.filter((a, i, arr) => 
+      !arr.slice(0, i).some(b => b.title.toLowerCase() === a.title.toLowerCase())
     );
+
+    // Sort by date, put articles with images first
+    const withImg = unique.filter(a => a.image).sort((a, b) => 
+      new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime()
+    );
+    const noImg = unique.filter(a => !a.image).sort((a, b) => 
+      new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime()
+    );
+
+    const final = [...withImg, ...noImg].slice(0, limit);
+    console.log('Final articles:', final.length, '(with images:', withImg.length, ')');
+
+    return NextResponse.json({
+      category,
+      articles: final,
+      count: final.length,
+      sources: { gnews: gnews.length, newsapi: newsapi.length, newsdata: newsdata.length },
+      timestamp: new Date().toISOString(),
+    }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    console.error('News error:', error);
+    return NextResponse.json({ error: "Failed to fetch news" }, { status: 500 });
   }
 }

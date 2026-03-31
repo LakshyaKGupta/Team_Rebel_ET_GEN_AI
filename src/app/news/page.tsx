@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, RefreshCw, Bookmark, MessageCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, RefreshCw, MessageCircle } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
 import { newsCategories } from "@/lib/data";
@@ -18,30 +18,26 @@ interface LiveNewsArticle {
   category?: string;
 }
 
-const ARTICLES_PER_PAGE = 20;
-const PAGINATION_BUFFER = 5; // Start loading when 5 articles from bottom
+const ARTICLES_PER_PAGE = 30;
 
-export default function NewsPage() {
+function NewsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "general";
+  const initialPage = parseInt(searchParams.get("page") || "1", 10);
   const initialInterests = searchParams.get("interests") || "";
 
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
   const [category, setCategory] = useState(initialCategory);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [allNews, setAllNews] = useState<LiveNewsArticle[]>([]);
-  const [displayedNews, setDisplayedNews] = useState<LiveNewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [displayCount, setDisplayCount] = useState(ARTICLES_PER_PAGE);
   const [selectedInterests] = useState(
     initialInterests ? initialInterests.split(",") : []
   );
-  const observerTarget = useRef<HTMLDivElement>(null);
 
   const categoryTopicMap: Record<string, string> = {
-    general: "", // Will be personalized based on interests
+    general: "",
     markets: "stock market Sensex Nifty BSE trading shares",
     economy: "economy GDP inflation RBI interest rate budget fiscal",
     tech: "tech AI technology startup software digital",
@@ -59,15 +55,42 @@ export default function NewsPage() {
     return categoryTopicMap[category] || category;
   };
 
-  // Fetch news articles
+  const totalPages = Math.ceil(allNews.length / ARTICLES_PER_PAGE);
+  const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
+  const endIndex = startIndex + ARTICLES_PER_PAGE;
+  const displayedNews = allNews.slice(startIndex, endIndex);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const showPages = 5;
+    
+    if (totalPages <= showPages + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      
+      if (currentPage > 3) pages.push("...");
+      
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      
+      for (let i = start; i <= end; i++) pages.push(i);
+      
+      if (currentPage < totalPages - 2) pages.push("...");
+      
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
+
   useEffect(() => {
     const fetchNews = async () => {
       setLoading(true);
-      setDisplayCount(ARTICLES_PER_PAGE);
       try {
         const query = getSearchQuery();
         const res = await fetch(
-          `/api/news?topic=${encodeURIComponent(query)}&category=${category}&limit=100`
+          `/api/news?topic=${encodeURIComponent(query)}&category=${category}&limit=100&t=${Date.now()}`
         );
         const data = await res.json();
         if (data.articles && Array.isArray(data.articles)) {
@@ -78,8 +101,6 @@ export default function NewsPage() {
             })
           );
           setAllNews(articlesWithIds);
-          setDisplayedNews(articlesWithIds.slice(0, ARTICLES_PER_PAGE));
-          setHasMore(articlesWithIds.length > ARTICLES_PER_PAGE);
         }
       } catch (error) {
         console.error("Failed to fetch news:", error);
@@ -91,39 +112,16 @@ export default function NewsPage() {
     fetchNews();
   }, [category, selectedInterests]);
 
-  // Intersection observer for infinite scroll
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore && displayCount < allNews.length) {
-        loadMoreArticles();
-      }
-    }, { threshold: 0.1 });
+    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [category]);
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMore, loadingMore, displayCount, allNews.length]);
-
-  const loadMoreArticles = useCallback(async () => {
-    setLoadingMore(true);
-    // Simulate network delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const newCount = displayCount + ARTICLES_PER_PAGE;
-    setDisplayedNews(allNews.slice(0, newCount));
-    setDisplayCount(newCount);
-    setHasMore(newCount < allNews.length);
-    
-    setLoadingMore(false);
-  }, [displayCount, allNews]);
-
-  const loadAll = useCallback(() => {
-    setDisplayedNews(allNews);
-    setDisplayCount(allNews.length);
-    setHasMore(false);
-  }, [allNews]);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    router.push(`/news?category=${category}&page=${page}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const briefingFeedMeta =
     newsCategories.find((c) => c.id === category) || newsCategories[0];
@@ -135,7 +133,6 @@ export default function NewsPage() {
       <main className="flex-1 pb-40 lg:pb-10">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-4 lg:px-6 lg:py-6">
           <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6">
-            {/* Header */}
             <div className="flex flex-col gap-4 border-b border-[#E8E1D3] pb-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <button
@@ -145,7 +142,7 @@ export default function NewsPage() {
                   <ArrowLeft size={20} className="text-[#1A1A1A]" />
                 </button>
                 <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
                       News Feed
                     </span>
@@ -180,24 +177,25 @@ export default function NewsPage() {
               </div>
             </div>
 
-            {/* Category Filter */}
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-              {newsCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    category === cat.id
-                      ? "bg-[#1A1A1A] text-white"
-                      : "border border-[#DDD4C4] bg-white text-[#5C5C5C] hover:border-[#8B4513]"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+                  {newsCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setCategory(cat.id);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                        category === cat.id
+                          ? "bg-[#1A1A1A] text-white"
+                          : "border border-[#DDD4C4] bg-white text-[#5C5C5C] hover:border-[#8B4513]"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
             </div>
 
-            {/* News Grid */}
             <div className="mt-6">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -219,8 +217,10 @@ export default function NewsPage() {
                               className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-gray-400">
-                              <span className="text-sm">No image</span>
+                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#F4EBDD] to-[#E8DCC8]">
+                              <span className="text-4xl font-bold text-[#8B4513] opacity-50">
+                                {article.title?.charAt(0) || "N"}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -230,14 +230,12 @@ export default function NewsPage() {
                               {article.source}
                             </span>
                             <span className="text-xs text-[#5C5C5C]">
-                              {new Date(article.date).toLocaleDateString()}
+                              {article.date}
                             </span>
                           </div>
                           <button
                             onClick={() => {
-                              // Store article for briefing page to use
-                              const newsData = allNews;
-                              localStorage.setItem("last-live-news", JSON.stringify(newsData));
+                              localStorage.setItem("last-live-news", JSON.stringify(allNews));
                               router.push(`/briefing/${article.id}`);
                             }}
                             className="text-left group"
@@ -251,9 +249,7 @@ export default function NewsPage() {
                           </p>
                           <button
                             onClick={() => {
-                              // Store article for briefing page to use
-                              const newsData = allNews;
-                              localStorage.setItem("last-live-news", JSON.stringify(newsData));
+                              localStorage.setItem("last-live-news", JSON.stringify(allNews));
                               router.push(`/briefing/${article.id}`);
                             }}
                             className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513] hover:text-[#1A1A1A] transition-colors"
@@ -266,42 +262,50 @@ export default function NewsPage() {
                     ))}
                   </div>
 
-                  {/* Loading more indicator and load more button */}
-                  {hasMore && (
-                    <div className="mt-8 flex flex-col items-center gap-4">
-                      {loadingMore && (
-                        <div className="flex items-center gap-2 text-[#8B4513]">
-                          <RefreshCw size={20} className="animate-spin" />
-                          <span className="text-sm font-medium">Loading more...</span>
-                        </div>
-                      )}
+                  {totalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-center gap-2">
                       <button
-                        onClick={loadMoreArticles}
-                        disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-6 py-3 text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F3EB] disabled:opacity-50 transition-colors"
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="rounded-full border border-[#DDD4C4] bg-white px-4 py-2 text-sm font-medium text-[#5C5C5C] hover:bg-[#F8F3EB] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Load More Articles
-                        <ChevronDown size={16} />
+                        ← Prev
                       </button>
+                      
+                      <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, idx) => (
+                          page === "..." ? (
+                            <span key={`ellipsis-${idx}`} className="px-2 text-[#5C5C5C]">...</span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page as number)}
+                              className={`min-w-[40px] rounded-full px-3 py-2 text-sm font-medium transition-colors ${
+                                currentPage === page
+                                  ? "bg-[#1A1A1A] text-white"
+                                  : "border border-[#DDD4C4] bg-white text-[#5C5C5C] hover:bg-[#F8F3EB]"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          )
+                        ))}
+                      </div>
+                      
                       <button
-                        onClick={loadAll}
-                        className="text-sm font-medium text-[#8B4513] hover:text-[#1A1A1A] transition-colors"
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="rounded-full border border-[#DDD4C4] bg-white px-4 py-2 text-sm font-medium text-[#5C5C5C] hover:bg-[#F8F3EB] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Load all {allNews.length} articles
+                        Next →
                       </button>
                     </div>
                   )}
 
-                  {/* Intersection observer target for infinite scroll */}
-                  <div ref={observerTarget} className="mt-8 h-1 bg-transparent" />
-
-                  {/* Results summary */}
-                  <div className="mt-6 rounded-[22px] bg-[#F8F3EB] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
-                      Results
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">
-                      Showing {displayedNews.length} of {allNews.length} articles in {briefingFeedMeta.label} category
+                  <div className="mt-6 rounded-[22px] bg-[#F8F3EB] p-4 text-center">
+                    <p className="text-sm leading-6 text-[#5C5C5C]">
+                      Showing {startIndex + 1}-{Math.min(endIndex, allNews.length)} of {allNews.length} articles
+                      {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
                     </p>
                   </div>
                 </>
@@ -314,7 +318,6 @@ export default function NewsPage() {
               )}
             </div>
 
-            {/* Info Footer */}
             <div className="mt-8 rounded-[22px] bg-[#F8F3EB] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
                 Tips
@@ -330,5 +333,24 @@ export default function NewsPage() {
 
       <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#FDFBF7]">
+      <div className="text-center">
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[#8B4513]"></div>
+        <p className="mt-4 text-[#5C5C5C]">Loading news...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function NewsPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <NewsContent />
+    </Suspense>
   );
 }

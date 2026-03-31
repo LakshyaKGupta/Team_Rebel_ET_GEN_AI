@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { UserPreferences } from './UserContext';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useUser } from './UserContext';
 
 export interface ChatMessage {
   id: string;
@@ -10,12 +10,25 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface ArticleContext {
+  title: string;
+  summary: string;
+  url: string;
+  category?: string;
+  generalView?: string;
+  keyTakeaways?: string[];
+  impact?: Record<string, string>;
+  sources?: Array<{ name: string; url: string }>;
+}
+
 interface ChatContextType {
   messages: ChatMessage[];
   loading: boolean;
   error: string | null;
-  sendMessage: (content: string, userPreferences?: UserPreferences) => Promise<void>;
+  articleContext: ArticleContext | null;
+  sendMessage: (content: string) => Promise<void>;
   clearChat: () => void;
+  initWithArticleContext: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -24,12 +37,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [articleContext, setArticleContext] = useState<ArticleContext | null>(null);
+  const { preferences } = useUser();
 
-  const sendMessage = useCallback(async (content: string, userPreferences?: UserPreferences) => {
+  useEffect(() => {
+    const stored = localStorage.getItem('articleContext');
+    if (stored) {
+      try {
+        const ctx = JSON.parse(stored);
+        setArticleContext(ctx);
+        localStorage.removeItem('articleContext');
+      } catch (e) {
+        console.error('Failed to parse article context:', e);
+      }
+    }
+  }, []);
+
+  const sendMessage = useCallback(async (content: string) => {
     setError(null);
     setLoading(true);
 
-    // Add user message
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -44,13 +71,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: messages
-            .concat(userMessage)
-            .map((msg) => ({
-              role: msg.role,
-              content: msg.content,
-            })),
-          userProfile: userPreferences || {},
+          messages: [...messages, userMessage].map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+          userProfile: {
+            userType: preferences.userType || 'exploring',
+            experienceLevel: preferences.experienceLevel || 'beginner',
+            riskAppetite: preferences.riskAppetite || 'moderate',
+            timeHorizon: preferences.timeHorizon || 'medium',
+            goal: preferences.goal || 'stay updated',
+            selectedInterests: preferences.selectedInterests || [],
+          },
+          articleContext: articleContext,
         }),
       });
 
@@ -79,15 +112,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [messages]);
+  }, [messages, preferences, articleContext]);
+
+  const initWithArticleContext = useCallback(() => {
+    if (articleContext && messages.length === 0) {
+      let introMessage = '';
+      
+      if (articleContext.generalView) {
+        introMessage = `Please explain this article to me:\n\n"${articleContext.title}"\n\n${articleContext.generalView}`;
+      } else if (articleContext.summary) {
+        introMessage = `Please explain this article to me:\n\n"${articleContext.title}"\n\n${articleContext.summary}`;
+      } else {
+        introMessage = `Please explain this article to me: "${articleContext.title}"`;
+      }
+      
+      sendMessage(introMessage);
+    }
+  }, [articleContext, messages.length, sendMessage]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
+    setArticleContext(null);
     setError(null);
   }, []);
 
   return (
-    <ChatContext.Provider value={{ messages, loading, error, sendMessage, clearChat }}>
+    <ChatContext.Provider value={{ messages, loading, error, articleContext, sendMessage, clearChat, initWithArticleContext }}>
       {children}
     </ChatContext.Provider>
   );

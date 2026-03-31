@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing topic or mode" }, { status: 400 });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 });
     }
 
     const cacheKey = JSON.stringify({
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(generalViewCache.get(cacheKey));
     }
 
-    // Simple prompt without persona complexity
     const prompt = `
 Provide a ${mode === 'explain_simply' ? 'simple' : 'detailed'} brief about the topic: ${topic}
 
@@ -33,43 +32,37 @@ ${articles ? `Based on these articles: ${JSON.stringify(articles)}` : 'Use your 
 Keep the response clear, concise, and actionable.
 `;
 
-    // Call Gemini API directly
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/${process.env.GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: 'You are a financial news briefing assistant. Provide clear, concise, and actionable insights.' }]
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }]
-          }
+        model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: 'You are a financial news briefing assistant. Provide clear, concise, and actionable insights.' },
+          { role: 'user', content: prompt }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-        }
+        temperature: 0.7,
+        max_tokens: 1024,
       })
     });
 
-    if (!geminiResponse.ok) {
-      const error = await geminiResponse.json();
-      console.error('Gemini API error:', error);
-      throw new Error(`Gemini returned ${geminiResponse.status}`);
+    if (!groqResponse.ok) {
+      const error = await groqResponse.json();
+      console.error('Groq API error:', error);
+      throw new Error(`Groq returned ${groqResponse.status}`);
     }
 
-    const data = await geminiResponse.json();
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const data = await groqResponse.json();
+    const aiResponse = data.choices?.[0]?.message?.content || '';
 
     const responsePayload = {
       topic,
       mode,
       aiResponse,
-      source: "gemini",
+      source: "groq",
       timestamp: new Date().toISOString(),
     };
 

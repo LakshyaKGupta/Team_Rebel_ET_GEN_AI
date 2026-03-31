@@ -5,6 +5,7 @@ import { UserProvider } from "@/context/UserContext";
 import { BriefingProvider } from "@/context/BriefingContext";
 import { ChatProvider } from "@/context/ChatContext";
 import { ChatBotWidget } from "@/components/ChatBotWidget";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 const syne = Syne({ 
   subsets: ["latin"],
@@ -38,12 +39,14 @@ export default function RootLayout({
     <html lang="en" className={`${syne.variable} ${inter.variable} ${spaceMono.variable}`} suppressHydrationWarning>
       <body className="antialiased font-sans">
         <UserProvider>
-          <BriefingProvider>
-            <ChatProvider>
-              {children}
-              <ChatBotWidget />
-            </ChatProvider>
-          </BriefingProvider>
+          <NotificationProvider>
+            <BriefingProvider>
+              <ChatProvider>
+                {children}
+                <ChatBotWidget />
+              </ChatProvider>
+            </BriefingProvider>
+          </NotificationProvider>
         </UserProvider>
       </body>
     </html>

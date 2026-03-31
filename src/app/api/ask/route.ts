@@ -9,11 +9,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Question cannot be empty" }, { status: 400 });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 });
     }
 
-    // Build messages with context
     const systemPrompt = `You are a knowledgeable financial and economics advisor. 
 Answer questions about investments, markets, startups, and economics in a clear, 
 concise manner. Keep responses focused and actionable.`;
@@ -22,39 +21,32 @@ concise manner. Keep responses focused and actionable.`;
       ? `Context: ${context}\n\nNow answer: ${question}`
       : question;
 
-    // Get AI response
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${process.env.GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userMessage }]
-          }
+        model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 512,
-        }
+        temperature: 0.7,
+        max_tokens: 512,
       })
     });
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Gemini API error:', error);
-      throw new Error(`Gemini returned ${response.status}`);
+      console.error('Groq API error:', error);
+      throw new Error(`Groq returned ${response.status}`);
     }
 
     const data = await response.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const answer = data.choices?.[0]?.message?.content || '';
 
-    // Generate simple ID
     const questionId = Math.random().toString(36).substring(7);
 
     return NextResponse.json({
@@ -62,16 +54,15 @@ concise manner. Keep responses focused and actionable.`;
       question,
       answer,
       timestamp: new Date().toISOString(),
-      source: "gemini",
+      source: "groq",
     });
   } catch (error) {
     console.error("Ask error:", error);
 
-    // Return a helpful error response
     return NextResponse.json(
       {
         error: "Failed to get answer",
-        message: "The Gemini AI service is temporarily unavailable. Please try again.",
+        message: "The Groq AI service is temporarily unavailable. Please try again.",
       },
       { status: 500 }
     );
@@ -80,8 +71,6 @@ concise manner. Keep responses focused and actionable.`;
 
 export async function GET(request: NextRequest) {
   try {
-    // Get conversation history would require database access
-    // For now, return empty history
     return NextResponse.json({
       history: [],
       count: 0,

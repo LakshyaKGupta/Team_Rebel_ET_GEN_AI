@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, ExternalLink, Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bell, Check, ExternalLink, Loader2, Plus, RefreshCw, Sparkles, Wand2, X } from "lucide-react";
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
+import { useNotifications } from "@/context/NotificationContext";
 import {
   getTopicsForUser,
   interestLibrary,
@@ -16,9 +17,21 @@ import {
 import { apiupdatePreferences, apiVerifyCustomInterest } from "@/lib/api";
 import { InterestVerificationResult } from "@/lib/types";
 
+interface LiveNewsArticle {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  date: string;
+  image?: string;
+  category?: string;
+}
+
 export default function TopicsPage() {
   const router = useRouter();
   const { preferences, setSelectedInterests } = useUser();
+  const { unreadCount } = useNotifications();
   const [selectedCategory, setSelectedCategory] = useState("general");
   const [isEditingInterests, setIsEditingInterests] = useState(false);
   const [customInterest, setCustomInterest] = useState("");
@@ -26,9 +39,55 @@ export default function TopicsPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [tempInterests, setTempInterests] = useState<string[]>(preferences.selectedInterests || []);
   const [isSaving, setIsSaving] = useState(false);
+  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(9);
 
   const userType = preferences.userType || "exploring";
   const topics = getTopicsForUser(userType);
+
+  // Fetch real news
+  useEffect(() => {
+    setVisibleCount(9); // Reset visible count when category changes
+    const fetchNews = async () => {
+      setNewsLoading(true);
+      try {
+        const res = await fetch(`/api/news?category=${selectedCategory}&t=${Date.now()}`);
+        const data = await res.json();
+        if (data.articles && data.articles.length > 0) {
+          const articlesWithIds = data.articles.map((a: any, i: number) => ({
+            ...a,
+            id: `topic-news-${i}-${Date.now()}`,
+          }));
+          setLiveNews(articlesWithIds);
+        }
+      } catch (error) {
+        console.error("Failed to fetch news:", error);
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+    fetchNews();
+  }, [selectedCategory]);
+
+  const refreshNews = async () => {
+    setNewsLoading(true);
+    try {
+      const res = await fetch(`/api/news?category=${selectedCategory}&t=${Date.now()}`);
+      const data = await res.json();
+      if (data.articles && data.articles.length > 0) {
+        const articlesWithIds = data.articles.map((a: any, i: number) => ({
+          ...a,
+          id: `topic-news-${i}-${Date.now()}`,
+        }));
+        setLiveNews(articlesWithIds);
+      }
+    } catch (error) {
+      console.error("Failed to refresh news:", error);
+    } finally {
+      setNewsLoading(false);
+    }
+  };
   const canAddVerifiedInterest =
     !!verification &&
     verification.verifiedOnline &&
@@ -159,21 +218,43 @@ export default function TopicsPage() {
           </div>
         </section>
 
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold">Browse by Topic</h2>
-            <p className="text-sm text-[#5C5C5C]">Topic buttons filter the page directly and every card can open a full briefing.</p>
+        {/* Real News Section */}
+        <section className="rounded-[28px] border border-[#D4CFC4] bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">Latest {newsCategories.find(c => c.id === selectedCategory)?.label || 'News'}</h2>
+              <p className="text-sm text-[#5C5C5C]">Real news from multiple sources</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => router.push('/notifications')}
+                className="relative rounded-full border border-[#D4CFC4] p-2 text-[#5C5C5C] hover:bg-[#F8F3EB]"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={refreshNews}
+                disabled={newsLoading}
+                className="rounded-full border border-[#D4CFC4] bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F3EB] disabled:opacity-60"
+              >
+                <RefreshCw size={16} className={newsLoading ? "animate-spin" : ""} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          {/* Category Filter */}
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {newsCategories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`rounded-full px-4 py-2 text-sm font-medium ${
-                  selectedCategory === category.id
-                    ? "bg-[#1A1A1A] text-white"
-                    : "border border-[#D4CFC4] bg-white text-[#5C5C5C]"
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  selectedCategory === category.id ? "bg-[#1A1A1A] text-white" : "border border-[#D4CFC4] bg-white text-[#5C5C5C]"
                 }`}
               >
                 {category.label}
@@ -181,44 +262,92 @@ export default function TopicsPage() {
             ))}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {displayTopics.map((topic, index) => (
-              <motion.article
-                key={topic.id}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="overflow-hidden rounded-[24px] border border-[#D4CFC4] bg-white shadow-sm"
-              >
-                <button onClick={() => router.push(`/briefing/${topic.id}`)} className="w-full text-left">
-                  <TopicVisual topic={topic} compact />
-                </button>
-
-                <div className="space-y-3 p-4">
-                  <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
-                    <span className="rounded-full bg-[#F5F0E6] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
-                    <span>{topic.time}</span>
-                    <span>{topic.readTime}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold leading-snug">{topic.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
-                  </div>
-                  <div className="rounded-2xl bg-[#F8F3EB] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">General view</p>
-                    <p className="mt-2 text-sm leading-6">{topic.generalView}</p>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/briefing/${topic.id}`)}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]"
+          {/* News Grid */}
+          {newsLoading ? (
+            <div className="mt-4 flex items-center justify-center py-8">
+              <RefreshCw size={32} className="animate-spin text-[#8B4513]" />
+            </div>
+          ) : liveNews.length > 0 ? (
+            <>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {liveNews.slice(0, visibleCount).map((article) => (
+                  <article
+                    key={article.id}
+                    className="overflow-hidden rounded-[20px] border border-[#E8E1D3] bg-white shadow-sm hover:shadow-md transition-shadow"
                   >
-                    Open full briefing
-                    <Sparkles size={14} />
+                    {article.image ? (
+                      <button
+                        onClick={() => {
+                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                          router.push(`/briefing/${article.id}`);
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="h-40 w-full overflow-hidden bg-gray-100">
+                          <img
+                            src={article.image}
+                            alt={article.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="h-40 bg-gradient-to-br from-[#F4EBDD] to-[#E8DCC8] flex items-center justify-center">
+                        <span className="text-4xl font-bold text-[#8B4513] opacity-50">
+                          {article.title?.charAt(0) || "N"}
+                        </span>
+                      </div>
+                    )}
+                    <div className="space-y-2 p-4">
+                      <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
+                        <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">
+                          {article.source || 'News'}
+                        </span>
+                        <span>{article.date}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                          router.push(`/briefing/${article.id}`);
+                        }}
+                        className="w-full text-left"
+                      >
+                        <h3 className="text-sm font-semibold line-clamp-2 hover:text-[#8B4513]">
+                          {article.title || 'Untitled'}
+                        </h3>
+                      </button>
+                      <p className="text-xs leading-5 text-[#5C5C5C] line-clamp-2">
+                        {article.summary || 'No description available.'}
+                      </p>
+                      <button
+                        onClick={() => {
+                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
+                          router.push(`/briefing/${article.id}`);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#8B4513] hover:underline"
+                      >
+                        Read more <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {visibleCount < liveNews.length && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={() => setVisibleCount(prev => prev + 9)}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-6 py-3 text-sm font-medium text-[#5C5C5C] hover:border-[#8B4513] hover:text-[#8B4513]"
+                  >
+                    View more ({liveNews.length - visibleCount} more) <ArrowRight size={16} />
                   </button>
                 </div>
-              </motion.article>
-            ))}
-          </div>
+              )}
+            </>
+          ) : (
+            <div className="mt-4 rounded-[20px] border border-[#E8E1D3] bg-[#F8F3EB] p-6 text-center">
+              <p className="text-sm text-[#5C5C5C]">No real news available. Try selecting a different category.</p>
+            </div>
+          )}
         </section>
       </main>
 

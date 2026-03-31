@@ -2,11 +2,11 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { useChat } from '@/context/ChatContext';
-import { Send, Loader, MessageCircle, Trash2 } from 'lucide-react';
+import { Send, Loader, MessageCircle, Trash2, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ChatPage() {
-  const { messages, loading, error, sendMessage, clearChat } = useChat();
+  const { messages, loading, error, sendMessage, clearChat, articleContext, initWithArticleContext } = useChat();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -17,6 +17,14 @@ export default function ChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (articleContext && messages.length === 0) {
+      setTimeout(() => {
+        initWithArticleContext();
+      }, 500);
+    }
+  }, [articleContext, initWithArticleContext, messages.length]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,16 +42,20 @@ export default function ChatPage() {
     }
   };
 
-  const suggestedQuestions = [
+  const suggestedQuestions = articleContext ? [
+    'What does this mean in simple terms?',
+    'How does this affect me?',
+    'What should I do next?',
+    'Summarize the key points',
+  ] : [
     'What are today\'s top market trends?',
     'Explain inflation for a beginner',
-    'How should I invest for short-term gains?',
     'What\'s happening with tech stocks?',
+    'How should I invest for short-term gains?',
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex flex-col">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -52,7 +64,9 @@ export default function ChatPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">News Assistant</h1>
-              <p className="text-sm text-gray-600">Ask me about markets, news, and investments</p>
+              <p className="text-sm text-gray-600">
+                {articleContext ? 'Explaining this article' : 'Ask me about news'}
+              </p>
             </div>
           </div>
           <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 transition">
@@ -61,9 +75,29 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
-        {messages.length === 0 ? (
+      {articleContext && (
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg flex-shrink-0">
+                <BookOpen size={18} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Explaining Article</p>
+                <h3 className="text-base font-bold text-gray-900 mt-1 line-clamp-2">{articleContext.title}</h3>
+                {articleContext.category && (
+                  <span className="inline-block mt-2 text-xs bg-white px-2 py-1 rounded-full text-blue-700 font-medium">
+                    {articleContext.category}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto">
+        {messages.length === 0 && !articleContext ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center space-y-6">
               <div className="flex justify-center">
@@ -76,15 +110,12 @@ export default function ChatPage() {
                 <p className="text-gray-600 mb-6">Ask me anything about news, markets, or investments</p>
               </div>
 
-              {/* Suggested Questions */}
               <div className="space-y-2 max-w-md mx-auto">
                 <p className="text-sm font-semibold text-gray-600">Suggested questions:</p>
                 {suggestedQuestions.map((question, idx) => (
                   <button
                     key={idx}
-                    onClick={() => {
-                      setInput(question);
-                    }}
+                    onClick={() => setInput(question)}
                     className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-600 hover:bg-blue-50 transition text-sm text-gray-700"
                   >
                     {question}
@@ -101,18 +132,23 @@ export default function ChatPage() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-2xl px-5 py-3 rounded-xl ${
+                  className={`max-w-[85%] px-5 py-4 rounded-2xl ${
                     msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-br-none shadow-md'
+                      : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none shadow-sm'
                   }`}
                 >
-                  <p className="text-base leading-relaxed">{msg.content}</p>
-                  <p className="text-xs mt-2 opacity-70">
-                    {msg.timestamp.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                  {msg.role === 'assistant' && (
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                      <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-1 rounded">
+                        <MessageCircle size={14} className="text-white" />
+                      </div>
+                      <span className="text-xs font-semibold text-gray-500">AI Assistant</span>
+                    </div>
+                  )}
+                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
+                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
@@ -120,17 +156,17 @@ export default function ChatPage() {
 
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-gray-200 text-gray-900 px-5 py-3 rounded-xl rounded-bl-none">
-                  <div className="flex items-center gap-2">
-                    <Loader size={18} className="animate-spin" />
-                    <span>Thinking...</span>
+                <div className="bg-white border border-gray-200 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <Loader size={18} className="animate-spin text-blue-600" />
+                    <span className="text-gray-600">Thinking...</span>
                   </div>
                 </div>
               </div>
             )}
 
             {error && (
-              <div className="bg-red-100 text-red-700 border border-red-300 p-4 rounded-lg">
+              <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded-xl">
                 <p className="font-semibold">Error</p>
                 <p className="text-sm">{error}</p>
               </div>
@@ -141,22 +177,21 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 sticky bottom-0 z-10 p-4">
+      <div className="bg-white border-t border-gray-200 sticky bottom-0 z-10 p-4 shadow-lg">
         <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSendMessage} className="flex gap-3">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question..."
+              placeholder={articleContext ? "Ask about this article..." : "Ask a question..."}
               disabled={loading}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-gray-100 disabled:text-gray-500"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 shadow-sm"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2 font-medium"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 transition shadow-md flex items-center gap-2 font-medium"
             >
               <Send size={18} />
               <span className="hidden sm:inline">Send</span>
@@ -165,7 +200,7 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition"
+                className="bg-gray-100 text-gray-600 px-4 py-3 rounded-xl hover:bg-gray-200 transition"
                 title="Clear conversation"
               >
                 <Trash2 size={18} />

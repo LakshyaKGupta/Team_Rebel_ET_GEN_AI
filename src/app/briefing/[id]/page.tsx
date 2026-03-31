@@ -12,6 +12,7 @@ import {
   Compass,
   ExternalLink,
   Gauge,
+  MessageCircle,
   Share2,
   ThumbsDown,
   ThumbsUp,
@@ -286,14 +287,15 @@ export default function BriefingDetailPage() {
             })
             .finally(() => setIsLiveLoading(false));
         } else {
-          console.log("Article not found in localStorage, checking cached briefing");
           const cachedBriefing = localStorage.getItem(`live-briefing-${topicId}`);
           if (cachedBriefing) {
             setLiveBriefing(JSON.parse(cachedBriefing));
           } else {
-            setLiveError("Article not found. It may have expired. Please go back and try another story.");
+            router.push("/dashboard");
           }
         }
+      } else {
+        router.push("/dashboard");
       }
     }
   }, [topicId]);
@@ -602,6 +604,32 @@ export default function BriefingDetailPage() {
                     <span className="inline-flex items-center gap-2">
                       <Bookmark size={15} />
                       {savedIds.includes(effectiveTopic?.id || "") ? "Saved" : "Save"}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const liveSources = liveBriefing?.sources || [];
+                      const staticSources = effectiveTopic?.sources || [];
+                      const sources = liveSources.length > 0 ? liveSources : staticSources;
+                      
+                      const articleContext = {
+                        title: effectiveTopic?.title || '',
+                        summary: effectiveTopic?.summary || effectiveTopic?.subtitle || '',
+                        url: effectiveTopic?.isLiveNews ? (liveBriefing?.url || '') : '',
+                        category: effectiveTopic?.category || 'general',
+                        generalView: effectiveTopic?.generalView || liveBriefing?.generalView || '',
+                        keyTakeaways: effectiveTopic?.keyTakeaways || liveBriefing?.keyTakeaways || [],
+                        impact: effectiveTopic?.isLiveNews ? (liveBriefing?.impactByUserType || {}) : (effectiveTopic as any)?.impactByUserType || {},
+                        sources: sources.slice(0, 2).map((s: any) => ({ name: s.name, url: s.url })),
+                      };
+                      localStorage.setItem('articleContext', JSON.stringify(articleContext));
+                      router.push('/chat');
+                    }}
+                    className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-medium text-white"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <MessageCircle size={15} />
+                      Ask AI
                     </span>
                   </button>
                   <button

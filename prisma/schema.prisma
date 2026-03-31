@@ -141,3 +141,136 @@ model IngestionLog {
 
   @@map("ingestion_logs")
 }
+
+// Phase 2: Portfolio & Alerts
+model Portfolio {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  name          String
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  holdings      Holding[]
+  alerts        Alert[]
+
+  @@map("portfolios")
+}
+
+model Holding {
+  id            String   @id @default(uuid())
+  portfolioId   String   @map("portfolio_id")
+  symbol        String
+  name          String
+  quantity      Float
+  purchasePrice Float    @map("purchase_price")
+  currentPrice  Float    @map("current_price")
+  purchaseDate  DateTime @map("purchase_date")
+  sector        String?
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  alerts        Alert[]
+
+  @@map("holdings")
+}
+
+model Alert {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  portfolioId   String?  @map("portfolio_id")
+  holdingId     String?  @map("holding_id")
+  assetSymbol   String   @map("asset_symbol")
+  alertType     String   @map("alert_type") // 'price_change', 'news_mention', 'threshold_breach'
+  threshold     Float?
+  importance    String?  // 'high', 'medium', 'low'
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  portfolio     Portfolio? @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  holding       Holding?   @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+// Phase 2: Analytics & Engagement
+model Engagement {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  articleId         String   @map("article_id")
+  actionType        String   @map("action_type") // 'read', 'like', 'save', 'share'
+  readTimeSeconds   Int?     @map("read_time_seconds")
+  timestamp         DateTime @default(now())
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("engagements")
+  @@index([userId])
+  @@index([articleId])
+  @@index([timestamp])
+}
+
+model ReadingPattern {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  hour              Int      // 0-23
+  readCount         Int      @default(0) @map("read_count")
+  totalTimeMinutes  Int      @default(0) @map("total_time_minutes")
+  lastUpdated       DateTime @updatedAt @map("last_updated")
+
+  @@unique([userId, hour])
+  @@map("reading_patterns")
+}
+
+// Phase 2: Social Sharing
+model ShareTracking {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  contentId         String   @map("content_id")
+  platform          String   // 'twitter', 'linkedin', 'facebook', 'email', 'whatsapp', 'reddit'
+  shareCount        Int      @default(1) @map("share_count")
+  clicks            Int      @default(0)
+  lastShared        DateTime @default(now()) @map("last_shared")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, contentId, platform])
+  @@map("share_tracking")
+}
+
+// Phase 2: Email Digests
+model EmailDigestConfig {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  frequency         String   @default("daily") // 'daily', 'weekly', 'bi-weekly'
+  sendTime          String   @default("09:00") @map("send_time") // HH:mm format
+  topics            String   @default("") // JSON array stored as string
+  includePortfolio  Boolean  @default(false) @map("include_portfolio")
+  includeAnalytics  Boolean  @default(false) @map("include_analytics")
+  isSubscribed      Boolean  @default(true) @map("is_subscribed")
+  timezone          String?  @default("UTC")
+  lastSent          DateTime? @map("last_sent")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("email_digest_configs")
+}
+
+model DigestDelivery {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  digestId          String   @map("digest_id")
+  sentAt            DateTime @default(now()) @map("sent_at")
+  deliveredAt       DateTime? @map("delivered_at")
+  openedAt          DateTime? @map("opened_at")
+  clickedAt         DateTime? @map("clicked_at")
+  status            String   @default("sent") // 'sent', 'delivered', 'opened', 'bounced', 'failed'
+  errorMessage      String?  @map("error_message")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("digest_deliveries")
+  @@index([userId])
+  @@index([sentAt])
+}

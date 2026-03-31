@@ -14,179 +14,151 @@ interface UserProfile {
   selectedInterests?: string[];
 }
 
+interface ArticleContext {
+  title: string;
+  summary: string;
+  url: string;
+  category?: string;
+  generalView?: string;
+  keyTakeaways?: string[];
+  impact?: Record<string, string>;
+  sources?: Array<{ name: string; url: string }>;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { messages, userProfile } = await req.json();
+    const { messages, userProfile, articleContext } = await req.json();
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return NextResponse.json(
-        { error: 'Gemini API key not configured' },
+        { error: 'AI is not configured. Please try again later.' },
         { status: 500 }
       );
     }
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
-        { error: 'Messages array is required' },
+        { error: 'Please ask a question' },
         { status: 400 }
       );
     }
 
-    // Get relevant news context for the user's query
     const userQuery = messages[messages.length - 1]?.content || '';
-    const newsContext = await fetchRelevantNews(userQuery, userProfile);
+    const systemPrompt = buildSystemPrompt(userProfile, articleContext);
 
-    // Build system prompt based on user profile and news context
-    const systemPrompt = buildSystemPrompt(userProfile, newsContext);
+    const groqMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map((msg: Message) => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
 
-    // Convert messages to Gemini format
-    const geminiMessages = messages.map((msg: Message) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
-
-    // Direct API call using Gemini
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${process.env.GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          contents: geminiMessages,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
-          }
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+        messages: groqMessages,
+        temperature: 0.7,
+        max_tokens: 1200,
+      })
+    });
 
     if (!response.ok) {
       const error = await response.json();
       const errorMsg = error?.error?.message || 'AI service unavailable';
-      if (errorMsg.includes('high demand')) {
-        throw new Error('AI is busy, please try again in a few seconds');
+      if (errorMsg.includes('high demand') || errorMsg.includes('rate limit')) {
+        throw new Error('AI is busy. Please wait a moment and try again.');
       }
       throw new Error(errorMsg);
     }
 
     const data = await response.json();
-    const assistantMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const assistantMessage = data.choices?.[0]?.message?.content || '';
 
     return NextResponse.json({
       success: true,
       message: assistantMessage,
-      usage: {
-        prompt_tokens: 0,
-        completion_tokens: 0,
-      },
     });
   } catch (error) {
     console.error('Chat API error:', error);
     return NextResponse.json(
-      { error: 'Failed to process chat request' },
+      { error: error instanceof Error ? error.message : 'Something went wrong. Please try again.' },
       { status: 500 }
     );
   }
 }
 
-async function fetchRelevantNews(query: string, userProfile: UserProfile): Promise<string> {
-  try {
-    const interests = userProfile?.selectedInterests?.join(' OR ') || 'business finance';
-    const searchQuery = `${query} ${interests}`.substring(0, 100);
-
-    // Use absolute URL for server-side fetch
-    const baseUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
-    const res = await fetch(
-      `${baseUrl}/api/news?topic=${encodeURIComponent(searchQuery)}&limit=3`,
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-
-    if (!res.ok) return '';
-
-    const data = await res.json();
-    
-    if (!data.articles || data.articles.length === 0) return '';
-
-    return data.articles
-      .map((article: any) => `- ${article.title}: ${article.summary}`)
-      .join('\n');
-  } catch (error) {
-    console.error('Failed to fetch news context:', error);
-    return '';
-  }
-}
-
-function buildSystemPrompt(userProfile: UserProfile, newsContext: string): string {
+function buildSystemPrompt(userProfile: UserProfile, articleContext?: ArticleContext | null) {
   const profile = userProfile || {};
-  const userType = profile.userType || 'general reader';
+  const userType = profile.userType || 'exploring';
   const experienceLevel = profile.experienceLevel || 'beginner';
-  const riskAppetite = profile.riskAppetite || 'moderate';
-  const timeHorizon = profile.timeHorizon || 'medium';
-  const goal = profile.goal || 'stay updated';
-  const interests = profile.selectedInterests?.join(', ') || 'general business news';
+  const interests = profile.selectedInterests?.join(', ') || 'business, finance, economy';
 
-  let toneGuidance = '';
-  let analysisDepth = '';
-
-  // Adjust tone and depth based on user type
-  if (userType === 'investor') {
-    toneGuidance = 'Provide investment-focused analysis with potential impacts on portfolios and market trends.';
-    analysisDepth = 'Include risk factors, growth potential, and investment implications.';
+  let userIntro = '';
+  if (userType === 'student') {
+    userIntro = 'The user is a student. Use simple examples and relate to studies/careers.';
+  } else if (userType === 'investor') {
+    userIntro = 'The user is an investor. Focus on portfolio impact and market implications.';
   } else if (userType === 'founder') {
-    toneGuidance = 'Focus on business implications, market opportunities, and competitive dynamics.';
-    analysisDepth = 'Highlight market trends, regulatory impacts, and growth opportunities relevant to startups.';
-  } else if (userType === 'student') {
-    toneGuidance = 'Explain concepts in easy-to-understand language with real-world examples.';
-    analysisDepth = 'Break down complex topics into digestible pieces with clear definitions.';
+    userIntro = 'The user is a startup founder. Focus on business implications and opportunities.';
+  } else if (userType === 'professional') {
+    userIntro = 'The user is a working professional. Focus on industry trends and practical insights.';
   } else {
-    toneGuidance = 'Provide balanced, informative coverage of business and economic news.';
-    analysisDepth = 'Focus on clarity and relevance to general audiences.';
+    userIntro = 'The user is exploring business news. Keep explanations clear and practical.';
   }
 
-  const newsContextSection = newsContext
-    ? `\n\nRecent relevant news context:\n${newsContext}`
-    : '';
+  if (articleContext) {
+    return `You are a friendly news assistant. Help the user understand an article clearly.
 
-  return `You are a personalized financial news and business analysis assistant for the Economic Times. Your role is to provide clear, insightful answers to user queries about economics, finance, markets, investments, and business news.
+${userIntro}
+Experience level: ${experienceLevel}
+Interests: ${interests}
 
-## User Profile
-- **User Type**: ${userType}
-- **Experience Level**: ${experienceLevel}
-- **Risk Appetite**: ${riskAppetite}
-- **Time Horizon**: ${timeHorizon}
-- **Primary Goal**: ${goal}
-- **Interests**: ${interests}
+ARTICLE TO EXPLAIN:
+Title: ${articleContext.title}
+Summary: ${articleContext.summary || 'No summary available'}
+${articleContext.category ? `Category: ${articleContext.category}` : ''}
+${articleContext.generalView ? `Why it matters: ${articleContext.generalView}` : ''}
+${articleContext.keyTakeaways?.length ? `Key points:\n${articleContext.keyTakeaways.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}
 
-## Communication Style
-- ${toneGuidance}
-- ${analysisDepth}
-- Always match the complexity level to the user's experience
-- For beginners: Explain without jargon, define key terms
-- For advanced users: Provide detailed analysis and data-driven insights
-- Be concise yet comprehensive${newsContextSection}
+IMPORTANT RULES:
+- Start with a clear, simple explanation
+- Use short paragraphs (2-3 sentences each)
+- Avoid jargon - if you must use it, explain it
+- Give practical examples
+- End with what this means for the user specifically
+- Be conversational, like explaining to a friend
+- Don't be overly formal
 
-## Guidelines
-1. **Personalization**: Always tailor responses to the user's profile and interests
-2. **News Integration**: Reference current events and market data when relevant
-3. **Accuracy**: Cite sources and acknowledge uncertainty when appropriate
-4. **Actionability**: Provide practical insights aligned with the user's goals
-5. **Scope**: Focus on economic, financial, business, and market topics
-6. **Clarity**: Use appropriate technical depth for the user's experience level
-7. **Relevance**: Prioritize information relevant to their stated interests
-8. **Redirect**: If asked about non-business topics, politely redirect to relevant business news
+Format your response like this:
+1. What happened (1-2 sentences)
+2. Why it matters (2-3 sentences)
+3. What it means for you (1-2 sentences)
+4. Simple example if helpful
 
-## Response Format
-- Start with a direct answer to the question
-- Provide supporting context or analysis as needed
-- Include actionable insights when relevant
-- Suggest follow-up topics if useful
+Keep it under 200 words. Be direct and helpful.`;
+  }
 
-Respond in a friendly, professional tone that matches the user's sophistication level and interests.`;
+  return `You are a friendly news assistant. Help users understand business and financial news.
+
+${userIntro}
+Experience level: ${experienceLevel}
+Interests: ${interests}
+
+IMPORTANT RULES:
+- Be conversational and warm
+- Start with the key takeaway
+- Use short paragraphs
+- Avoid jargon when possible
+- Give practical examples
+- Relate to the user's interests
+- Keep responses focused and useful
+- If you're not sure, say so honestly
+
+Format: Be direct. Short intro, explanation, then practical takeaway.`;
 }
-

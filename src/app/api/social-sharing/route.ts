@@ -1,120 +1,17 @@
-// Social Sharing Module
-// Utility functions for sharing content to social platforms
+// Social Sharing API
+// Tracks article shares across social platforms
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export interface ShareableContent {
-  id: string;
-  title: string;
-  summary: string;
-  url: string;
-  imageUrl?: string;
-  articleUrl?: string;
-}
-
-/**
- * Generate sharing URLs for different platforms
- */
-export function generateShareUrls(content: ShareableContent) {
-  const encodedUrl = encodeURIComponent(content.url);
-  const encodedTitle = encodeURIComponent(content.title);
-  const encodedSummary = encodeURIComponent(content.summary);
-
-  return {
-    twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-    email: `mailto:?subject=${encodedTitle}&body=${encodedSummary}%0A%0A${encodedUrl}`,
-    whatsapp: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
-    reddit: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
-    copy: content.url,
-  };
-}
-
-/**
- * Generate shareable snippet for content
- */
-export function generateShareSnippet(content: ShareableContent): string {
-  return `
-"${content.title}"
-
-${content.summary}
-
-Read more: ${content.url}
-
-#ETGenAI #News
-  `.trim();
-}
-
 /**
  * Get share statistics for content
- */
-export async function getShareStats(
-  contentId: string,
-  userId?: string
-): Promise<{
-  contentId: string;
-  totalShares: number;
-  byPlatform: Record<string, number>;
-  topPlatform: string;
-}> {
-  try {
-    const url = `/api/social-sharing?contentId=${contentId}${
-      userId ? `&userId=${userId}` : ''
-    }`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-
-    return data.stats;
-  } catch (error) {
-    console.error('Error fetching share stats:', error);
-    return {
-      contentId,
-      totalShares: 0,
-      byPlatform: {
-        twitter: 0,
-        linkedin: 0,
-        facebook: 0,
-        email: 0,
-        whatsapp: 0,
-        reddit: 0,
-      },
-      topPlatform: 'twitter',
-    };
-  }
-}
-
-/**
- * Track share click
- */
-export async function trackShareClick(
-  userId: string,
-  contentId: string,
-  platform: string
-): Promise<void> {
-  try {
-    await fetch('/api/social-sharing', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, contentId, platform }),
-    });
-  } catch (error) {
-    console.error('Error recording share click:', error);
-  }
-}
-
-/**
- * GET - Fetch share statistics for content
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contentId = searchParams.get('contentId');
+    const userId = searchParams.get('userId');
 
     if (!contentId) {
       return NextResponse.json(
@@ -123,6 +20,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch share statistics from database
     const shares = await prisma.shareTracking.findMany({
       where: { contentId },
       select: {
@@ -133,9 +31,11 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Calculate totals
     const totalShares = shares.reduce((sum, s) => sum + s.shareCount, 0);
     const totalClicks = shares.reduce((sum, s) => sum + s.clicks, 0);
 
+    // Group by platform
     const byPlatform: Record<string, { shareCount: number; clicks: number }> = {};
     shares.forEach((s) => {
       byPlatform[s.platform] = {
@@ -144,6 +44,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Find top platform
     const topPlatform = Object.entries(byPlatform).sort(
       ([, a], [, b]) => b.shareCount - a.shareCount
     )[0]?.[0] || 'twitter';
@@ -168,7 +69,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST - Track share event
+ * Track share click/action
  */
 export async function POST(request: NextRequest) {
   try {
@@ -182,7 +83,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validPlatforms = ['twitter', 'linkedin', 'facebook', 'email', 'whatsapp', 'reddit'];
+    const validPlatforms = [
+      'twitter',
+      'linkedin',
+      'facebook',
+      'email',
+      'whatsapp',
+      'reddit',
+    ];
     if (!validPlatforms.includes(platform)) {
       return NextResponse.json(
         { error: 'Invalid platform' },
@@ -190,9 +98,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Record or update share tracking
     const share = await prisma.shareTracking.upsert({
       where: {
-        userId_contentId_platform: { userId, contentId, platform },
+        userId_contentId_platform: {
+          userId,
+          contentId,
+          platform,
+        },
       },
       create: {
         userId,
@@ -215,7 +128,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, share });
+    return NextResponse.json({
+      success: true,
+      share,
+    });
   } catch (error) {
     console.error('Error tracking share:', error);
     return NextResponse.json(
@@ -226,7 +142,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PATCH - Record share click
+ * Record share click
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -240,11 +156,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Increment click count
     const updated = await prisma.shareTracking.update({
       where: {
-        userId_contentId_platform: { userId, contentId, platform },
+        userId_contentId_platform: {
+          userId,
+          contentId,
+          platform,
+        },
       },
-      data: { clicks: { increment: 1 } },
+      data: {
+        clicks: { increment: 1 },
+      },
       select: {
         id: true,
         contentId: true,
@@ -253,7 +176,10 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, updated });
+    return NextResponse.json({
+      success: true,
+      updated,
+    });
   } catch (error) {
     console.error('Error recording click:', error);
     return NextResponse.json(

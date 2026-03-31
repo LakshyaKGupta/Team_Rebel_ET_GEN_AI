@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  Bell,
   Bookmark,
   ChevronRight,
   History,
   Layers3,
-  MessageCircle,
   ThumbsDown,
   ThumbsUp,
   RefreshCw,
@@ -17,6 +17,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/nav/BottomNav";
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
+import { useNotifications } from "@/context/NotificationContext";
 import {
   assessPortfolioImpact,
   getRecentTopicCards,
@@ -27,7 +28,7 @@ import {
 } from "@/lib/data";
 import { DemoEngagementState, markTopicsUnread, pushRecentTopic, readPortfolioAssets, writeDemoEngagementState } from "@/lib/demo-state";
 
-type ReadingListFilter = "saved" | "liked" | "portfolio" | "unread";
+type ReadingListFilter = "saved" | "liked" | "portfolio" | "interest";
 
 interface LiveNewsArticle {
   id: string;
@@ -40,14 +41,59 @@ interface LiveNewsArticle {
   category?: string;
 }
 
+const mockNewsByCategory: Record<string, LiveNewsArticle[]> = {
+  markets: [
+    { id: "m1", title: "Sensex Surges 500 Points on FII Buying", summary: "Foreign investors poured Rs 5,000 crore into Indian equities today, pushing markets to new highs.", source: "ET Markets", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800", category: "markets" },
+    { id: "m2", title: "Nifty 50 Hits Record High of 25,000", summary: "India's benchmark index crossed the psychological 25,000 mark for the first time.", source: "MoneyControl", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800", category: "markets" },
+    { id: "m3", title: "IPO Market Sees Record Fundraising in 2024", summary: "Indian companies raised over Rs 1 lakh crore through IPOs this year.", source: "Business Today", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800", category: "markets" },
+    { id: "m4", title: "Banking Stocks Lead Market Rally", summary: "Public sector bank stocks surged up to 8% on strong quarterly results.", source: "Financial Express", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=800", category: "markets" },
+  ],
+  economy: [
+    { id: "e1", title: "India GDP Growth Exceeds 7% in Q3", summary: "India remains the fastest-growing major economy with 7.2% GDP growth.", source: "Livemint", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800", category: "economy" },
+    { id: "e2", title: "RBI Holds Interest Rates Steady at 6.5%", summary: "The central bank maintained status quo on rates for the sixth consecutive time.", source: "ET Economy", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=800", category: "economy" },
+    { id: "e3", title: "Inflation Falls to 4-Month Low of 4.85%", summary: "Retail inflation in India dropped below 5% for the first time since August.", source: "NDTV Profit", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800", category: "economy" },
+    { id: "e4", title: "Union Budget 2025: Key Tax Proposals Expected", summary: "Finance minister to present budget next week with focus on fiscal consolidation.", source: "The Hindu BusinessLine", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800", category: "economy" },
+  ],
+  tech: [
+    { id: "t1", title: "Infosys Wins $2.5 Billion AI Contract from US Firm", summary: "India's IT major secures one of its largest deals with generative AI services.", source: "ET Tech", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800", category: "tech" },
+    { id: "t2", title: "Google Announces $10B Investment in India", summary: "Tech giant to set up AI research labs and data centers across India.", source: "TechCrunch India", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?w=800", category: "tech" },
+    { id: "t3", title: "Tata Group Launches AI-Powered Manufacturing Units", summary: "Tata Motors deploys AI and robotics in its new electric vehicle plant.", source: "Business Standard", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800", category: "tech" },
+    { id: "t4", title: "WhatsApp Launches UPI Payments for 100M Users", summary: "Meta's messaging platform enables seamless payments across India.", source: "Gadgets 360", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=800", category: "tech" },
+  ],
+  startups: [
+    { id: "s1", title: "Flipkart Co-founder Raises $500M for New Venture", summary: "Sachin Bansal launches electric vehicle startup with massive funding.", source: "YourStory", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800", category: "startups" },
+    { id: "s2", title: "Razorpay Valued at $5 Billion in New Round", summary: "Payments startup becomes India's latest unicorn with latest funding.", source: "VCCircle", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800", category: "startups" },
+    { id: "s3", title: "Government Launches Rs 10,000 Cr Startup Fund", summary: "Startup India 2.0 announced with focus on deep tech and AI ventures.", source: "Inc42", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800", category: "startups" },
+    { id: "s4", title: "Ola Electric Files for Rs 5,000 Cr IPO", summary: "Bhavish Aggarwal's EV company files draft papers with SEBI.", source: "MoneyControl", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800", category: "startups" },
+  ],
+  banking: [
+    { id: "b1", title: "HDFC Bank Posts 20% Rise in Q3 Net Profit", summary: "India's largest private lender beats estimates with strong loan growth.", source: "ET Money", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800", category: "banking" },
+    { id: "b2", title: "SBI Links FD Rates to Repo Rate from Next Month", summary: "State Bank changes deposit pricing to align with RBI policy.", source: "The Economic Times", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800", category: "banking" },
+    { id: "b3", title: "RBI Fines Paytm Payments Bank Rs 5 Crore", summary: "Regulator cites KYC violations and data security concerns.", source: "NDTV", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800", category: "banking" },
+    { id: "b4", title: "Digital Lending Platforms See 50% Surge in Loans", summary: "BNPL and instant loan apps gain traction among young borrowers.", source: "Business Today", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800", category: "banking" },
+  ],
+  general: [
+    { id: "g1", title: "India Announces New Trade Agreement with EU", summary: "Historic free trade deal to boost exports by $50 billion annually.", source: "The Hindu", url: "#", date: "1h ago", image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800", category: "general" },
+    { id: "g2", title: "Air India Places Order for 500 Airbus Aircraft", summary: "Tata group airline signs largest ever deal in aviation history.", source: "NDTV", url: "#", date: "2h ago", image: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800", category: "general" },
+    { id: "g3", title: "India Launches Chandrayaan-4 Moon Mission", summary: "ISRO successfully sends spacecraft to land on lunar south pole.", source: "Times of India", url: "#", date: "3h ago", image: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800", category: "general" },
+    { id: "g4", title: "Reliance Announces Rs 1 Lakh Crore Green Energy Push", summary: "Mukesh Ambani commits to net-zero operations by 2035.", source: "Business Standard", url: "#", date: "4h ago", image: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=800", category: "general" },
+  ],
+};
+
+const getMockNews = (category: string): LiveNewsArticle[] => {
+  return mockNewsByCategory[category] || mockNewsByCategory.general;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { preferences } = useUser();
+  const { unreadCount } = useNotifications();
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
   const [briefingFeedCategory, setBriefingFeedCategory] = useState("general");
-  const [readingListFilter, setReadingListFilter] = useState<ReadingListFilter>("unread");
-  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>([]);
-  const [liveNewsLoading, setLiveNewsLoading] = useState(true);
+  const [activeQuickFilter, setActiveQuickFilter] = useState<ReadingListFilter | null>(null);
+  const [expandReadingList, setExpandReadingList] = useState(false);
+  const [liveNews, setLiveNews] = useState<LiveNewsArticle[]>(getMockNews("general"));
+  const [liveNewsLoading, setLiveNewsLoading] = useState(false);
   const [engagement, setEngagement] = useState<DemoEngagementState>({
     savedIds: [],
     likedIds: [],
@@ -95,41 +141,61 @@ export default function DashboardPage() {
     [portfolioAssets, topics],
   );
   const briefingFeedTopics = getTopicsForCategory(rankedTopics, briefingFeedCategory, selectedInterests).slice(0, 3);
-  const briefingFeedMeta = newsCategories.find((category) => category.id === briefingFeedCategory) || newsCategories[0];
   const recentTopics = getRecentTopicCards(engagement.recentTopicIds, userType);
   const savedTopics = topics.filter((topic) => engagement.savedIds.includes(topic.id));
   const likedTopics = topics.filter((topic) => engagement.likedIds.includes(topic.id));
   const unreadTopics = topics.filter((topic) => engagement.unreadIds.includes(topic.id));
   const portfolioTopics = topics.filter((topic) => portfolioRelatedIds.includes(topic.id));
   const leadTopic = briefingFeedTopics[0] || topics[0] || null;
-  const secondaryTopics = leadTopic ? briefingFeedTopics.filter((topic) => topic.id !== leadTopic.id) : [];
-  const readingListGroups: Record<ReadingListFilter, typeof topics> = {
-    saved: savedTopics,
-    liked: likedTopics,
-    portfolio: portfolioTopics,
-    unread: unreadTopics,
-  };
-  const readingListTopics = readingListGroups[readingListFilter].slice(0, 4);
-  const readingListMeta: Record<ReadingListFilter, { label: string; empty: string }> = {
-    saved: {
-      label: "Saved",
-      empty: "Save stories from the front page or inside a briefing to build a real reading list.",
-    },
-    liked: {
-      label: "Liked",
-      empty: "Likes tell the feed what should appear more often when the ranking tightens.",
-    },
-    portfolio: {
-      label: "Portfolio-related",
-      empty: "Add assets in portfolio and the reading list will pull in stories mapped to those holdings.",
-    },
-    unread: {
-      label: "Unread",
-      empty: "Unread stories stay here until you open them, so the front page remains scannable without losing the queue.",
-    },
+
+  const getCategoryArticles = (category: string) => {
+    return liveNews.filter((article) => {
+      if (category === "general") return true;
+      const articleCategory = article.category?.toLowerCase() || "";
+      const articleTitle = (article.title || '').toLowerCase();
+      return articleCategory.includes(category) || articleTitle.includes(category);
+    });
   };
 
+  const portfolioCount = getCategoryArticles("markets").length;
+  const savedCount = engagement.savedIds.length;
+  const likedCount = engagement.likedIds.length;
   const topInterest = selectedInterests[0] || "General";
+
+  const getFilteredArticles = () => {
+    if (!activeQuickFilter) return [];
+    switch (activeQuickFilter) {
+      case "portfolio":
+        return liveNews.filter(a => a.image && 
+          portfolioAssets.some(p => 
+            (a.title || '').toLowerCase().includes((p.ticker || '').toLowerCase()) || 
+            (a.title || '').toLowerCase().includes((p.name || '').toLowerCase().split(' ')[0].toLowerCase()) ||
+            (a.summary || '').toLowerCase().includes((p.ticker || '').toLowerCase())
+          )
+        );
+      case "liked":
+        return likedTopics;
+      case "saved":
+        return savedTopics;
+      case "interest":
+        return liveNews.filter(a => a.image && 
+          ((a.title || '').toLowerCase().includes(topInterest.toLowerCase()) ||
+          (a.category || '').toLowerCase().includes(topInterest.toLowerCase()) ||
+          (a.summary || '').toLowerCase().includes(topInterest.toLowerCase()))
+        );
+      default:
+        return [];
+    }
+  };
+
+  const readingListTopics = getFilteredArticles();
+  const secondaryTopics = leadTopic ? briefingFeedTopics.filter((topic) => topic.id !== leadTopic.id) : [];
+  const readingListMeta: Record<string, { label: string; empty: string }> = {
+    saved: { label: "Saved", empty: "Save stories from the front page or inside a briefing to build a real reading list." },
+    liked: { label: "Liked", empty: "Articles you have liked." },
+    portfolio: { label: "Portfolio-related", empty: "Articles related to your portfolio holdings." },
+    interest: { label: topInterest, empty: `Articles related to ${topInterest} - your top interest.` },
+  };
   const portfolioRadar = useMemo(
     () =>
       portfolioAssets.slice(0, 3).map((asset) => ({
@@ -155,7 +221,7 @@ export default function DashboardPage() {
   }, [router]);
 
   const categoryTopicMap: Record<string, string> = {
-    general: "", // Will be personalized based on interests
+    general: "",
     markets: "stock market Sensex Nifty BSE trading shares",
     economy: "economy GDP inflation RBI interest rate budget fiscal",
     tech: "tech AI technology startup software digital",
@@ -175,12 +241,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchLiveNews = async () => {
-      setLiveNewsLoading(true);
       try {
-        const query = getSearchQuery();
-        const res = await fetch(`/api/news?topic=${encodeURIComponent(query)}&category=${briefingFeedCategory}`);
+        const res = await fetch(`/api/news?category=${briefingFeedCategory}&t=${Date.now()}`);
         const data = await res.json();
-        console.log("News API response:", data);
         if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
           const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
             ...article,
@@ -189,59 +252,33 @@ export default function DashboardPage() {
           setLiveNews(articlesWithIds);
           localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
         } else {
-          console.log("No articles found, data:", data);
+          setLiveNews(getMockNews(briefingFeedCategory));
         }
       } catch (error) {
         console.error("Failed to fetch live news:", error);
-      } finally {
-        setLiveNewsLoading(false);
+        setLiveNews(getMockNews(briefingFeedCategory));
       }
     };
     fetchLiveNews();
-  }, [briefingFeedCategory, selectedInterests]);
-
-  // Auto-refresh news every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const fetchNewNews = async () => {
-        try {
-          const query = getSearchQuery();
-          const res = await fetch(`/api/news?topic=${encodeURIComponent(query)}&category=${briefingFeedCategory}`);
-          const data = await res.json();
-          if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
-            const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
-              ...article,
-              id: `live-${index}-${Date.now()}`,
-            }));
-            setLiveNews(articlesWithIds);
-          }
-        } catch (error) {
-          console.error("Auto-refresh failed:", error);
-        }
-      };
-      fetchNewNews();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [briefingFeedCategory, selectedInterests]);
+  }, [briefingFeedCategory]);
 
   const refreshNews = async () => {
-    setLiveNewsLoading(true);
     try {
-      const query = getSearchQuery();
-      const res = await fetch(`/api/news?topic=${encodeURIComponent(query)}&category=${briefingFeedCategory}`);
+      const res = await fetch(`/api/news?category=${briefingFeedCategory}&t=${Date.now()}`);
       const data = await res.json();
-      if (data.articles && Array.isArray(data.articles)) {
+      if (data.articles && Array.isArray(data.articles) && data.articles.length > 0) {
         const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
           ...article,
           id: `live-${index}-${Date.now()}`,
         }));
         setLiveNews(articlesWithIds);
         localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
+      } else {
+        setLiveNews(getMockNews(briefingFeedCategory));
       }
     } catch (error) {
       console.error("Failed to refresh news:", error);
-    } finally {
-      setLiveNewsLoading(false);
+      setLiveNews(getMockNews(briefingFeedCategory));
     }
   };
 
@@ -268,31 +305,7 @@ export default function DashboardPage() {
   const toggleSave = (topicId: string) => {
     updateEngagement((current) => ({
       ...current,
-      savedIds: current.savedIds.includes(topicId)
-        ? current.savedIds.filter((id) => id !== topicId)
-        : [...current.savedIds, topicId],
-      analytics: {
-        ...current.analytics,
-        [topicId]: {
-          openedCount: current.analytics[topicId]?.openedCount || 0,
-          savedCount: Math.max(
-            0,
-            (current.analytics[topicId]?.savedCount || 0) + (current.savedIds.includes(topicId) ? -1 : 1),
-          ),
-          likedCount: current.analytics[topicId]?.likedCount || 0,
-          dislikedCount: current.analytics[topicId]?.dislikedCount || 0,
-          ignoredCount: current.analytics[topicId]?.ignoredCount || 0,
-          lastOpenedAt: current.analytics[topicId]?.lastOpenedAt,
-        },
-      },
-      interactions: [
-        {
-          topicId,
-          type: current.savedIds.includes(topicId) ? ("unsave" as const) : ("save" as const),
-          timestamp: Date.now(),
-        },
-        ...current.interactions,
-      ].slice(0, 120),
+      savedIds: current.savedIds.includes(topicId) ? current.savedIds.filter((id) => id !== topicId) : [...current.savedIds, topicId],
     }));
   };
 
@@ -301,452 +314,266 @@ export default function DashboardPage() {
       ...current,
       likedIds: current.likedIds.includes(topicId) ? current.likedIds.filter((id) => id !== topicId) : [...current.likedIds, topicId],
       dislikedIds: current.dislikedIds.filter((id) => id !== topicId),
-      analytics: {
-        ...current.analytics,
-        [topicId]: {
-          openedCount: current.analytics[topicId]?.openedCount || 0,
-          savedCount: current.analytics[topicId]?.savedCount || 0,
-          likedCount: Math.max(0, (current.analytics[topicId]?.likedCount || 0) + (current.likedIds.includes(topicId) ? -1 : 1)),
-          dislikedCount: Math.max(0, (current.analytics[topicId]?.dislikedCount || 0) - (current.dislikedIds.includes(topicId) ? 1 : 0)),
-          ignoredCount: current.analytics[topicId]?.ignoredCount || 0,
-          lastOpenedAt: current.analytics[topicId]?.lastOpenedAt,
-        },
-      },
-      interactions: [
-        {
-          topicId,
-          type: current.likedIds.includes(topicId) ? ("unlike" as const) : ("like" as const),
-          timestamp: Date.now(),
-        },
-        ...current.interactions,
-      ].slice(0, 120),
     }));
   };
 
   const dislikeTopic = (topicId: string) => {
     updateEngagement((current) => ({
       ...current,
-      dislikedIds: current.dislikedIds.includes(topicId)
-        ? current.dislikedIds.filter((id) => id !== topicId)
-        : [...current.dislikedIds, topicId],
+      dislikedIds: current.dislikedIds.includes(topicId) ? current.dislikedIds.filter((id) => id !== topicId) : [...current.dislikedIds, topicId],
       likedIds: current.likedIds.filter((id) => id !== topicId),
-      analytics: {
-        ...current.analytics,
-        [topicId]: {
-          openedCount: current.analytics[topicId]?.openedCount || 0,
-          savedCount: current.analytics[topicId]?.savedCount || 0,
-          likedCount: Math.max(0, (current.analytics[topicId]?.likedCount || 0) - (current.likedIds.includes(topicId) ? 1 : 0)),
-          dislikedCount: Math.max(
-            0,
-            (current.analytics[topicId]?.dislikedCount || 0) + (current.dislikedIds.includes(topicId) ? -1 : 1),
-          ),
-          ignoredCount: (current.analytics[topicId]?.ignoredCount || 0) + (current.dislikedIds.includes(topicId) ? 0 : 1),
-          lastOpenedAt: current.analytics[topicId]?.lastOpenedAt,
-        },
-      },
-      interactions: [
-        {
-          topicId,
-          type: current.dislikedIds.includes(topicId) ? ("undislike" as const) : ("dislike" as const),
-          timestamp: Date.now(),
-        },
-        ...current.interactions,
-      ].slice(0, 120),
     }));
   };
 
   return (
     <div className="min-h-screen bg-[#F3EFE7] text-[#1A1A1A] lg:flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
-
       <main className="flex-1 pb-40 lg:pb-10">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-4 lg:px-6 lg:py-6">
           <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6" id="dashboard-feed">
             <div className="flex flex-col gap-4 border-b border-[#E8E1D3] pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-                    Front Page
-                  </span>
-                  <span className="rounded-full bg-[#EFE7D8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
-                    {briefingFeedMeta.label}
+                  <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">Front Page</span>
+                  <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
+                    {userType}
                   </span>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-semibold leading-tight lg:text-3xl">A personalized business front page.</h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5C5C5C]">
-                    Open the biggest story first, scan two strong follow-ups, and keep the utility layer below so the newsroom reads like news, not a control panel.
-                  </p>
-                </div>
+                <h1 className="text-3xl font-semibold lg:text-4xl">
+                  Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {userType}
+                </h1>
+                <p className="max-w-2xl text-base text-[#5C5C5C]">
+                  {selectedInterests.length > 0
+                    ? `Your feed is shaped by ${selectedInterests.join(", ")}.`
+                    : "Tell us what you care about in Settings to personalize your feed."}
+                </p>
               </div>
-
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2 items-center">
                 <button
-                  onClick={refreshNews}
-                  disabled={liveNewsLoading}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-4 py-2.5 text-sm font-medium text-[#1A1A1A] disabled:opacity-50"
+                  onClick={(e) => { e.stopPropagation(); router.push('/notifications'); }}
+                  className="relative rounded-full border border-[#DDD4C4] bg-white p-2.5 text-[#5C5C5C] hover:bg-[#F8F3EB]"
                 >
-                  <RefreshCw size={15} className={liveNewsLoading ? "animate-spin" : ""} />
-                  Refresh
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
                 </button>
-                <button
-                  onClick={() => router.push("/chat")}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:shadow-lg transition-shadow"
-                >
-                  <MessageCircle size={15} />
-                  Ask AI
-                </button>
-                <button
-                  onClick={() => router.push("/topics")}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1A1A1A] px-4 py-2.5 text-sm font-medium text-white"
-                >
-                  Edit interests
-                  <ArrowRight size={15} />
-                </button>
-                <button
-                  onClick={() => router.push("/portfolio")}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-4 py-2.5 text-sm font-medium text-[#1A1A1A]"
-                >
-                  Connect portfolio
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-              {newsCategories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setBriefingFeedCategory(category.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    briefingFeedCategory === category.id
-                      ? "bg-[#1A1A1A] text-white"
-                      : "border border-[#DDD4C4] bg-white text-[#5C5C5C]"
-                  }`}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
-              {liveNewsLoading ? (
-                <div className="flex items-center justify-center rounded-[28px] border border-[#DDD4C4] bg-white p-12">
-                  <RefreshCw size={32} className="animate-spin text-[#8B4513]" />
-                </div>
-              ) : liveNews[0] ? (
-                <article className="overflow-hidden rounded-[28px] border border-[#DDD4C4] bg-white shadow-sm">
-                  <div className="h-64 w-full overflow-hidden bg-gray-100">
-                    {liveNews[0].image ? (
-                      <img src={liveNews[0].image} alt={liveNews[0].title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-400">
-                        <span className="text-sm">No image available</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4 p-5">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                      <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 font-semibold text-[#8B4513]">{liveNews[0].source}</span>
-                      <span>{liveNews[0].date}</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <button 
-                        onClick={() => {
-                          localStorage.setItem("last-live-news", JSON.stringify(liveNews));
-                          router.push(`/briefing/${liveNews[0].id}`);
-                        }} 
-                        className="text-left"
-                      >
-                        <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513]">{liveNews[0].title}</h2>
-                      </button>
-                      <p className="text-sm leading-6 text-[#5C5C5C]">{liveNews[0].summary}</p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        localStorage.setItem("last-live-news", JSON.stringify(liveNews));
-                        router.push(`/briefing/${liveNews[0].id}`);
-                      }}
-                      className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]"
-                    >
-                      Open full briefing
-                      <ArrowRight size={15} />
-                    </button>
-
-                    <div className="flex items-center justify-between border-t border-[#ECE5D8] pt-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => refreshNews()}
-                          className="rounded-full bg-[#F5F0E6] p-2 text-[#5C5C5C]"
-                        >
-                          <RefreshCw size={15} />
-                        </button>
-                      </div>
-
-                      <button onClick={refreshNews} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                        Get new story
-                        <RefreshCw size={15} />
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ) : leadTopic ? (
-                <article className="overflow-hidden rounded-[28px] border border-[#DDD4C4] bg-white shadow-sm">
-                  <button onClick={() => openTopic(leadTopic.id)} className="w-full text-left">
-                    <TopicVisual topic={leadTopic} />
+                {newsCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setBriefingFeedCategory(category.id)}
+                    className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${briefingFeedCategory === category.id ? "bg-[#1A1A1A] text-white" : "border border-[#DDD4C4] bg-white text-[#5C5C5C]"}`}
+                  >
+                    {category.label}
                   </button>
+                ))}
+              </div>
+            </div>
 
-                  <div className="space-y-4 p-5">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                      <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 font-semibold text-[#8B4513]">{leadTopic.category}</span>
-                      <span>{leadTopic.time}</span>
-                      <span>{leadTopic.readTime}</span>
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              {liveNewsLoading && !liveNews[0] && !leadTopic ? (
+                <>
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center justify-center rounded-[28px] border border-[#DDD4C4] bg-white p-12">
+                      <RefreshCw size={32} className="animate-spin text-[#8B4513]" />
                     </div>
-
-                    <div className="space-y-2">
-                      <button onClick={() => openTopic(leadTopic.id)} className="text-left">
-                        <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513]">{leadTopic.title}</h2>
-                      </button>
-                      <p className="text-sm leading-6 text-[#5C5C5C]">{leadTopic.summary}</p>
-                    </div>
-
-                    <div className="rounded-[22px] bg-[#F8F3EB] p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Why it matters now</p>
-                      <p className="mt-2 text-sm leading-6 text-[#1A1A1A]">{leadTopic.generalView}</p>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-[#ECE5D8] pt-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            likeTopic(leadTopic.id);
-                          }}
-                          className={`rounded-full p-2 ${engagement.likedIds.includes(leadTopic.id) ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
-                        >
-                          <ThumbsUp size={15} />
-                        </button>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            dislikeTopic(leadTopic.id);
-                          }}
-                          className={`rounded-full p-2 ${engagement.dislikedIds.includes(leadTopic.id) ? "bg-red-100 text-red-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
-                        >
-                          <ThumbsDown size={15} />
-                        </button>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleSave(leadTopic.id);
-                          }}
-                          className={`rounded-full p-2 ${engagement.savedIds.includes(leadTopic.id) ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
-                        >
-                          <Bookmark size={15} />
-                        </button>
-                      </div>
-
-                      <button onClick={() => openTopic(leadTopic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                        Open briefing
-                        <ArrowRight size={15} />
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ) : null}
-
-              <div className="grid gap-4">
-                <div className="rounded-[28px] border border-[#DDD4C4] bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Live News</p>
-                      <h2 className="mt-2 text-lg font-semibold">Latest Headlines</h2>
-                      <p className="mt-1 text-sm leading-6 text-[#5C5C5C]">Real-time business news powered by NewsAPI</p>
-                    </div>
-                    <button
-                      onClick={refreshNews}
-                      disabled={liveNewsLoading}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF5] px-3 py-2 text-sm font-medium text-[#1A1A1A] disabled:opacity-50"
-                    >
-                      <RefreshCw size={15} className={liveNewsLoading ? "animate-spin" : ""} />
-                      Refresh
-                    </button>
-                  </div>
-                </div>
-
-                {liveNewsLoading ? (
-                  <div className="flex items-center justify-center rounded-[24px] border border-[#DDD4C4] bg-white p-8">
-                    <RefreshCw size={24} className="animate-spin text-[#8B4513]" />
-                  </div>
-                ) : liveNews.length > 1 ? (
-                   <>
-                     {liveNews.slice(1, 4).map((article, index) => (
-                       <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
-                         <div className="h-32 w-full overflow-hidden bg-gray-100">
-                           {article.image ? (
-                             <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
-                           ) : (
-                             <div className="flex h-full w-full items-center justify-center text-gray-400">
-                               <span className="text-sm">No image</span>
-                             </div>
-                           )}
-                         </div>
-                          <div className="space-y-3 p-4">
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                              <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
-                              <span>{article.date}</span>
-                            </div>
-                            <button 
-                              onClick={() => {
-                                localStorage.setItem("last-live-news", JSON.stringify(liveNews));
-                                router.push(`/briefing/${article.id}`);
-                              }} 
-                              className="text-left"
-                            >
-                              <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{article.title}</h3>
-                            </button>
-                            <p className="text-sm leading-6 text-[#5C5C5C]">{article.summary}</p>
-                            <button 
-                              onClick={() => {
-                                localStorage.setItem("last-live-news", JSON.stringify(liveNews));
-                                router.push(`/briefing/${article.id}`);
-                              }} 
-                              className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]"
-                            >
-                              Open briefing
-                              <ArrowRight size={15} />
-                            </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {liveNews.filter(a => a.image).slice(0, 4).map((article, idx) => (
+                    <article key={article.id} className="overflow-hidden rounded-[28px] border border-[#DDD4C4] bg-white shadow-sm">
+                      <div className="h-64 w-full overflow-hidden bg-gray-100">
+                        {article.image ? (
+                          <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#F4EBDD] to-[#E8DCC8]">
+                            <span className="text-6xl font-bold text-[#8B4513] opacity-50">{article.title?.charAt(0) || "N"}</span>
                           </div>
-                       </article>
-                     ))}
-                     <button
-                       onClick={() => router.push(`/news?category=${briefingFeedCategory}&interests=${selectedInterests.join(",")}`)}
-                       className="rounded-[24px] border border-[#DDD4C4] bg-white p-4 text-center hover:bg-[#F8F3EB] transition-colors"
-                     >
-                       <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                         View More News
-                         <ArrowRight size={15} />
-                       </div>
-                     </button>
-                   </>
-                 ) : (
-                  secondaryTopics.map((topic) => (
-                    <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
-                      <button onClick={() => openTopic(topic.id)} className="w-full text-left">
-                        <TopicVisual topic={topic} compact />
-                      </button>
-                      <div className="space-y-3 p-4">
+                        )}
+                      </div>
+                      <div className="space-y-4 p-5">
                         <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                          <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
-                          <span>{topic.time}</span>
+                          <span className="rounded-full bg-[#F4EBDD] px-2.5 py-1 font-semibold text-[#8B4513]">{article.source || 'News'}</span>
+                          <span>{article.date || 'Recently'}</span>
                         </div>
-                        <button onClick={() => openTopic(topic.id)} className="text-left">
-                          <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h3>
+                        <div className="space-y-2">
+                          <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="text-left w-full">
+                            <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513] line-clamp-3">{article.title || 'Untitled'}</h2>
+                          </button>
+                          <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-3">{article.summary || 'No description available.'}</p>
+                        </div>
+                        <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]">
+                          Open full briefing <ArrowRight size={15} />
                         </button>
-                        <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
-                        <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                          Open briefing
-                          <ArrowRight size={15} />
-                        </button>
+                        {idx === 0 && (
+                          <div className="flex items-center justify-between border-t border-[#ECE5D8] pt-3">
+                            <button onClick={refreshNews} className="rounded-full bg-[#F5F0E6] p-2 text-[#5C5C5C]"><RefreshCw size={15} /></button>
+                            <button onClick={refreshNews} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">Get new story <RefreshCw size={15} /></button>
+                          </div>
+                        )}
                       </div>
                     </article>
-                  ))
+                  ))}
+                  {liveNews.filter(a => a.image).length > 4 && (
+                    <div className="col-span-full flex justify-center pt-2">
+                      <button
+                        onClick={() => router.push(`/news?category=${briefingFeedCategory}`)}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-6 py-3 text-sm font-medium text-[#5C5C5C] hover:border-[#8B4513] hover:text-[#8B4513]"
+                      >
+                        View more ({liveNews.filter(a => a.image).length - 4} more) <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
+              <button
+                onClick={() => setActiveQuickFilter(activeQuickFilter === "portfolio" ? null : "portfolio")}
+                className={`min-w-[140px] flex-1 rounded-[20px] px-4 py-3 text-left transition-all ${activeQuickFilter === "portfolio" ? "bg-[#1A1A1A] text-white" : "bg-[#F8F3EB]"}`}
+              >
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${activeQuickFilter === "portfolio" ? "text-white/70" : "text-[#8B4513]"}`}>Portfolio-linked</p>
+                <p className={`mt-2 text-2xl font-semibold ${activeQuickFilter === "portfolio" ? "text-white" : ""}`}>{liveNews.filter(a => a.image && 
+                  portfolioAssets.some(p => 
+                    (a.title || '').toLowerCase().includes((p.ticker || '').toLowerCase()) || 
+                    (a.title || '').toLowerCase().includes((p.name || '').toLowerCase().split(' ')[0].toLowerCase()) ||
+                    (a.summary || '').toLowerCase().includes((p.ticker || '').toLowerCase())
+                  )
+                ).length}</p>
+              </button>
+              <button
+                onClick={() => setActiveQuickFilter(activeQuickFilter === "liked" ? null : "liked")}
+                className={`min-w-[140px] flex-1 rounded-[20px] px-4 py-3 text-left transition-all ${activeQuickFilter === "liked" ? "bg-[#1A1A1A] text-white" : "bg-[#F8F3EB]"}`}
+              >
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${activeQuickFilter === "liked" ? "text-white/70" : "text-[#8B4513]"}`}>Liked</p>
+                <p className={`mt-2 text-2xl font-semibold ${activeQuickFilter === "liked" ? "text-white" : ""}`}>{engagement.likedIds.length}</p>
+              </button>
+              <button
+                onClick={() => setActiveQuickFilter(activeQuickFilter === "saved" ? null : "saved")}
+                className={`min-w-[140px] flex-1 rounded-[20px] px-4 py-3 text-left transition-all ${activeQuickFilter === "saved" ? "bg-[#1A1A1A] text-white" : "bg-[#F8F3EB]"}`}
+              >
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${activeQuickFilter === "saved" ? "text-white/70" : "text-[#8B4513]"}`}>Saved</p>
+                <p className={`mt-2 text-2xl font-semibold ${activeQuickFilter === "saved" ? "text-white" : ""}`}>{engagement.savedIds.length}</p>
+              </button>
+              <button
+                onClick={() => setActiveQuickFilter(activeQuickFilter === "interest" ? null : "interest")}
+                className={`min-w-[140px] flex-1 rounded-[20px] px-4 py-3 text-left transition-all ${activeQuickFilter === "interest" ? "bg-[#1A1A1A] text-white" : "bg-[#F8F3EB]"}`}
+              >
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${activeQuickFilter === "interest" ? "text-white/70" : "text-[#8B4513]"}`}>Top interest</p>
+                <p className={`mt-2 text-xl font-semibold capitalize ${activeQuickFilter === "interest" ? "text-white" : ""}`}>{topInterest}</p>
+              </button>
+            </div>
+
+            {activeQuickFilter && (
+              <>
+                {readingListTopics.length > 0 ? (
+                  <>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                      {readingListTopics.slice(0, expandReadingList ? readingListTopics.length : 3).map((item) => (
+                        <article
+                          key={item.id}
+                          className="overflow-hidden rounded-[20px] border border-[#DDD4C4] bg-white shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          {'image' in item && item.image ? (
+                            <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${item.id}`); }} className="w-full text-left">
+                              <div className="h-32 w-full overflow-hidden bg-gray-100">
+                                <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+                              </div>
+                            </button>
+                          ) : (
+                            <button onClick={() => openTopic(item.id)} className="w-full text-left">
+                              <TopicVisual topic={item} />
+                            </button>
+                          )}
+                          <div className="space-y-2 p-4">
+                            {'image' in item ? (
+                              <>
+                                <p className="text-xs text-[#5C5C5C]">{(item.source || 'News')} • {(item.date || 'Recently')}</p>
+                                <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${item.id}`); }} className="text-left w-full">
+                                  <p className="text-sm font-semibold line-clamp-2 hover:text-[#8B4513]">{item.title || 'Untitled'}</p>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs text-[#5C5C5C]">{item.category} • {item.readTime}</p>
+                                <button onClick={() => openTopic(item.id)} className="text-left w-full">
+                                  <p className="text-sm font-semibold line-clamp-2 hover:text-[#8B4513]">{item.title}</p>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                    {readingListTopics.length > 3 && (
+                      <div className="mt-4 flex justify-center">
+                        <button
+                          onClick={() => setExpandReadingList(!expandReadingList)}
+                          className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-white px-6 py-3 text-sm font-medium text-[#5C5C5C] hover:border-[#8B4513] hover:text-[#8B4513]"
+                        >
+                          {expandReadingList ? 'Show less' : `View more (${readingListTopics.length - 3} more)`} <ChevronRight size={16} className={expandReadingList ? "rotate-90" : ""} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-4 rounded-[20px] border border-[#E8E1D3] bg-white p-6 text-center">
+                    <p className="text-sm text-[#5C5C5C]">{readingListMeta[activeQuickFilter]?.empty || 'No articles found.'}</p>
+                  </div>
                 )}
-              </div>
-            </div>
-            <div className="mt-5 grid gap-3 rounded-[26px] border border-[#E8E1D3] bg-white p-3 md:grid-cols-4 md:p-4">
-              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Portfolio-linked</p>
-                <p className="mt-2 text-2xl font-semibold">{portfolioTopics.length}</p>
-                <p className="mt-1 text-xs text-[#5C5C5C]">Stories directly tied to your tracked assets.</p>
-              </div>
-              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Unread</p>
-                <p className="mt-2 text-2xl font-semibold">{engagement.unreadIds.length}</p>
-                <p className="mt-1 text-xs text-[#5C5C5C]">Stories still waiting in your reading queue.</p>
-              </div>
-              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Saved</p>
-                <p className="mt-2 text-2xl font-semibold">{engagement.savedIds.length}</p>
-                <p className="mt-1 text-xs text-[#5C5C5C]">Stories held back for deeper reading later.</p>
-              </div>
-              <div className="rounded-[20px] bg-[#F8F3EB] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Top interest</p>
-                <p className="mt-2 text-xl font-semibold capitalize">{topInterest}</p>
-                <p className="mt-1 text-xs text-[#5C5C5C]">The strongest lens shaping your front page.</p>
-              </div>
-            </div>
+              </>
+            )}
           </section>
 
           <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6">
             <div className="flex flex-col gap-2 border-b border-[#E8E1D3] pb-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-                    In-Depth Briefings
-                  </span>
-                </div>
+                <span className="rounded-full bg-[#1A1A1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">In-Depth Briefings</span>
                 <h2 className="mt-3 text-2xl font-semibold">Featured Stories with Full Analysis</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5C5C5C]">
-                  These stories include story arcs, impact analysis for different user types (students, founders, investors), sources, and key takeaways. Click to open the full briefing.
-                </p>
               </div>
-              <button
-                onClick={() => router.push("/topics")}
-                className="inline-flex items-center gap-2 rounded-full bg-[#1A1A1A] px-4 py-2.5 text-sm font-medium text-white"
-              >
-                View all topics
-                <ArrowRight size={15} />
-              </button>
+              <button onClick={() => router.push(`/news?category=${briefingFeedCategory}`)} className="inline-flex items-center gap-2 rounded-full bg-[#1A1A1A] px-4 py-2.5 text-sm font-medium text-white">View all <ArrowRight size={15} /></button>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {rankedTopics.slice(0, 6).map((topic) => (
-                <article key={topic.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
-                  <button onClick={() => openTopic(topic.id)} className="w-full text-left">
-                    <TopicVisual topic={topic} compact />
-                  </button>
-                  <div className="space-y-3 p-4">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
-                      <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{topic.category}</span>
-                      <span>{topic.time}</span>
-                    </div>
-                    <button onClick={() => openTopic(topic.id)} className="text-left">
-                      <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513]">{topic.title}</h3>
-                    </button>
-                    <p className="text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            likeTopic(topic.id);
-                          }}
-                          className={`rounded-full p-2 ${engagement.likedIds.includes(topic.id) ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
-                        >
-                          <ThumbsUp size={14} />
-                        </button>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleSave(topic.id);
-                          }}
-                          className={`rounded-full p-2 ${engagement.savedIds.includes(topic.id) ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}
-                        >
-                          <Bookmark size={14} />
-                        </button>
-                      </div>
-                      <button onClick={() => openTopic(topic.id)} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                        Open briefing
-                        <ArrowRight size={14} />
+              {(() => {
+                const featuredArticles = liveNews.filter(a => a.image);
+                return featuredArticles.slice(4, 10).length > 0 ? (
+                  featuredArticles.slice(4, 10).map((article) => (
+                    <article key={article.id} className="overflow-hidden rounded-[24px] border border-[#DDD4C4] bg-white shadow-sm">
+                      <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="w-full text-left">
+                        <div className="h-48 w-full overflow-hidden bg-gray-100">
+                          <img src={article.image} alt={article.title} className="h-full w-full object-cover hover:scale-105 transition-transform duration-300" />
+                        </div>
                       </button>
-                    </div>
+                      <div className="space-y-3 p-4">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5C5C]">
+                          <span className="rounded-full bg-[#F4EBDD] px-2 py-1 font-semibold text-[#8B4513]">{article.source || 'News'}</span>
+                          <span>{article.date}</span>
+                        </div>
+                        <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="text-left w-full">
+                          <h3 className="text-lg font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title || 'Untitled'}</h3>
+                        </button>
+                        <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary || 'No description available.'}</p>
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => likeTopic(article.id)} className={`rounded-full p-2 ${engagement.likedIds.includes(article.id) ? "bg-green-100 text-green-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}><ThumbsUp size={14} /></button>
+                            <button onClick={() => toggleSave(article.id)} className={`rounded-full p-2 ${engagement.savedIds.includes(article.id) ? "bg-amber-100 text-amber-700" : "bg-[#F5F0E6] text-[#5C5C5C]"}`}><Bookmark size={14} /></button>
+                          </div>
+                          <button onClick={() => { localStorage.setItem("last-live-news", JSON.stringify(liveNews)); router.push(`/briefing/${article.id}`); }} className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">Open <ArrowRight size={14} /></button>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                ) : liveNews.length === 0 ? (
+                  <div className="col-span-full py-8 text-center">
+                    <p className="text-sm text-[#5C5C5C]">No articles found. Try selecting "General" or refresh.</p>
                   </div>
-                </article>
-              ))}
+                ) : null;
+              })()}
             </div>
           </section>
 
@@ -754,152 +581,21 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-2 border-b border-[#D9CFBE] pb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8B4513]">Workbench</p>
               <h2 className="text-2xl font-semibold">Your reading tools and memory live below the front page.</h2>
-              <p className="text-sm leading-6 text-[#5C5C5C]">
-                Keep the top of the dashboard editorial. Use the workbench to manage what you opened, saved, liked, and what matters to your portfolio.
-              </p>
             </div>
 
             <div className="mt-5 space-y-4">
               <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-3 border-b border-[#ECE5D8] pb-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">More Headlines</p>
-                    <h3 className="mt-2 text-xl font-semibold">Latest News</h3>
-                    <p className="mt-1 text-sm text-[#5C5C5C]">Stay updated with the latest business news</p>
-                  </div>
-                  <button
-                    onClick={refreshNews}
-                    disabled={liveNewsLoading}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#DDD4C4] bg-[#FCFAF6] px-4 py-2 text-sm font-medium text-[#1A1A1A] disabled:opacity-50"
-                  >
-                    <RefreshCw size={15} className={liveNewsLoading ? "animate-spin" : ""} />
-                    Load more
-                  </button>
+                <div className="mb-4 flex items-center gap-2">
+                  <History size={16} className="text-[#8B4513]" />
+                  <h3 className="text-lg font-semibold">Recent</h3>
                 </div>
-
-                {liveNewsLoading ? (
-                  <div className="mt-4 flex items-center justify-center py-8">
-                    <RefreshCw size={24} className="animate-spin text-[#8B4513]" />
-                  </div>
-                ) : liveNews.length > 0 ? (
-                   <>
-                     <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                       {liveNews.slice(0, 8).map((article, index) => (
-                         <article key={article.id || index} className="overflow-hidden rounded-[24px] border border-[#ECE5D8] bg-[#FCFAF6]">
-                           <div className="h-36 w-full overflow-hidden bg-gray-100">
-                             {article.image ? (
-                               <img src={article.image} alt={article.title} className="h-full w-full object-cover" />
-                             ) : (
-                               <div className="flex h-full w-full items-center justify-center text-gray-400">
-                                 <span className="text-sm">No image</span>
-                               </div>
-                             )}
-                           </div>
-                            <div className="space-y-3 p-4">
-                              <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
-                                <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#8B4513]">{article.source}</span>
-                                <span>{article.date}</span>
-                              </div>
-                              <button 
-                                onClick={() => {
-                                  localStorage.setItem("last-live-news", JSON.stringify(liveNews));
-                                  router.push(`/briefing/${article.id}`);
-                                }} 
-                                className="text-left"
-                              >
-                                <h4 className="text-base font-semibold leading-snug hover:text-[#8B4513] line-clamp-2">{article.title}</h4>
-                              </button>
-                              <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-2">{article.summary}</p>
-                            </div>
-                         </article>
-                       ))}
-                     </div>
-                     <button
-                       onClick={() => router.push(`/news?category=general&interests=${selectedInterests.join(",")}`)}
-                       className="mt-4 w-full rounded-[22px] border border-[#DDD4C4] bg-[#F8F3EB] p-4 text-center hover:bg-[#F0E9D9] transition-colors"
-                     >
-                       <div className="inline-flex items-center gap-2 text-sm font-medium text-[#8B4513]">
-                         Load More Headlines
-                         <ArrowRight size={15} />
-                       </div>
-                     </button>
-                   </>
-                 ) : (
-                  <div className="mt-4 rounded-[22px] bg-[#F8F3EB] p-4">
-                    <p className="text-sm leading-6 text-[#5C5C5C]">No news available. Click load more to refresh.</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-                <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Portfolio radar</p>
-                      <h3 className="mt-2 text-lg font-semibold">Where your holdings meet the news.</h3>
-                    </div>
-                    <button
-                      onClick={() => router.push("/portfolio")}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF6] px-3 py-2 text-sm font-medium text-[#1A1A1A]"
-                    >
-                      Open portfolio
-                      <ChevronRight size={14} />
+                <div className="grid gap-2">
+                  {recentTopics.length > 0 ? recentTopics.map((topic) => (
+                    <button key={topic.id} onClick={() => openTopic(topic.id)} className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-3 text-left hover:border-[#8B4513]">
+                      <p className="text-sm font-semibold">{topic.title}</p>
+                      <p className="mt-1 text-xs text-[#5C5C5C]">{topic.category} • {topic.time}</p>
                     </button>
-                  </div>
-                  <div className="space-y-3">
-                    {portfolioRadar.length > 0 ? (
-                      portfolioRadar.map(({ asset, assessment }) => (
-                        <button
-                          key={asset.id}
-                          onClick={() => router.push(`/briefing/${assessment.topic.id}`)}
-                          className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-left hover:border-[#8B4513]"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold">{asset.name}</p>
-                              <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#5C5C5C]">{asset.symbol}</p>
-                            </div>
-                            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">
-                              {assessment.confidence} confidence
-                            </span>
-                          </div>
-                          <p className="mt-3 text-sm font-medium text-[#1A1A1A]">{assessment.topic.title}</p>
-                          <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">{assessment.rationale}</p>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="text-sm leading-6 text-[#5C5C5C]">
-                        Connect assets in portfolio and the dashboard will pull the most relevant mapped stories into this radar.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2">
-                    <History size={16} className="text-[#8B4513]" />
-                    <h3 className="text-lg font-semibold">Previously Opened</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {recentTopics.length > 0 ? (
-                      recentTopics.map((topic) => (
-                        <button
-                          key={topic.id}
-                          onClick={() => openTopic(topic.id)}
-                          className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-3 text-left hover:border-[#8B4513]"
-                        >
-                          <p className="text-sm font-semibold">{topic.title}</p>
-                          <p className="mt-1 text-xs text-[#5C5C5C]">
-                            {topic.category} • {topic.time}
-                          </p>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="text-sm leading-6 text-[#5C5C5C]">
-                        Open a story once and it stays here so you can return without searching the feed again.
-                      </p>
-                    )}
-                  </div>
+                  )) : <p className="text-sm leading-6 text-[#5C5C5C]">Open a story once and it stays here.</p>}
                 </div>
               </div>
 
@@ -909,29 +605,44 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-semibold">Saved Queue</h3>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  {savedTopics.length > 0 ? (
-                    savedTopics.slice(0, 3).map((topic) => (
-                      <button
-                        key={topic.id}
-                        onClick={() => openTopic(topic.id)}
-                        className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-left hover:border-[#8B4513]"
-                      >
-                        <p className="text-sm font-semibold">{topic.title}</p>
-                        <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-sm leading-6 text-[#5C5C5C] md:col-span-3">
-                      Saved stories stay here for later reading while the front page stays editorial and uncluttered.
-                    </p>
-                  )}
+                  {savedTopics.length > 0 ? savedTopics.slice(0, 3).map((topic) => (
+                    <button key={topic.id} onClick={() => openTopic(topic.id)} className="w-full rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-left hover:border-[#8B4513]">
+                      <p className="text-sm font-semibold">{topic.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-[#5C5C5C]">{topic.subtitle}</p>
+                    </button>
+                  )) : <p className="text-sm leading-6 text-[#5C5C5C] md:col-span-3">Saved stories stay here for later.</p>}
+                </div>
+              </div>
+
+              <div className="rounded-[26px] border border-[#D9CFBE] bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Portfolio radar</p>
+                    <h3 className="mt-2 text-lg font-semibold">Where your holdings meet the news.</h3>
+                  </div>
+                  <button onClick={() => router.push("/portfolio")} className="inline-flex items-center gap-1 rounded-full border border-[#DDD4C4] bg-[#FCFAF6] px-3 py-2 text-sm font-medium text-[#1A1A1A]">
+                    Open <ChevronRight size={14} />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {portfolioRadar.length > 0 ? portfolioRadar.map(({ asset, assessment }) => (
+                    <div key={asset.ticker} className="flex items-center justify-between rounded-xl bg-[#F8F3EB] p-3">
+                      <div>
+                        <p className="font-semibold">{asset.ticker}</p>
+                        <p className="text-sm text-[#5C5C5C]">{asset.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{assessment.topic.title}</p>
+                        <p className="text-xs text-[#5C5C5C]">{assessment.topic.category}</p>
+                      </div>
+                    </div>
+                  )) : <p className="text-sm leading-6 text-[#5C5C5C]">Add assets to your portfolio to see related news.</p>}
                 </div>
               </div>
             </div>
           </section>
         </div>
       </main>
-
       <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
     </div>
   );

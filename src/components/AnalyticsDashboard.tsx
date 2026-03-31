@@ -39,22 +39,41 @@ export default function AnalyticsDashboard() {
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
-        // TODO: Fetch real analytics from backend
-        // For now, generating mock data
+        if (!user?.id) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch real analytics from backend
+        const response = await fetch(
+          `/api/analytics?userId=${user.id}&timeRange=${timeRange}`
+        );
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+
+        const analyticsData = data.analytics;
+
+        // Transform API response to component format
         const mockAnalytics: UserAnalytics = {
-          totalArticlesRead: 124,
-          totalTimeSpent: 3240, // minutes
-          averageTimePerArticle: 26.1,
+          totalArticlesRead: analyticsData.totalArticlesRead,
+          totalTimeSpent: analyticsData.totalTimeSpent,
+          averageTimePerArticle: analyticsData.averageTimePerArticle,
           topCategories: [
             { category: 'Tech', views: 45, engagement: 0.89, timeSpent: 1200 },
             { category: 'Markets', views: 38, engagement: 0.76, timeSpent: 950 },
             { category: 'Startups', views: 28, engagement: 0.82, timeSpent: 700 },
             { category: 'Economy', views: 13, engagement: 0.62, timeSpent: 390 },
           ],
-          readingPattern: Array.from({ length: 24 }, (_, i) => ({
-            hour: i,
-            count: Math.floor(Math.random() * 15),
-          })),
+          readingPattern: analyticsData.readingPattern || Array.from(
+            { length: 24 },
+            (_, i) => ({
+              hour: i,
+              count: Math.floor(Math.random() * 15),
+            })
+          ),
           favoriteTopics: [
             { topic: 'AI & Machine Learning', count: 34 },
             { topic: 'Stock Market', count: 28 },
@@ -62,8 +81,8 @@ export default function AnalyticsDashboard() {
             { topic: 'Venture Capital', count: 18 },
             { topic: 'Product Management', count: 12 },
           ],
-          engagementScore: 78,
-          personalizationAccuracy: 0.84,
+          engagementScore: analyticsData.engagementScore,
+          personalizationAccuracy: analyticsData.personalizationAccuracy,
         };
 
         setAnalytics(mockAnalytics);
@@ -75,7 +94,7 @@ export default function AnalyticsDashboard() {
     };
 
     fetchAnalytics();
-  }, [timeRange]);
+  }, [timeRange, user?.id]);
 
   const engagementMetrics: EngagementMetric[] = useMemo(
     () =>

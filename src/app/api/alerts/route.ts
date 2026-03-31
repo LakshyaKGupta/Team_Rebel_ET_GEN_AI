@@ -1,7 +1,8 @@
-// Real-Time Portfolio Alerts System
-// Monitors news for portfolio-related articles and sends alerts
+// Real-Time Portfolio Alerts API
+// GET, POST, DELETE handlers for portfolio alerts
 
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 interface Alert {
   id: string;
@@ -13,138 +14,8 @@ interface Alert {
   createdAt: Date;
 }
 
-interface PortfolioAsset {
-  id: string;
-  symbol: string;
-  name: string;
-  currentPrice: number;
-  priceChange?: number;
-}
-
-interface NewsAlert {
-  id: string;
-  assetSymbol: string;
-  title: string;
-  summary: string;
-  source: string;
-  sentiment: 'positive' | 'negative' | 'neutral';
-  importance: 'high' | 'medium' | 'low';
-  timestamp: Date;
-  articleUrl: string;
-}
-
 /**
- * Check if a news article mentions any portfolio assets
- */
-function isRelevantToAsset(
-  articleTitle: string,
-  articleSummary: string,
-  assetSymbol: string,
-  assetName: string
-): boolean {
-  const text = `${articleTitle} ${articleSummary}`.toLowerCase();
-  const symbolLower = assetSymbol.toLowerCase();
-  const nameLower = assetName.toLowerCase();
-
-  // Direct mention
-  if (text.includes(symbolLower) || text.includes(nameLower)) {
-    return true;
-  }
-
-  // Check for common variations
-  const variations = [
-    assetSymbol.replace(/^([A-Z]+)\d+/, '$1'), // Remove trailing numbers
-    assetName.split(' ')[0], // First word of name
-  ];
-
-  return variations.some((v) => v && text.includes(v.toLowerCase()));
-}
-
-/**
- * Determine alert importance based on sentiment and keywords
- */
-function determineImportance(
-  title: string,
-  summary: string,
-  sentiment: string
-): 'high' | 'medium' | 'low' {
-  const text = `${title} ${summary}`.toLowerCase();
-  const highPriorityWords = [
-    'crash',
-    'collapse',
-    'surge',
-    'breakthrough',
-    'bankruptcy',
-    'acquisition',
-    'merger',
-    'ipo',
-    'scandal',
-    'fraud',
-  ];
-  const mediumPriorityWords = [
-    'earnings',
-    'profit',
-    'loss',
-    'growth',
-    'decline',
-    'upgrade',
-    'downgrade',
-  ];
-
-  const hasHighPriority = highPriorityWords.some((word) => text.includes(word));
-  const hasMediumPriority = mediumPriorityWords.some((word) => text.includes(word));
-
-  if (hasHighPriority || sentiment !== 'neutral') return 'high';
-  if (hasMediumPriority) return 'medium';
-  return 'low';
-}
-
-/**
- * Process news articles and create alerts for portfolio assets
- */
-export async function processNewsForAlerts(
-  articles: any[],
-  portfolioAssets: PortfolioAsset[],
-  userId: string
-): Promise<NewsAlert[]> {
-  const alerts: NewsAlert[] = [];
-
-  for (const article of articles) {
-    for (const asset of portfolioAssets) {
-      if (
-        isRelevantToAsset(
-          article.title || '',
-          article.summary || '',
-          asset.symbol,
-          asset.name
-        )
-      ) {
-        const importance = determineImportance(
-          article.title || '',
-          article.summary || '',
-          article.sentiment || 'neutral'
-        );
-
-        alerts.push({
-          id: `alert-${Date.now()}-${Math.random()}`,
-          assetSymbol: asset.symbol,
-          title: article.title,
-          summary: article.summary,
-          source: article.source,
-          sentiment: article.sentiment || 'neutral',
-          importance,
-          timestamp: new Date(article.date || Date.now()),
-          articleUrl: article.url,
-        });
-      }
-    }
-  }
-
-  return alerts;
-}
-
-/**
- * API route for retrieving portfolio alerts
+ * GET - Retrieve portfolio alerts
  */
 export async function GET(request: NextRequest) {
   try {
@@ -159,19 +30,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Fetch from database
-    // This would query the alerts table filtered by userId
-    const alerts: NewsAlert[] = []; // Placeholder
+    const whereClause: any = {
+      userId,
+      isActive: true,
+    };
 
-    const filtered =
-      importance === 'all'
-        ? alerts
-        : alerts.filter((a) => a.importance === importance);
+    if (importance !== 'all') {
+      whereClause.importance = importance;
+    }
+
+    const alerts = await prisma.alert.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        assetSymbol: true,
+        alertType: true,
+        importance: true,
+        threshold: true,
+        createdAt: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      alerts: filtered,
-      count: filtered.length,
+      alerts,
+      count: alerts.length,
     });
   } catch (error) {
     console.error('Error fetching alerts:', error);
@@ -183,12 +67,12 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Create a new alert for a portfolio asset
+ * POST - Create a new alert for a portfolio asset
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, assetSymbol, alertType, threshold } = body;
+    const { userId, portfolioId, holdingId, assetSymbol, alertType, threshold } = body;
 
     if (!userId || !assetSymbol || !alertType) {
       return NextResponse.json(
@@ -197,7 +81,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate alert type
     const validTypes = ['price_change', 'news_mention', 'threshold_breach'];
     if (!validTypes.includes(alertType)) {
       return NextResponse.json(
@@ -206,16 +89,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Save to database
-    const alert: Alert = {
-      id: `alert-${Date.now()}`,
-      userId,
-      assetSymbol,
-      alertType,
-      threshold,
-      isActive: true,
-      createdAt: new Date(),
-    };
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const alert = await prisma.alert.create({
+      data: {
+        userId,
+        portfolioId: portfolioId || null,
+        holdingId: holdingId || null,
+        assetSymbol,
+        alertType,
+        threshold: threshold ? parseFloat(threshold) : null,
+        importance: 'medium',
+        isActive: true,
+      },
+      select: {
+        id: true,
+        userId: true,
+        assetSymbol: true,
+        alertType: true,
+        threshold: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -231,38 +136,51 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Send alert notification (email, push, in-app)
+ * DELETE - Deactivate an alert
  */
-export async function sendAlert(alert: NewsAlert, userId: string) {
-  // Email notification
+export async function DELETE(request: NextRequest) {
   try {
-    const emailTemplate = `
-      <h2>${alert.assetSymbol}: ${alert.title}</h2>
-      <p><strong>Source:</strong> ${alert.source}</p>
-      <p><strong>Sentiment:</strong> ${alert.sentiment}</p>
-      <p><strong>Priority:</strong> ${alert.importance}</p>
-      <p>${alert.summary}</p>
-      <p><a href="${alert.articleUrl}">Read full article</a></p>
-    `;
+    const { searchParams } = new URL(request.url);
+    const alertId = searchParams.get('alertId');
+    const userId = searchParams.get('userId');
 
-    // TODO: Send email via SendGrid, Nodemailer, etc.
-    console.log(`[Alert] Sending email to user ${userId}:`, alert);
+    if (!alertId || !userId) {
+      return NextResponse.json(
+        { error: 'alertId and userId parameters required' },
+        { status: 400 }
+      );
+    }
 
-    // Push notification (for mobile)
-    // TODO: Implement push notifications
-    console.log(`[Alert] Push notification for user ${userId}:`, alert);
+    const alert = await prisma.alert.findUnique({
+      where: { id: alertId },
+    });
 
-    // In-app notification (via database)
-    // TODO: Save notification to database
-    console.log(`[Alert] In-app notification for user ${userId}:`, alert);
+    if (!alert || alert.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Alert not found or unauthorized' },
+        { status: 404 }
+      );
+    }
+
+    const updated = await prisma.alert.update({
+      where: { id: alertId },
+      data: { isActive: false },
+      select: {
+        id: true,
+        assetSymbol: true,
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      alert: updated,
+    });
   } catch (error) {
-    console.error('Error sending alert:', error);
+    console.error('Error deleting alert:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete alert' },
+      { status: 500 }
+    );
   }
 }
-
-export default {
-  processNewsForAlerts,
-  sendAlert,
-  determineImportance,
-  isRelevantToAsset,
-};
