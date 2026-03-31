@@ -18,7 +18,6 @@ import BottomNav from "@/components/nav/BottomNav";
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
 import { useNotifications } from "@/context/NotificationContext";
-import { useBriefing } from "@/context/BriefingContext";
 import {
   assessPortfolioImpact,
   getRecentTopicCards,
@@ -46,7 +45,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const { preferences } = useUser();
   const { unreadCount, checkNewsForInterests } = useNotifications();
-  const { setCurrentArticle } = useBriefing();
   const [activeNav, setActiveNav] = useState<"home" | "topics">("home");
   const [briefingFeedCategory, setBriefingFeedCategory] = useState("general");
   const [activeQuickFilter, setActiveQuickFilter] = useState<ReadingListFilter | null>(null);
@@ -225,12 +223,6 @@ export default function DashboardPage() {
     fetchLiveNews();
     return () => { mounted = false; };
   }, [briefingFeedCategory]);
-
-  useEffect(() => {
-    if (liveNews.length > 0) {
-      checkNewsForInterests(liveNews);
-    }
-  }, [liveNews, checkNewsForInterests]);
 
   const refreshNews = async () => {
     try {

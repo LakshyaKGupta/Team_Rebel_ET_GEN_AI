@@ -8,7 +8,6 @@ import { ArrowLeft, ArrowRight, Bell, Check, ExternalLink, Loader2, Plus, Refres
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
 import { useNotifications } from "@/context/NotificationContext";
-import { useBriefing } from "@/context/BriefingContext";
 import {
   getTopicsForUser,
   interestLibrary,
@@ -32,8 +31,7 @@ interface LiveNewsArticle {
 export default function TopicsPage() {
   const router = useRouter();
   const { preferences, setSelectedInterests } = useUser();
-  const { unreadCount, checkNewsForInterests } = useNotifications();
-  const { setCurrentArticle } = useBriefing();
+  const { unreadCount } = useNotifications();
   const [selectedCategory, setSelectedCategory] = useState("general");
   const [isEditingInterests, setIsEditingInterests] = useState(false);
   const [customInterest, setCustomInterest] = useState("");
@@ -73,12 +71,6 @@ export default function TopicsPage() {
     fetchNews();
     return () => { mounted = false; };
   }, [selectedCategory]);
-
-  useEffect(() => {
-    if (liveNews.length > 0) {
-      checkNewsForInterests(liveNews);
-    }
-  }, [liveNews, checkNewsForInterests]);
 
   const refreshNews = async () => {
     setNewsLoading(true);
