@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 
 const DEMO_USERS: Record<string, { id: string; email: string; name: string; avatarUrl: string | null; createdAt: Date }> = {};
 
 export async function GET(request: NextRequest) {
   try {
+    const { verifyToken } = await import("@/lib/auth");
+    
     const token = request.cookies.get("auth-token")?.value;
 
     if (!token) {

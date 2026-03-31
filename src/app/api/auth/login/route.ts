@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateUser, generateToken, getUserPreferences } from "@/lib/auth";
-import { isValidEmail, isValidPassword, sanitizeString } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const { authenticateUser, generateToken, getUserPreferences } = await import("@/lib/auth");
+    const { isValidEmail, isValidPassword, sanitizeString } = await import("@/lib/validation");
+    
     const body = await request.json();
     const email = sanitizeString(body.email?.toLowerCase());
     const password = body.password;
