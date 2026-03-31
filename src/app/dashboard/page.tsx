@@ -375,7 +375,9 @@ export default function DashboardPage() {
                         </div>
                         <div className="space-y-2">
                           <button onClick={() => { 
-                            setCurrentArticle(article);
+                            const articleKey = `article-${article.id}`;
+                            sessionStorage.setItem(articleKey, JSON.stringify(article));
+                            sessionStorage.setItem("last-live-news", JSON.stringify(liveNews));
                             router.push(`/briefing/${article.id}`); 
                           }} className="text-left w-full">
                             <h2 className="text-2xl font-semibold leading-tight hover:text-[#8B4513] line-clamp-3">{article.title || 'Untitled'}</h2>
@@ -383,7 +385,9 @@ export default function DashboardPage() {
                           <p className="text-sm leading-6 text-[#5C5C5C] line-clamp-3">{article.summary || 'No description available.'}</p>
                         </div>
                         <button onClick={() => { 
-                          setCurrentArticle(article);
+                          const articleKey = `article-${article.id}`;
+                          sessionStorage.setItem(articleKey, JSON.stringify(article));
+                          sessionStorage.setItem("last-live-news", JSON.stringify(liveNews));
                           router.push(`/briefing/${article.id}`); 
                         }} className="inline-flex items-center gap-2 rounded-[22px] bg-[#F8F3EB] px-4 py-3 text-sm font-medium text-[#8B4513]">
                           Open full briefing <ArrowRight size={15} />

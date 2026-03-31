@@ -317,7 +317,8 @@ export default function TopicsPage() {
                       </div>
                       <button
                         onClick={() => {
-                          setCurrentArticle(article);
+                          const articleKey = `article-${article.id}`;
+                          sessionStorage.setItem(articleKey, JSON.stringify(article));
                           router.push(`/briefing/${article.id}`);
                         }}
                         className="w-full text-left"
@@ -331,7 +332,8 @@ export default function TopicsPage() {
                       </p>
                       <button
                         onClick={() => {
-                          setCurrentArticle(article);
+                          const articleKey = `article-${article.id}`;
+                          sessionStorage.setItem(articleKey, JSON.stringify(article));
                           router.push(`/briefing/${article.id}`);
                         }}
                         className="inline-flex items-center gap-1 text-xs font-medium text-[#8B4513] hover:underline"

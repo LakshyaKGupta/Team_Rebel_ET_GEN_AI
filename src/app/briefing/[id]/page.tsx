@@ -251,36 +251,10 @@ export default function BriefingDetailPage() {
     setRecentTopicIds(current.recentTopicIds);
 
     if (topicId.startsWith("live-") || topicId.startsWith("topic-news-")) {
-      // Check context first (from dashboard/topics via setCurrentArticle)
-      const contextArticle = state.currentArticle;
-      if (contextArticle && contextArticle.id === topicId) {
-        setIsLiveLoading(true);
-        setLiveError(null);
-        fetch("/api/generate-briefing", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(contextArticle),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.briefing) {
-              setLiveBriefing(data.briefing);
-            } else {
-              setLiveError(data.error || "Failed to generate briefing");
-            }
-          })
-          .catch((err) => {
-            console.error("API error:", err);
-            setLiveError("Failed to generate briefing");
-          })
-          .finally(() => setIsLiveLoading(false));
-        setCurrentArticle(null);
-        return;
-      }
-
-      // Fallback to sessionStorage
-      const sessionKey = `briefing-${topicId}`;
+      // Check sessionStorage first (from dashboard/topics)
+      const sessionKey = `article-${topicId}`;
       const sessionArticle = sessionStorage.getItem(sessionKey);
+      
       if (sessionArticle) {
         try {
           const article = JSON.parse(sessionArticle);
@@ -310,46 +284,44 @@ export default function BriefingDetailPage() {
         }
       }
 
-      // Fallback to localStorage
-      const cachedLive = localStorage.getItem(`live-briefing-${topicId}`);
-      if (cachedLive) {
-        setLiveBriefing(JSON.parse(cachedLive));
-        return;
-      }
-
+      // Fallback to localStorage last-live-news
       const storedNews = localStorage.getItem("last-live-news");
       if (storedNews) {
-        const newsArticles = JSON.parse(storedNews);
-        const article = newsArticles.find((a: any) => a.id === topicId);
-        if (article) {
-          setIsLiveLoading(true);
-          setLiveError(null);
-          fetch("/api/generate-briefing", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(article),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.briefing) {
-                setLiveBriefing(data.briefing);
-              } else {
-                setLiveError(data.error || "Failed to generate briefing");
-              }
+        try {
+          const newsArticles = JSON.parse(storedNews);
+          const article = newsArticles.find((a: any) => a.id === topicId);
+          if (article) {
+            setIsLiveLoading(true);
+            setLiveError(null);
+            fetch("/api/generate-briefing", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(article),
             })
-            .catch((err) => {
-              console.error("API error:", err);
-              setLiveError("Failed to generate briefing");
-            })
-            .finally(() => setIsLiveLoading(false));
-        } else {
-          router.push("/dashboard");
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.briefing) {
+                  setLiveBriefing(data.briefing);
+                } else {
+                  setLiveError(data.error || "Failed to generate briefing");
+                }
+              })
+              .catch((err) => {
+                console.error("API error:", err);
+                setLiveError("Failed to generate briefing");
+              })
+              .finally(() => setIsLiveLoading(false));
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse stored news:", e);
         }
-      } else {
-        router.push("/dashboard");
       }
+
+      // Redirect if no article found
+      router.push("/dashboard");
     }
-  }, [topicId, state.currentArticle]);
+  }, [topicId]);
 
   useEffect(() => {
     setPortfolioAssets(readPortfolioAssets(starterPortfolioAssets));
