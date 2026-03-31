@@ -309,6 +309,8 @@ export default function TopicsPage() {
                       </div>
                       <button
                         onClick={() => {
+                          const articleKey = `live-article-${article.id}`;
+                          localStorage.setItem(articleKey, JSON.stringify(article));
                           localStorage.setItem("last-live-news", JSON.stringify(liveNews));
                           router.push(`/briefing/${article.id}`);
                         }}
@@ -323,6 +325,8 @@ export default function TopicsPage() {
                       </p>
                       <button
                         onClick={() => {
+                          const articleKey = `live-article-${article.id}`;
+                          localStorage.setItem(articleKey, JSON.stringify(article));
                           localStorage.setItem("last-live-news", JSON.stringify(liveNews));
                           router.push(`/briefing/${article.id}`);
                         }}
