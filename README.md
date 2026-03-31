@@ -1,6 +1,6 @@
 # Team_Rebel_ET_GEN_AI
 
-**Live Demo**: https://team-rebel-et-gen-ai.vercel.app/
+**Live Demo**: https://myetnews.vercel.app/
 
 AI-Native News Experience - Personalized newsroom + Interactive AI briefings + AI Chatbot
 
