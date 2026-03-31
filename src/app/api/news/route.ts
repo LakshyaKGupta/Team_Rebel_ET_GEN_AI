@@ -11,6 +11,9 @@ const categoryQueries: Record<string, string> = {
   general: "India business economy finance breaking news",
 };
 
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 60000;
+
 function categorizeArticle(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
   if (text.match(/stock|market|sensex|nifty|bse|nse|trading|shares|ipo|fii|dii/)) return 'markets';
@@ -42,6 +45,18 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || "general";
     const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 30);
 
+    const cacheKey = category;
+    const cached = cache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      console.log('Returning cached news for:', category);
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+      }, { headers: { 'Cache-Control': 'public, s-maxage=30' } });
+    }
+
     const query = categoryQueries[category] || categoryQueries.general;
     console.log('Fetching news for:', category);
 
@@ -59,7 +74,7 @@ export async function GET(request: NextRequest) {
     const articles = (data.articles || [])
       .filter((a: any) => a.title && a.title !== '[Removed]')
       .map((a: any, i: number) => ({
-        id: `na-${Date.now()}-${i}`,
+        id: `na-${i}`,
         title: a.title || '',
         summary: a.description || '',
         source: a.source?.name || 'NewsAPI',
@@ -76,12 +91,16 @@ export async function GET(request: NextRequest) {
 
     console.log('Final articles:', final.length, '(with images:', withImg.length, ')');
 
-    return NextResponse.json({
+    const result = {
       category,
       articles: final,
       count: final.length,
       timestamp: new Date().toISOString(),
-    }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
+    };
+
+    cache.set(cacheKey, { data: result, timestamp: now });
+
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, s-maxage=30' } });
   } catch (error) {
     console.error('News error:', error);
     return NextResponse.json({ error: "Failed to fetch news", articles: [] }, { status: 200 });
