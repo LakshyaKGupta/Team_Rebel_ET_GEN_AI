@@ -73,7 +73,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [notifications]);
 
   useEffect(() => {
-    localStorage.setItem("et_seen_articles", JSON.stringify([...seenArticleIds]));
+    localStorage.setItem("et_seen_articles", JSON.stringify(Array.from(seenArticleIds)));
   }, [seenArticleIds]);
 
   const getUserInterestCategories = useCallback((): string[] => {
@@ -124,7 +124,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (seenArticleIds.has(articleId)) return;
       if (!isArticleRelevant(article)) return;
 
-      setSeenArticleIds(prev => new Set([...prev, articleId]));
+      setSeenArticleIds(prev => new Set([...Array.from(prev), articleId]));
 
       const newNotification: Notification = {
         id: `news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -151,7 +151,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     
     if (seenArticleIds.has(articleId)) return;
 
-    setSeenArticleIds(prev => new Set([...prev, articleId]));
+    setSeenArticleIds(prev => new Set([...Array.from(prev), articleId]));
 
     const newNotification: Notification = {
       id: articleId,

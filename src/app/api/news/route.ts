@@ -74,10 +74,10 @@ export async function GET(request: NextRequest) {
         category: categorizeArticle(a.title || '', a.description || ''),
       }));
 
-    articles.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+    articles.sort((a: any, b: any) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
 
-    const withImg = articles.filter(a => a.image);
-    const noImg = articles.filter(a => !a.image);
+    const withImg = articles.filter((a: any) => a.image);
+    const noImg = articles.filter((a: any) => !a.image);
     const final = [...withImg, ...noImg].slice(0, limit);
 
     console.log('Final articles:', final.length, '(with images:', withImg.length, ')');

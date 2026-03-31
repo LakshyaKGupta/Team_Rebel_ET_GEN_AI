@@ -241,7 +241,6 @@ export default function DashboardPage() {
         const articlesWithIds = data.articles.map((article: LiveNewsArticle, index: number) => ({
           ...article,
           id: `live-${index}-${Date.now()}`,
-          id: `live-${index}-${Date.now()}`,
         }));
         setLiveNews(articlesWithIds);
         localStorage.setItem("last-live-news", JSON.stringify(articlesWithIds));
