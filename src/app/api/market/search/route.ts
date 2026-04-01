@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+
 import { fallbackMarketSearchResults } from "@/lib/data";
 import { MarketSearchResult, AssetType } from "@/lib/types";
 

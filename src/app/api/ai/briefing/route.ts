@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 const generalViewCache = new Map<string, unknown>();
 
 export async function POST(request: NextRequest) {
