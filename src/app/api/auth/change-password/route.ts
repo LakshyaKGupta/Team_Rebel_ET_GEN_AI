@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
+      select: {
+        id: true,
+        passwordHash: true,
+      },
     });
 
     if (!user) {
@@ -57,6 +61,7 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: payload.userId },
       data: { passwordHash: newPasswordHash },
+      select: { id: true },
     });
 
     return NextResponse.json({ success: true, message: "Password changed successfully" });

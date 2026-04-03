@@ -13,6 +13,10 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+      },
     });
 
     if (!user) {
@@ -29,9 +33,16 @@ export async function POST(request: Request) {
         resetToken,
         resetTokenExpiry,
       },
+      select: { id: true },
     });
 
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
+    const requestUrl = new URL(request.url);
+    const appOrigin =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+      requestUrl.origin;
+    const normalizedOrigin = appOrigin.startsWith("http") ? appOrigin : `https://${appOrigin}`;
+    const resetUrl = `${normalizedOrigin}/reset-password?token=${resetToken}`;
 
     const text = `You requested a password reset. Click the following link to securely reset your password: ${resetUrl}`;
     const html = `

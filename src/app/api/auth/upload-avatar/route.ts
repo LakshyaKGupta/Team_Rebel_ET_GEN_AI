@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: payload.userId },
       data: { avatarUrl },
+      select: { id: true },
     });
 
     return NextResponse.json({ avatarUrl });

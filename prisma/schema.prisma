@@ -3,277 +3,264 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  name          String?
-  avatarUrl     String?  @map("avatar_url")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  resetToken       String?   @unique @map("reset_token")
-  resetTokenExpiry DateTime? @map("reset_token_expiry")
-
-  preferences   UserPreference?
+  id           String          @id @default(uuid())
+  email        String          @unique
+  passwordHash String          @map("password_hash")
+  name         String?
+  avatarUrl    String?         @map("avatar_url")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+  resetToken       String?     @unique @map("reset_token")
+  resetTokenExpiry DateTime?   @map("reset_token_expiry")
+  preferences  UserPreference?
 
   @@map("users")
 }
 
 model UserPreference {
-  id                    String   @id @default(uuid())
-  userId               String   @unique @map("user_id")
-  theme                String   @default("light")
-  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
-  emailUpdates         Boolean  @default(false) @map("email_updates")
-  userType             String?  @map("user_type")
-  selectedInterests    String?  @map("selected_interests")
-  goal                 String?
-  notificationPref     String?  @map("notification_pref")
-  hasCompletedOnboarding Boolean @default(false) @map("has_completed_onboarding")
-  experienceLevel      String?  @map("experience_level")
-  riskAppetite         String?  @map("risk_appetite")
-  timeHorizon         String?  @map("time_horizon")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String   @id @default(uuid())
+  userId                 String   @unique @map("user_id")
+  theme                  String   @default("light")
+  notificationsEnabled   Boolean  @default(true) @map("notifications_enabled")
+  emailUpdates           Boolean  @default(false) @map("email_updates")
+  userType               String?  @map("user_type")
+  selectedInterests      String?  @map("selected_interests")
+  goal                   String?
+  notificationPref       String?  @map("notification_pref")
+  hasCompletedOnboarding Boolean  @default(false) @map("has_completed_onboarding")
+  experienceLevel        String?  @map("experience_level")
+  riskAppetite           String?  @map("risk_appetite")
+  timeHorizon            String?  @map("time_horizon")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
 }
 
 model Article {
-  id            String   @id @default(uuid())
+  id            String         @id @default(uuid())
   title         String
   summary       String?
   content       String?
   source        String?
-  url           String?  @unique
-  date          DateTime @default(now())
+  url           String?        @unique
+  date          DateTime       @default(now())
   sentiment     String?
   category      String?
   author        String?
-  imageUrl      String?  @map("image_url")
-  createdAt     DateTime @default(now()) @map("created_at")
-  
+  imageUrl      String?        @map("image_url")
+  createdAt     DateTime       @default(now()) @map("created_at")
   storyArticles StoryArticle[]
 
   @@map("articles")
 }
 
 model Story {
-  id            String   @id @default(uuid())
-  title         String
-  summary       String?
-  description   String?
-  category      String?
-  priority      Int      @default(0)
-  timeline      String?  @default("past-week")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  
-  articles      StoryArticle[]
-  savedBy       SavedStory[]
+  id          String         @id @default(uuid())
+  title       String
+  summary     String?
+  description String?
+  category    String?
+  priority    Int            @default(0)
+  timeline    String?        @default("past-week")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  savedBy     SavedStory[]
+  articles    StoryArticle[]
 
   @@map("stories")
 }
 
 model StoryArticle {
-  id            String   @id @default(uuid())
-  storyId       String   @map("story_id")
-  articleId     String   @map("article_id")
-  position      Int      @default(0)
-  createdAt     DateTime @default(now()) @map("created_at")
-  
-  story         Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  article       Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  storyId   String   @map("story_id")
+  articleId String   @map("article_id")
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, articleId])
   @@map("story_articles")
 }
 
 model SavedStory {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  storyId       String   @map("story_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  
-  story         Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  storyId   String   @map("story_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storyId])
   @@map("saved_stories")
 }
 
 model QALog {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  question        String
-  answer          String
-  context         String?
-  conversationId  String?  @map("conversation_id")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  question       String
+  answer         String
+  context        String?
+  conversationId String?  @map("conversation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("qa_logs")
 }
 
 model BriefingCache {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  topic         String
-  mode          String
-  response      String
-  expiresAt     DateTime @map("expires_at")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  topic     String
+  mode      String
+  response  String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([userId, topic, mode])
   @@map("briefing_cache")
 }
 
 model IngestionLog {
-  id            String   @id @default(uuid())
-  source        String
-  status        String   @default("processing")
-  count         Int      @default(0)
-  error         String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  source    String
+  status    String   @default("processing")
+  count     Int      @default(0)
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("ingestion_logs")
 }
 
-// Phase 2: Portfolio & Alerts
 model Portfolio {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  name          String
-  description   String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  holdings      Holding[]
-  alerts        Alert[]
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  name        String
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  alerts      Alert[]
+  holdings    Holding[]
 
   @@map("portfolios")
 }
 
 model Holding {
-  id            String   @id @default(uuid())
-  portfolioId   String   @map("portfolio_id")
+  id            String    @id @default(uuid())
+  portfolioId   String    @map("portfolio_id")
   symbol        String
   name          String
   quantity      Float
-  purchasePrice Float    @map("purchase_price")
-  currentPrice  Float    @map("current_price")
-  purchaseDate  DateTime @map("purchase_date")
+  purchasePrice Float     @map("purchase_price")
+  currentPrice  Float     @map("current_price")
+  purchaseDate  DateTime  @map("purchase_date")
   sector        String?
   notes         String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   alerts        Alert[]
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
   @@map("holdings")
 }
 
 model Alert {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  portfolioId   String?  @map("portfolio_id")
-  holdingId     String?  @map("holding_id")
-  assetSymbol   String   @map("asset_symbol")
-  alertType     String   @map("alert_type") // 'price_change', 'news_mention', 'threshold_breach'
-  threshold     Float?
-  importance    String?  // 'high', 'medium', 'low'
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  portfolio     Portfolio? @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-  holding       Holding?   @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  id          String     @id @default(uuid())
+  userId      String     @map("user_id")
+  portfolioId String?    @map("portfolio_id")
+  holdingId   String?    @map("holding_id")
+  assetSymbol String     @map("asset_symbol")
+  alertType   String     @map("alert_type")
+  threshold   Float?
+  importance  String?
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  holding     Holding?   @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
   @@map("alerts")
 }
 
-// Phase 2: Analytics & Engagement
 model Engagement {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  articleId         String   @map("article_id")
-  actionType        String   @map("action_type") // 'read', 'like', 'save', 'dislike', 'share'
-  readTimeSeconds   Int?     @map("read_time_seconds")
-  context           String?  // JSON blob: { title, summary, source, date, image, category }
-  timestamp         DateTime @default(now())
-  createdAt         DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  articleId       String   @map("article_id")
+  actionType      String   @map("action_type")
+  readTimeSeconds Int?     @map("read_time_seconds")
+  context         String?
+  timestamp       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  @@map("engagements")
   @@index([userId])
   @@index([articleId])
   @@index([timestamp])
+  @@map("engagements")
 }
 
 model ReadingPattern {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  hour              Int      // 0-23
-  readCount         Int      @default(0) @map("read_count")
-  totalTimeMinutes  Int      @default(0) @map("total_time_minutes")
-  lastUpdated       DateTime @updatedAt @map("last_updated")
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  hour             Int
+  readCount        Int      @default(0) @map("read_count")
+  totalTimeMinutes Int      @default(0) @map("total_time_minutes")
+  lastUpdated      DateTime @updatedAt @map("last_updated")
 
   @@unique([userId, hour])
   @@map("reading_patterns")
 }
 
-// Phase 2: Social Sharing
 model ShareTracking {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  contentId         String   @map("content_id")
-  platform          String   // 'twitter', 'linkedin', 'facebook', 'email', 'whatsapp', 'reddit'
-  shareCount        Int      @default(1) @map("share_count")
-  clicks            Int      @default(0)
-  lastShared        DateTime @default(now()) @map("last_shared")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  contentId  String   @map("content_id")
+  platform   String
+  shareCount Int      @default(1) @map("share_count")
+  clicks     Int      @default(0)
+  lastShared DateTime @default(now()) @map("last_shared")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, contentId, platform])
   @@map("share_tracking")
 }
 
-// Phase 2: Email Digests
 model EmailDigestConfig {
-  id                String   @id @default(uuid())
-  userId            String   @unique @map("user_id")
-  frequency         String   @default("daily") // 'daily', 'weekly', 'bi-weekly'
-  sendTime          String   @default("09:00") @map("send_time") // HH:mm format
-  topics            String   @default("") // JSON array stored as string
-  includePortfolio  Boolean  @default(false) @map("include_portfolio")
-  includeAnalytics  Boolean  @default(false) @map("include_analytics")
-  isSubscribed      Boolean  @default(true) @map("is_subscribed")
-  timezone          String?  @default("UTC")
-  lastSent          DateTime? @map("last_sent")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(uuid())
+  userId           String    @unique @map("user_id")
+  frequency        String    @default("daily")
+  sendTime         String    @default("09:00") @map("send_time")
+  topics           String    @default("")
+  includePortfolio Boolean   @default(false) @map("include_portfolio")
+  includeAnalytics Boolean   @default(false) @map("include_analytics")
+  isSubscribed     Boolean   @default(true) @map("is_subscribed")
+  timezone         String?   @default("UTC")
+  lastSent         DateTime? @map("last_sent")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   @@map("email_digest_configs")
 }
 
 model DigestDelivery {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  digestId          String   @map("digest_id")
-  sentAt            DateTime @default(now()) @map("sent_at")
-  deliveredAt       DateTime? @map("delivered_at")
-  openedAt          DateTime? @map("opened_at")
-  clickedAt         DateTime? @map("clicked_at")
-  status            String   @default("sent") // 'sent', 'delivered', 'opened', 'bounced', 'failed'
-  errorMessage      String?  @map("error_message")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  digestId     String    @map("digest_id")
+  sentAt       DateTime  @default(now()) @map("sent_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  openedAt     DateTime? @map("opened_at")
+  clickedAt    DateTime? @map("clicked_at")
+  status       String    @default("sent")
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
-  @@map("digest_deliveries")
   @@index([userId])
   @@index([sentAt])
+  @@map("digest_deliveries")
 }

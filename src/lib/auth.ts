@@ -1,11 +1,24 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && process.env.NODE_ENV === "production") {
   throw new Error("Missing JWT_SECRET in production environment variables. Cannot start securely.");
 }
 const ACTIVE_SECRET = JWT_SECRET || "fallback-secret-change-me";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+
+const userWithPreferencesSelect = Prisma.validator<Prisma.UserSelect>()({
+  id: true,
+  email: true,
+  passwordHash: true,
+  name: true,
+  avatarUrl: true,
+  createdAt: true,
+  updatedAt: true,
+  preferences: true,
+});
 
 
 export async function hashPassword(password: string): Promise<string> {
@@ -17,7 +30,11 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, ACTIVE_SECRET, { expiresIn: "7d" });
+  return jwt.sign(
+    { userId },
+    ACTIVE_SECRET as jwt.Secret,
+    { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
+  );
 }
 
 export function verifyToken(token: string): { userId: string } | null {
@@ -49,9 +66,7 @@ export async function createUser(email: string, password: string, name?: string)
         },
       },
     },
-    include: {
-      preferences: true,
-    },
+    select: userWithPreferencesSelect,
   });
   
   return user;
@@ -61,7 +76,7 @@ export async function authenticateUser(email: string, password: string) {
   const { prisma } = await import("./prisma");
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { preferences: true },
+    select: userWithPreferencesSelect,
   });
   
   if (!user) return null;
@@ -76,7 +91,7 @@ export async function getUserById(userId: string) {
   const { prisma } = await import("./prisma");
   return prisma.user.findUnique({
     where: { id: userId },
-    include: { preferences: true },
+    select: userWithPreferencesSelect,
   });
 }
 
@@ -84,7 +99,7 @@ export async function getUserByEmail(email: string) {
   const { prisma } = await import("./prisma");
   return prisma.user.findUnique({
     where: { email },
-    include: { preferences: true },
+    select: userWithPreferencesSelect,
   });
 }
 

@@ -16,6 +16,10 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { resetToken: token },
+      select: {
+        id: true,
+        resetTokenExpiry: true,
+      },
     });
 
     if (!user) {
@@ -35,6 +39,7 @@ export async function POST(request: Request) {
         resetToken: null,
         resetTokenExpiry: null,
       },
+      select: { id: true },
     });
 
     return NextResponse.json({ message: "Password updated successfully" }, { status: 200 });
