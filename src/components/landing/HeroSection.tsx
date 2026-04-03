@@ -66,8 +66,8 @@ const floatingIcons = [
 
 export default function HeroSection() {
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 400], [0, 80]);
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
+  const y = useTransform(scrollY, [0, 1000], [0, 150]);
+  const opacity = useTransform(scrollY, [0, 600, 900], [1, 1, 0]);
 
   return (
     <section 

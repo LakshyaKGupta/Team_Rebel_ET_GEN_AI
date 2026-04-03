@@ -21,6 +21,7 @@ import {
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
 import { useBriefing } from "@/context/BriefingContext";
+import { useChat } from "@/context/ChatContext";
 import { assessPortfolioImpact, getRecentTopicCards, getTopicById, getTopicsForUser, starterPortfolioAssets } from "@/lib/data";
 import { apiGetPersonalizedBriefing } from "@/lib/api";
 import {
@@ -154,6 +155,7 @@ export default function BriefingDetailPage() {
   const [likedIds, setLikedIds] = useState<string[]>([]);
   const [dislikedIds, setDislikedIds] = useState<string[]>([]);
   const [recentTopicIds, setRecentTopicIds] = useState<string[]>([]);
+  const [articleMetaFromServer, setArticleMetaFromServer] = useState<Record<string, { title: string; source?: string; category?: string; date?: string }>>({});
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("overview");
   const [overviewNarrative, setOverviewNarrative] = useState("");
   const [personalNarrative, setPersonalNarrative] = useState<string | null>(null);
@@ -163,19 +165,12 @@ export default function BriefingDetailPage() {
   const [liveBriefing, setLiveBriefing] = useState<any>(null);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
+  const [relatedLiveArticles, setRelatedLiveArticles] = useState<Array<{ id: string; title: string; category: string; source?: string }>>([]);
 
   const topicId = params.id as string;
   const userType = preferences.userType || "exploring";
   const topics = useMemo(() => getTopicsForUser(userType), [userType]);
   const topic = useMemo(() => getTopicById(topicId, userType), [topicId, userType]);
-  const relatedTopics = useMemo(() => topics.filter((candidate) => candidate.id !== topicId).slice(0, 3), [topicId, topics]);
-  const portfolioMatches = useMemo(
-    () =>
-      portfolioAssets
-        .map((asset) => ({ asset, assessment: assessPortfolioImpact(asset, topics) }))
-        .filter(({ assessment }) => assessment.topic.id === topicId),
-    [portfolioAssets, topicId, topics],
-  );
   const effectiveTopic = topic || (liveBriefing ? {
     id: liveBriefing.id,
     title: liveBriefing.title,
@@ -195,10 +190,60 @@ export default function BriefingDetailPage() {
   } : null);
 
   const storyArc = effectiveTopic?.storyArc;
-  const recentTopics = useMemo(
-    () => getRecentTopicCards(recentTopicIds.filter((id) => id !== topicId), userType).slice(0, 3),
-    [recentTopicIds, topicId, userType],
-  );
+  const isLiveId = (id: string) => id.startsWith('art-') || id.startsWith('live-') || id.startsWith('topic-news-');
+
+  // Recent opens: static topics + live articles from server meta
+  const recentTopics = useMemo(() => {
+    const recentWithoutCurrent = recentTopicIds.filter((id) => id !== topicId);
+    const staticOnes = getRecentTopicCards(recentWithoutCurrent.filter(id => !isLiveId(id)), userType);
+    const liveOnes = recentWithoutCurrent
+      .filter(id => isLiveId(id) && articleMetaFromServer[id])
+      .slice(0, 3 - staticOnes.length)
+      .map(id => ({
+        id,
+        title: articleMetaFromServer[id].title,
+        category: articleMetaFromServer[id].category || 'news',
+        time: articleMetaFromServer[id].date || 'Recently',
+        isLive: true,
+      }));
+    return [...staticOnes, ...liveOnes].slice(0, 3);
+  }, [recentTopicIds, topicId, userType, articleMetaFromServer]);
+
+  // Read next: for live articles try same-category from session; for static use topics list
+  const relatedTopics = useMemo(() => {
+    if (!isLiveId(topicId)) {
+      const sameCategory = topics.filter(t => t.id !== topicId && t.category === (topic?.category || '')).slice(0, 2);
+      const others = topics.filter(t => t.id !== topicId && !sameCategory.find(s => s.id === t.id)).slice(0, 3 - sameCategory.length);
+      return [...sameCategory, ...others].slice(0, 3);
+    }
+    return relatedLiveArticles;
+  }, [topicId, topics, topic, relatedLiveArticles]);
+
+  // Portfolio impact: for live articles match entity names vs portfolio, for static use topic-based matching
+  const portfolioMatches = useMemo(() => {
+    if (!isLiveId(topicId)) {
+      return portfolioAssets
+        .map((asset) => ({ asset, assessment: assessPortfolioImpact(asset, topics) }))
+        .filter(({ assessment }) => assessment.topic.id === topicId);
+    }
+    // For live articles: match article title/summary text against portfolio asset names/symbols
+    const articleText = `${liveBriefing?.title || ''} ${liveBriefing?.summary || ''}`.toLowerCase();
+    return portfolioAssets
+      .filter(asset => {
+        const sym = (asset.symbol || '').toLowerCase();
+        const name = (asset.name || '').toLowerCase().split(' ')[0];
+        return sym && (articleText.includes(sym) || (name.length > 3 && articleText.includes(name)));
+      })
+      .map(asset => ({
+        asset,
+        assessment: {
+          topic: { id: topicId, title: liveBriefing?.title || '' },
+          impact: liveBriefing?.storyArc?.sentiment?.[0]?.score > 0 ? 'positive' : liveBriefing?.storyArc?.sentiment?.[0]?.score < 0 ? 'negative' : 'neutral',
+          confidence: 'medium',
+          rationale: `${asset.name || asset.symbol} is mentioned in this article. Monitor for price impact over the next 1–3 trading sessions.`,
+        },
+      }));
+  }, [portfolioAssets, topicId, topics, liveBriefing]);
   const latestUpdate = useMemo(() => {
     if (storyArc?.updates && storyArc.updates.length > 0) {
       return storyArc.updates[storyArc.updates.length - 1];
@@ -244,13 +289,26 @@ export default function BriefingDetailPage() {
   useEffect(() => {
     if (!topicId) return;
 
-    const current = pushRecentTopic(topicId);
-    setSavedIds(current.savedIds);
-    setLikedIds(current.likedIds);
-    setDislikedIds(current.dislikedIds);
-    setRecentTopicIds(current.recentTopicIds);
+    // Load engagement state from server (persists across sessions)
+    fetch('/api/engagement')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        setSavedIds(data.savedIds || []);
+        setLikedIds(data.likedIds || []);
+        setDislikedIds(data.dislikedIds || []);
+        setRecentTopicIds((data.recentIds || []).filter((id: string) => id !== topicId));
+        setArticleMetaFromServer(data.articleMeta || {});
+        // Also record this article as read
+        fetch('/api/engagement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articleId: topicId, actionType: 'read' }),
+        }).catch(() => {});
+      })
+      .catch(() => {});
 
-    if (topicId.startsWith("live-") || topicId.startsWith("topic-news-")) {
+    if (topicId.startsWith("live-") || topicId.startsWith("topic-news-") || topicId.startsWith("art-")) {
       // Check sessionStorage first (from dashboard/topics)
       const sessionKey = `article-${topicId}`;
       const sessionArticle = sessionStorage.getItem(sessionKey);
@@ -263,16 +321,36 @@ export default function BriefingDetailPage() {
           fetch("/api/generate-briefing", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(article),
+            body: JSON.stringify({
+              ...article,
+              userType,
+              selectedInterests: preferences.selectedInterests || [],
+              experienceLevel: preferences.experienceLevel || 'beginner',
+              goal: preferences.goal || 'stay_updated',
+            }),
           })
             .then((res) => res.json())
-            .then((data) => {
-              if (data.briefing) {
-                setLiveBriefing(data.briefing);
-              } else {
-                setLiveError(data.error || "Failed to generate briefing");
-              }
-            })
+            // After live briefing loads — find related articles from session storage
+      .then((data) => {
+        if (data.briefing) {
+          setLiveBriefing(data.briefing);
+          // Find same-category articles from the last-live-news cache
+          try {
+            const cached = sessionStorage.getItem('last-live-news');
+            if (cached) {
+              const all = JSON.parse(cached) as Array<{ id: string; title: string; category?: string; source?: string }>;
+              const cat = data.briefing.category || '';
+              const related = all
+                .filter(a => a.id !== topicId && (a.category === cat || !cat))
+                .slice(0, 3)
+                .map(a => ({ id: a.id, title: a.title, category: a.category || 'news', source: a.source }));
+              setRelatedLiveArticles(related);
+            }
+          } catch {}
+        } else {
+          setLiveError(data.error || "Failed to generate briefing");
+        }
+      })
             .catch((err) => {
               console.error("API error:", err);
               setLiveError("Failed to generate briefing");
@@ -296,7 +374,13 @@ export default function BriefingDetailPage() {
             fetch("/api/generate-briefing", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(article),
+              body: JSON.stringify({
+              ...article,
+              userType,
+              selectedInterests: preferences.selectedInterests || [],
+              experienceLevel: preferences.experienceLevel || 'beginner',
+              goal: preferences.goal || 'stay_updated',
+            }),
             })
               .then((res) => res.json())
               .then((data) => {
@@ -355,7 +439,29 @@ export default function BriefingDetailPage() {
     });
   }, [relatedTopics, router]);
 
-  const isLiveNewsArticle = topicId.startsWith("live-") || topicId.startsWith("topic-news-");
+  const isLiveNewsArticle = topicId.startsWith("live-") || topicId.startsWith("topic-news-") || topicId.startsWith("art-");
+
+  const { setArticleContext } = useChat();
+
+  useEffect(() => {
+    if (effectiveTopic || liveBriefing) {
+      const liveSources = liveBriefing?.sources || [];
+      const staticSources = effectiveTopic?.sources || [];
+      const sources = liveSources.length > 0 ? liveSources : staticSources;
+      
+      const newContext = {
+        title: effectiveTopic?.title || '',
+        summary: effectiveTopic?.summary || effectiveTopic?.subtitle || '',
+        url: effectiveTopic?.isLiveNews ? (liveBriefing?.url || '') : '',
+        category: effectiveTopic?.category || 'general',
+        generalView: effectiveTopic?.generalView || liveBriefing?.generalView || '',
+        keyTakeaways: effectiveTopic?.keyTakeaways || liveBriefing?.keyTakeaways || [],
+        impact: effectiveTopic?.isLiveNews ? (liveBriefing?.impactByUserType || {}) : (effectiveTopic as any)?.impactByUserType || {},
+        sources: sources.slice(0, 2).map((s: any) => ({ name: s.name, url: s.url })),
+      };
+      setArticleContext(newContext);
+    }
+  }, [effectiveTopic, liveBriefing, setArticleContext]);
 
   if (!topic && !liveBriefing && !isLiveLoading && !isLiveNewsArticle) {
     return (
@@ -471,24 +577,60 @@ export default function BriefingDetailPage() {
 
   const currentId = effectiveTopic?.id || "";
 
-  const toggleSave = () => {
+  const toggleSave = async () => {
     if (!currentId) return;
-    const nextSavedIds = savedIds.includes(currentId) ? savedIds.filter((id) => id !== currentId) : [...savedIds, currentId];
-    persistEngagement(nextSavedIds, likedIds, dislikedIds);
+    const isSaved = savedIds.includes(currentId);
+    const next = isSaved ? savedIds.filter(id => id !== currentId) : [...savedIds, currentId];
+    setSavedIds(next);
+    try {
+      const meta = effectiveTopic ? {
+        title: effectiveTopic.title,
+        summary: effectiveTopic.summary || effectiveTopic.subtitle || '',
+        source: (effectiveTopic as any).source,
+        category: effectiveTopic.category,
+        image: (liveBriefing?.image || effectiveTopic.image?.alt || undefined) as string | undefined,
+      } : undefined;
+      await fetch('/api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: currentId, actionType: isSaved ? 'unsave' : 'save', meta }),
+      });
+    } catch (e) {
+      console.error('Save toggle failed:', e);
+      setSavedIds(savedIds); // revert on failure
+    }
   };
 
-  const likeTopic = () => {
+  const likeTopic = async () => {
     if (!currentId) return;
-    const nextLikedIds = likedIds.includes(currentId) ? likedIds.filter((id) => id !== currentId) : [...likedIds, currentId];
-    const nextDislikedIds = dislikedIds.filter((id) => id !== currentId);
-    persistEngagement(savedIds, nextLikedIds, nextDislikedIds);
+    const isLiked = likedIds.includes(currentId);
+    const nextLikedIds = isLiked ? likedIds.filter(id => id !== currentId) : [...likedIds, currentId];
+    const nextDislikedIds = dislikedIds.filter(id => id !== currentId);
+    setLikedIds(nextLikedIds);
+    setDislikedIds(nextDislikedIds);
+    try {
+      await fetch('/api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: currentId, actionType: isLiked ? 'unlike' : 'like' }),
+      });
+    } catch (e) { console.error('Like toggle failed:', e); }
   };
 
-  const dislikeTopic = () => {
+  const dislikeTopic = async () => {
     if (!currentId) return;
-    const nextDislikedIds = dislikedIds.includes(currentId) ? dislikedIds.filter((id) => id !== currentId) : [...dislikedIds, currentId];
-    const nextLikedIds = likedIds.filter((id) => id !== currentId);
-    persistEngagement(savedIds, nextLikedIds, nextDislikedIds);
+    const isDisliked = dislikedIds.includes(currentId);
+    const nextDislikedIds = isDisliked ? dislikedIds.filter(id => id !== currentId) : [...dislikedIds, currentId];
+    const nextLikedIds = likedIds.filter(id => id !== currentId);
+    setDislikedIds(nextDislikedIds);
+    setLikedIds(nextLikedIds);
+    try {
+      await fetch('/api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: currentId, actionType: isDisliked ? 'undislike' : 'dislike' }),
+      });
+    } catch (e) { console.error('Dislike toggle failed:', e); }
   };
 
   const loadPersonalNarrative = async () => {
@@ -645,8 +787,9 @@ export default function BriefingDetailPage() {
                         impact: effectiveTopic?.isLiveNews ? (liveBriefing?.impactByUserType || {}) : (effectiveTopic as any)?.impactByUserType || {},
                         sources: sources.slice(0, 2).map((s: any) => ({ name: s.name, url: s.url })),
                       };
-                      localStorage.setItem('articleContext', JSON.stringify(articleContext));
-                      router.push('/chat');
+                      setArticleContext(articleContext);
+                      // Open the floating ChatBotWidget (dispatches custom event it listens to)
+                      window.dispatchEvent(new CustomEvent('open-chatbot'));
                     }}
                     className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-medium text-white"
                   >
@@ -733,10 +876,6 @@ export default function BriefingDetailPage() {
                     <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Why this belongs in your feed</p>
                       <p className="mt-2 text-sm leading-7 text-[#4F4A43]">{effectiveTopic?.generalView}</p>
-                      <div className="mt-4 rounded-2xl bg-white p-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Next step</p>
-                        <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{overviewNextRead}</p>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -794,7 +933,12 @@ export default function BriefingDetailPage() {
                           <div className="h-4 w-4/5 rounded bg-white" />
                         </div>
                       ) : (
-                        <p className="mt-2 whitespace-pre-line text-sm leading-7 text-[#4F4A43] line-clamp-6">{personalNarrative || "Open this tab to load a more personal interpretation for your profile."}</p>
+                        <p className="mt-2 text-sm leading-7 text-[#4F4A43]">
+                          {liveBriefing?.actionableNote ||
+                            (effectiveTopic as any)?.actionableNote ||
+                            personalNarrative ||
+                            "Open this tab to load a personalised interpretation for your profile."}
+                        </p>
                       )}
                       {personalError ? <p className="mt-3 text-xs text-[#8B4513]">{personalError}</p> : null}
                     </div>
@@ -804,19 +948,21 @@ export default function BriefingDetailPage() {
                       <div className="mt-3 flex flex-wrap gap-2">
                         <button
                           onClick={toggleSave}
-                          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A]"
+                          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                            savedIds.includes(effectiveTopic?.id || '') ? 'bg-amber-500 text-white' : 'bg-white text-[#1A1A1A] hover:bg-amber-50'
+                          }`}
                         >
-                          {savedIds.includes(effectiveTopic?.id || "") ? "Keep saved" : "Save this story"}
+                          {savedIds.includes(effectiveTopic?.id || '') ? '✓ Saved' : 'Save this story'}
                         </button>
                         <button
-                          onClick={() => router.push("/portfolio")}
-                          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A]"
+                          onClick={() => { window.location.href = '/portfolio'; }}
+                          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F3EB] transition-colors"
                         >
                           Review portfolio
                         </button>
                         <button
-                          onClick={() => router.push("/topics")}
-                          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A]"
+                          onClick={() => { window.location.href = '/topics'; }}
+                          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F3EB] transition-colors"
                         >
                           Adjust interests
                         </button>
@@ -858,17 +1004,66 @@ export default function BriefingDetailPage() {
                       </div>
 
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Updates over time</p>
-                        <div className="mt-3 space-y-3">
-                          {(storyArc.updates || []).map((update: StoryArcUpdate) => (
-                            <div key={`${update.time}-${update.title}`} className="rounded-2xl bg-white p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold">{update.title}</p>
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8B4513]">{update.time}</span>
-                              </div>
-                              <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{update.detail}</p>
-                            </div>
+                        <div className="flex items-center justify-between gap-3 mb-1">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Updates over time</p>
+                          <span className="text-[11px] font-semibold text-[#5C5C5C]">
+                            {(storyArc.updates || []).filter((u: StoryArcUpdate) => u.status === 'completed').length} / {(storyArc.updates || []).length} triggered
+                          </span>
+                        </div>
+                        {/* Progress track */}
+                        <div className="flex items-center gap-1 mb-4 mt-2">
+                          {(storyArc.updates || []).map((u: StoryArcUpdate, ui: number) => (
+                            <div
+                              key={`track-${ui}`}
+                              className={`h-1.5 flex-1 rounded-full ${
+                                u.status === 'completed' ? 'bg-[#1A1A1A]'
+                                : u.status === 'upcoming' ? 'bg-amber-400'
+                                : 'bg-[#D4CFC4]'
+                              }`}
+                            />
                           ))}
+                        </div>
+                        <div className="space-y-3">
+                          {(storyArc.updates || []).map((update: StoryArcUpdate, ui: number) => {
+                            const statusStyles: Record<string, string> = {
+                              completed: 'bg-[#1A1A1A] text-white',
+                              upcoming: 'bg-amber-100 text-amber-700',
+                              watch: 'bg-[#F8F3EB] text-[#8B4513]',
+                            };
+                            const statusLabels: Record<string, string> = {
+                              completed: '✓ Done',
+                              upcoming: '⏳ Upcoming',
+                              watch: '👁 Watch',
+                            };
+                            const status = update.status || 'watch';
+                            return (
+                              <div key={`update-${ui}`} className="rounded-2xl bg-white p-4 space-y-2">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-semibold">{update.title}</p>
+                                    {update.category && (
+                                      <span className="rounded-full bg-[#F0EBE3] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#8B4513]">
+                                        {update.category}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex shrink-0 flex-col items-end gap-1">
+                                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusStyles[status]}`}>
+                                      {statusLabels[status]}
+                                    </span>
+                                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8B4513]">{update.time}</span>
+                                  </div>
+                                </div>
+                                <p className="text-sm leading-6 text-[#4F4A43]">{update.detail}</p>
+                                {update.watchpoint && (
+                                  <div className="flex items-start gap-2 rounded-xl bg-[#F8F3EB] px-3 py-2">
+                                    <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#8B4513] shrink-0">Watch →</span>
+                                    <p className="text-xs leading-5 text-[#5C5C5C]">{update.watchpoint}</p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -927,32 +1122,130 @@ export default function BriefingDetailPage() {
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Contrarian views</p>
+                        <p className="mt-1 text-xs text-[#5C5C5C]">Alternative perspectives that challenge the consensus narrative</p>
                         <div className="mt-3 space-y-3">
-                          {storyArc.contrarian.map((perspective: StoryArcContrarian) => (
-                            <div key={perspective.title} className="rounded-2xl bg-white p-3">
-                              <p className="text-sm font-semibold">{perspective.title}</p>
-                              <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{perspective.body}</p>
-                            </div>
-                          ))}
+                          {storyArc.contrarian.map((perspective: StoryArcContrarian, ci: number) => {
+                            const angleColors: Record<string, string> = {
+                              bull_trap: 'bg-amber-100 text-amber-700',
+                              structural_risk: 'bg-orange-100 text-orange-700',
+                              regulatory: 'bg-purple-100 text-purple-700',
+                              macro: 'bg-blue-100 text-blue-700',
+                              valuation: 'bg-green-100 text-green-700',
+                              generic: 'bg-[#F8F3EB] text-[#8B4513]',
+                            };
+                            const angleLabels: Record<string, string> = {
+                              bull_trap: 'Bull Trap Risk',
+                              structural_risk: 'Structural Risk',
+                              regulatory: 'Regulatory Tail',
+                              macro: 'Macro Risk',
+                              valuation: 'Valuation Case',
+                              generic: 'Contra View',
+                            };
+                            const strength = perspective.strength ?? 50;
+                            const strengthColor = strength > 60 ? 'bg-red-400' : strength > 40 ? 'bg-amber-400' : 'bg-green-400';
+                            const angle = perspective.angle || 'generic';
+                            return (
+                              <div key={`contrarian-${ci}`} className="rounded-2xl bg-white p-4 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="text-sm font-semibold leading-5">{perspective.title}</p>
+                                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${angleColors[angle] || angleColors.generic}`}>
+                                    {angleLabels[angle] || 'Contra'}
+                                  </span>
+                                </div>
+                                {/* Argument strength bar */}
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8B4513]">Argument strength</span>
+                                    <span className="text-[11px] font-bold text-[#1A1A1A]">{strength}%</span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-[#F0EBE3] overflow-hidden">
+                                    <div className={`h-full rounded-full ${strengthColor} transition-all`} style={{ width: `${strength}%` }} />
+                                  </div>
+                                </div>
+                                <p className="text-sm leading-6 text-[#4F4A43]">{perspective.body}</p>
+                                {perspective.counterpoint && (
+                                  <div className="rounded-xl border border-[#E7DCC8] bg-[#FCFAF6] p-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8B4513] mb-1">Consensus counter</p>
+                                    <p className="text-xs leading-5 text-[#5C5C5C]">{perspective.counterpoint}</p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
                       <div className="rounded-[24px] border border-[#E7DCC8] bg-[#FCFAF6] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Scenario probabilities</p>
-                        <div className="mt-3 space-y-3">
-                          {(storyArc.scenarios || []).map((scenario: StoryArcScenario) => (
-                            <div key={scenario.title} className="rounded-2xl bg-white p-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold">{scenario.title}</p>
-                                <span className="text-sm font-semibold text-[#8B4513]">{scenario.probability}%</span>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8B4513]">Scenario probabilities</p>
+                          <span className="text-[11px] font-semibold text-[#5C5C5C]">
+                            Σ = {(storyArc.scenarios || []).reduce((s: number, sc: StoryArcScenario) => s + sc.probability, 0)}%
+                          </span>
+                        </div>
+                        {/* Stacked probability bar */}
+                        <div className="mt-2 mb-4 flex h-2.5 overflow-hidden rounded-full">
+                          {(storyArc.scenarios || []).map((sc: StoryArcScenario) => {
+                            const barColor = sc.title === 'Bull Case' ? 'bg-emerald-500'
+                              : sc.title === 'Bear Case' ? 'bg-red-400'
+                              : 'bg-[#D4CFC4]';
+                            return (
+                              <div
+                                key={sc.title}
+                                className={`h-full ${barColor} first:rounded-l-full last:rounded-r-full`}
+                                style={{ width: `${sc.probability}%` }}
+                                title={`${sc.title}: ${sc.probability}%`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="space-y-3">
+                          {(storyArc.scenarios || []).map((scenario: StoryArcScenario) => {
+                            const isBull = scenario.title === 'Bull Case';
+                            const isBear = scenario.title === 'Bear Case';
+                            const headerBg = isBull ? 'bg-emerald-50 border-emerald-200' : isBear ? 'bg-red-50 border-red-200' : 'bg-[#F8F3EB] border-[#E7DCC8]';
+                            const headerText = isBull ? 'text-emerald-700' : isBear ? 'text-red-600' : 'text-[#8B4513]';
+                            const probBg = isBull ? 'bg-emerald-500' : isBear ? 'bg-red-400' : 'bg-[#8B8B8B]';
+                            const icon = isBull ? '↑' : isBear ? '↓' : '→';
+                            return (
+                              <div key={scenario.title} className="overflow-hidden rounded-2xl bg-white border border-[#E7DCC8]">
+                                {/* Header row */}
+                                <div className={`flex items-center justify-between px-4 py-2.5 border-b ${headerBg}`}>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-base font-bold ${headerText}`}>{icon}</span>
+                                    <p className={`text-sm font-semibold ${headerText}`}>{scenario.title}</p>
+                                    {scenario.timeframe && (
+                                      <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-[#5C5C5C]">
+                                        {scenario.timeframe}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {/* Probability pill */}
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-2 w-16 overflow-hidden rounded-full bg-white/60">
+                                      <div className={`h-full rounded-full ${probBg}`} style={{ width: `${scenario.probability}%` }} />
+                                    </div>
+                                    <span className={`text-sm font-bold ${headerText}`}>{scenario.probability}%</span>
+                                  </div>
+                                </div>
+                                {/* Body */}
+                                <div className="px-4 py-3 space-y-2.5">
+                                  <p className="text-sm leading-6 text-[#4F4A43]">{scenario.detail}</p>
+                                  {scenario.trigger && (
+                                    <div className="flex items-start gap-2 rounded-xl bg-[#F8F3EB] px-3 py-2">
+                                      <span className="mt-0.5 shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#8B4513]">Trigger →</span>
+                                      <p className="text-xs leading-5 text-[#5C5C5C]">{scenario.trigger}</p>
+                                    </div>
+                                  )}
+                                  {scenario.keyIndicator && (
+                                    <div className="flex items-start gap-2">
+                                      <span className="mt-0.5 shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#8B4513]">Key signal →</span>
+                                      <p className="text-xs leading-5 text-[#5C5C5C]">{scenario.keyIndicator}</p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F5F0E6]">
-                                <div className="h-full rounded-full bg-[#1A1A1A]" style={{ width: `${scenario.probability}%` }} />
-                              </div>
-                              <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B4513]">{scenario.outlook}</p>
-                              <p className="mt-2 text-sm leading-6 text-[#4F4A43]">{scenario.detail}</p>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -1078,7 +1371,7 @@ export default function BriefingDetailPage() {
                 >
                   <p className="text-sm font-semibold">{relatedTopic.title}</p>
                   <p className="mt-1 text-xs text-[#5C5C5C]">
-                    {relatedTopic.category} • {relatedTopic.time}
+                    {relatedTopic.category} • {(relatedTopic as any).time || 'Today'}
                   </p>
                 </button>
               ))}

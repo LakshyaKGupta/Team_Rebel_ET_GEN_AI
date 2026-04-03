@@ -21,7 +21,8 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
-import { apisignup, apilogin, apiupdatePreferences } from "@/lib/api";
+import { apisignup, apilogin, apiupdatePreferences, apiForgotPassword, apiGoogleLogin } from "@/lib/api";
+import { GoogleLogin } from "@react-oauth/google";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -72,7 +73,7 @@ const timeHorizons = [
   { id: "long" as const, label: "Long Term", desc: "3+ years" },
 ];
 
-type AuthMode = "signup" | "login";
+type AuthMode = "signup" | "login" | "forgot_password";
 
 export default function Onboarding() {
   const router = useRouter();
@@ -80,6 +81,7 @@ export default function Onboarding() {
   
   const [step, setStep] = useState(0);
   const [authMode, setAuthMode] = useState<AuthMode>("signup");
+  const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -135,12 +137,44 @@ export default function Onboarding() {
     return true;
   };
 
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (credentialResponse.credential) {
+      try {
+        setAuthError("");
+        setIsLoading(true);
+        const data = await apiGoogleLogin(credentialResponse.credential);
+        await refreshUser();
+        if (data.preferences?.hasCompletedOnboarding) {
+          router.push("/dashboard");
+        } else {
+          setStep(1);
+        }
+      } catch (error) {
+        setAuthError(error instanceof Error ? error.message : "Google authentication failed");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
     setIsLoading(true);
 
     try {
+      if (authMode === "forgot_password") {
+        if (!email.trim()) {
+          setAuthError("Please enter your email address");
+          setIsLoading(false);
+          return;
+        }
+        await apiForgotPassword(email);
+        setResetSent(true);
+        setIsLoading(false);
+        return;
+      }
+
       if (authMode === "signup") {
         await apisignup(email, password);
         await refreshUser();
@@ -240,15 +274,55 @@ export default function Onboarding() {
           >
             <div className="text-center space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight text-white">
-                {authMode === "signup" ? "Create your account" : "Welcome back"}
+                {authMode === "signup" ? "Create your account" : authMode === "login" ? "Welcome back" : "Reset Password"}
               </h1>
               <p className="text-[#7E8BA3]">
-                {authMode === "signup" ? "Start your personalized newsroom" : "Sign in to continue"}
+                {authMode === "signup" ? "Start your personalized newsroom" : authMode === "login" ? "Sign in to continue" : "We'll send a recovery link to your email"}
               </p>
             </div>
 
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div>
+            {authMode === "forgot_password" && resetSent ? (
+              <div className="space-y-6 text-center">
+                <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400">
+                  A password reset link has been sent to <strong>{email}</strong> if an account exists.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setResetSent(false);
+                  }}
+                  className="text-[#E8501A] hover:underline"
+                >
+                  Back to Sign in
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {authMode !== "forgot_password" && (
+                  <>
+                    <div className="flex justify-center w-full">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setAuthError("Google authentication failed")}
+                        useOneTap
+                        theme="filled_black"
+                        shape="pill"
+                        text={authMode === "signup" ? "signup_with" : "signin_with"}
+                      />
+                    </div>
+                    <div className="relative py-2">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-white/[0.07]" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-[#080B14] px-3 text-[#7E8BA3]">or continue with email</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div>
                 <label className="text-sm text-[#7E8BA3] mb-2 block">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E8BA3]" size={18} />
@@ -262,26 +336,42 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm text-[#7E8BA3] mb-2 block">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E8BA3]" size={18} />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-11 pr-12 py-3 rounded-xl bg-white/[0.07] border border-white/[0.07] text-white placeholder-[#7E8BA3] focus:outline-none focus:border-[#E8501A] transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7E8BA3] hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              {authMode !== "forgot_password" && (
+                <div>
+                  <label className="text-sm text-[#7E8BA3] mb-2 block">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7E8BA3]" size={18} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-11 pr-12 py-3 rounded-xl bg-white/[0.07] border border-white/[0.07] text-white placeholder-[#7E8BA3] focus:outline-none focus:border-[#E8501A] transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7E8BA3] hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {authMode === "login" && (
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode("forgot_password");
+                          setAuthError("");
+                        }}
+                        className="text-sm text-[#7E8BA3] hover:text-[#E8501A] transition-colors"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               {authError && (
                 <p className="text-red-400 text-sm">{authError}</p>
@@ -296,27 +386,31 @@ export default function Onboarding() {
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    {authMode === "signup" ? "Create Account" : "Sign In"}
+                    {authMode === "signup" ? "Create Account" : authMode === "login" ? "Sign In" : "Send Reset Link"}
                     <ArrowRight size={18} />
                   </>
                 )}
               </button>
             </form>
-
-            <div className="text-center">
-              <p className="text-[#7E8BA3]">
-                {authMode === "signup" ? "Already have an account?" : "Don't have an account?"}{" "}
-                <button
-                  onClick={() => {
-                    setAuthMode(authMode === "signup" ? "login" : "signup");
-                    setAuthError("");
-                  }}
-                  className="text-[#E8501A] hover:underline"
-                >
-                  {authMode === "signup" ? "Sign in" : "Sign up"}
-                </button>
-              </p>
             </div>
+            )}
+
+            {authMode !== "forgot_password" && (
+              <div className="text-center">
+                <p className="text-[#7E8BA3]">
+                  {authMode === "signup" ? "Already have an account?" : "Don't have an account?"}{" "}
+                  <button
+                    onClick={() => {
+                      setAuthMode(authMode === "signup" ? "login" : "signup");
+                      setAuthError("");
+                    }}
+                    className="text-[#E8501A] hover:underline"
+                  >
+                    {authMode === "signup" ? "Sign in" : "Sign up"}
+                  </button>
+                </p>
+              </div>
+            )}
           </motion.div>
         </div>
       </div>

@@ -18,13 +18,12 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-explain the article as soon as context is available
   useEffect(() => {
-    if (articleContext && messages.length === 0) {
-      setTimeout(() => {
-        initWithArticleContext();
-      }, 500);
+    if (articleContext && !loading) {
+      initWithArticleContext();
     }
-  }, [articleContext, initWithArticleContext, messages.length]);
+  }, [articleContext, loading, initWithArticleContext]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

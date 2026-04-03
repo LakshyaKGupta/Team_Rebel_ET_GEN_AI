@@ -4,8 +4,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  url       = env("DATABASE_URL")
 }
 
 model User {
@@ -16,6 +15,8 @@ model User {
   avatarUrl     String?  @map("avatar_url")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  resetToken       String?   @unique @map("reset_token")
+  resetTokenExpiry DateTime? @map("reset_token_expiry")
 
   preferences   UserPreference?
 
@@ -202,8 +203,9 @@ model Engagement {
   id                String   @id @default(uuid())
   userId            String   @map("user_id")
   articleId         String   @map("article_id")
-  actionType        String   @map("action_type") // 'read', 'like', 'save', 'share'
+  actionType        String   @map("action_type") // 'read', 'like', 'save', 'dislike', 'share'
   readTimeSeconds   Int?     @map("read_time_seconds")
+  context           String?  // JSON blob: { title, summary, source, date, image, category }
   timestamp         DateTime @default(now())
   createdAt         DateTime @default(now()) @map("created_at")
 

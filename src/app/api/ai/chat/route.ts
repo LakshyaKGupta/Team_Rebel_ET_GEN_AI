@@ -32,10 +32,16 @@ export async function POST(req: NextRequest) {
     const { messages, userProfile, articleContext } = await req.json();
 
     if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json(
-        { error: 'AI is not configured. Please try again later.' },
-        { status: 500 }
-      );
+      const userType = userProfile?.userType || 'exploring';
+      const interests = userProfile?.selectedInterests?.join(', ') || 'general news';
+      const contextTitle = articleContext?.title ? `"${articleContext.title}"` : "this topic";
+      
+      const userQueryRaw = messages && messages.length > 0 ? messages[messages.length - 1].content : '';
+      
+      return NextResponse.json({
+        success: true,
+        message: `[AI Demonstration Mode]\n\nBased on your profile as a **${userType}** interested in **${interests}**, here is my analysis regarding ${contextTitle}:\n\nYou asked: "${userQueryRaw}"\n\nThis article highlights key events that could influence your selected sectors. Since my external API key is not configured, this is an offline demonstration response. However, I have successfully received your exact article context and personalized profile!`
+      });
     }
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -115,52 +121,39 @@ function buildSystemPrompt(userProfile: UserProfile, articleContext?: ArticleCon
   }
 
   if (articleContext) {
-    return `You are a friendly news assistant. Help the user understand an article clearly.
+      return `You are a friendly, highly intelligent but very conversational news assistant.
 
 ${userIntro}
 Experience level: ${experienceLevel}
 Interests: ${interests}
 
-ARTICLE TO EXPLAIN:
+IMPORTANT: The user is currently reading the specific article summarized below. When they say "this article" or ask you to explain it, DO NOT ask them for a link! You must use the context provided below to generate your answer immediately.
+
+ARTICLE CONTEXT:
 Title: ${articleContext.title}
 Summary: ${articleContext.summary || 'No summary available'}
 ${articleContext.category ? `Category: ${articleContext.category}` : ''}
-${articleContext.generalView ? `Why it matters: ${articleContext.generalView}` : ''}
-${articleContext.keyTakeaways?.length ? `Key points:\n${articleContext.keyTakeaways.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}
 
-IMPORTANT RULES:
-- Start with a clear, simple explanation
-- Use short paragraphs (2-3 sentences each)
-- Avoid jargon - if you must use it, explain it
-- Give practical examples
-- End with what this means for the user specifically
-- Be conversational, like explaining to a friend
-- Don't be overly formal
-
-Format your response like this:
-1. What happened (1-2 sentences)
-2. Why it matters (2-3 sentences)
-3. What it means for you (1-2 sentences)
-4. Simple example if helpful
-
-Keep it under 200 words. Be direct and helpful.`;
+YOUR CONVERSATION RULES:
+- If the user asks about "this article", analyze the ARTICLE CONTEXT block above and answer them.
+- You must reply exactly like a human talking to a friend! Never use rigid or robotic structure.
+- Answer their question directly in 1 or 2 short, highly readable paragraphs.
+- Keep the language incredibly simple. Explain it like they are five years old if the topic is complex.
+- Do NOT use bullet points or numbered lists unless explicitly asked to.
+- Never say "Here is the answer". Just start having a normal conversation with them giving them the answer.
+- Keep your entire response under 100 words if possible. Just be direct, friendly, and helpful.`;
   }
 
-  return `You are a friendly news assistant. Help users understand business and financial news.
+  return `You are a friendly, highly intelligent but very conversational news assistant.
 
 ${userIntro}
 Experience level: ${experienceLevel}
 Interests: ${interests}
 
-IMPORTANT RULES:
-- Be conversational and warm
-- Start with the key takeaway
-- Use short paragraphs
-- Avoid jargon when possible
-- Give practical examples
-- Relate to the user's interests
-- Keep responses focused and useful
-- If you're not sure, say so honestly
-
-Format: Be direct. Short intro, explanation, then practical takeaway.`;
+YOUR CONVERSATION RULES:
+- Reply naturally like a friend. Never use rigid or robotic formatting.
+- Keep sentences short, sweet, and incredibly easy to understand.
+- Do NOT output numbered lists or complex sections.
+- Just answer their question directly natively in no more than 1 or 2 paragraphs.
+- Drop all financial jargon immediately and explain the concepts plainly.`;
 }

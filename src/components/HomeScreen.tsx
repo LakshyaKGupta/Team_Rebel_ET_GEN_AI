@@ -492,48 +492,6 @@ export default function HomeScreen() {
     </>
   );
 
-  const MobileBottomNav = () => (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
-      <div className="flex items-center justify-around py-2">
-        <button 
-          onClick={() => { setActiveNav('home'); selectTopic(null); }}
-          className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'home' ? 'text-black' : 'text-gray-400'}`}
-        >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'home' ? 'bg-black' : 'bg-gray-100'}`}>
-            <Sparkles size={16} className={activeNav === 'home' ? 'text-white' : ''} />
-          </div>
-          <span className={`text-xs font-medium ${activeNav === 'home' ? 'text-black' : ''}`}>For You</span>
-        </button>
-        <button 
-          onClick={() => { setActiveNav('topics'); selectTopic(null); }}
-          className={`flex flex-col items-center gap-1 py-2 px-4 ${activeNav === 'topics' ? 'text-black' : 'text-gray-400'}`}
-        >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeNav === 'topics' ? 'bg-black' : 'bg-gray-100'}`}>
-            <Compass size={16} className={activeNav === 'topics' ? 'text-white' : ''} />
-          </div>
-          <span className={`text-xs font-medium ${activeNav === 'topics' ? 'text-black' : ''}`}>Topics</span>
-        </button>
-        <button 
-          onClick={() => router.push('/portfolio')}
-          className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400"
-        >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100">
-            <TrendingUp size={16} />
-          </div>
-          <span className="text-xs font-medium">Portfolio</span>
-        </button>
-        <button 
-          onClick={() => router.push('/profile')}
-          className="flex flex-col items-center gap-1 py-2 px-4 text-gray-400"
-        >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100">
-            <Settings size={16} />
-          </div>
-          <span className="text-xs font-medium">Settings</span>
-        </button>
-      </div>
-    </nav>
-  );
 
   if (selectedTopic) {
     const getUserBadge = () => {
@@ -814,7 +772,7 @@ export default function HomeScreen() {
           </aside>
         </div>
         <SourcesSheet />
-        <MobileBottomNav />
+
       </div>
     );
   }
@@ -942,7 +900,7 @@ export default function HomeScreen() {
         <RightSidebar />
       </div>
 
-      <MobileBottomNav />
+
     </div>
   );
 }

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useChat } from '@/context/ChatContext';
 import { useUser } from '@/context/UserContext';
 import { MessageCircle, Send, X, Loader } from 'lucide-react';
 
 export function ChatBotWidget() {
-  const { messages, loading, error, sendMessage, clearChat } = useChat();
+  const pathname = usePathname();
+  const { messages, loading, error, sendMessage, clearChat, articleContext, initWithArticleContext } = useChat();
   const { preferences } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -27,6 +29,23 @@ export function ChatBotWidget() {
     scrollToBottom();
   }, [messages]);
 
+  // Listen for external 'open-chatbot' event (from Ask AI button on briefing page)
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open-chatbot', handleOpen);
+    return () => window.removeEventListener('open-chatbot', handleOpen);
+  }, []);
+
+  // Auto-explain ONLY when on a briefing page (pathname includes /briefing/)
+  useEffect(() => {
+    if (isOpen && articleContext && !loading) {
+      const onBriefingPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/briefing/');
+      if (onBriefingPage) {
+        initWithArticleContext();
+      }
+    }
+  }, [isOpen, articleContext, loading, initWithArticleContext]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -42,6 +61,8 @@ export function ChatBotWidget() {
     clearChat();
     setInput('');
   };
+
+  if (pathname === '/') return null;
 
   return (
     <>

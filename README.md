@@ -1,198 +1,111 @@
-# Team_Rebel_ET_GEN_AI
+# My ET — AI-Native News Experience
 
-**Live Demo**: https://myetnews.vercel.app/
+> **Built by Team Rebel for the ET Gen AI Hackathon**
 
-AI-Native News Experience - Personalized newsroom + Interactive AI briefings + AI Chatbot
+[![Live Demo](https://img.shields.io/badge/Live_Demo-myetnews.vercel.app-emerald?style=for-the-badge)](https://myetnews.vercel.app/) [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/) [![Groq](https://img.shields.io/badge/Powered_by-Groq_AI-f55036?style=for-the-badge)](https://groq.com)
 
-## 🚀 Overview
+Welcome to **My ET**, an entirely reimagined business news ecosystem built from the ground up for the AI era. Instead of overwhelming users with a static wall of generic headlines, My ET leverages advanced LLMs (via Groq) to intelligently curate, summarize, and synthesize macroeconomic events natively around the user’s personal portfolio, goals, and risk appetite.
 
-This project revolutionizes business news delivery using Gen-AI:
+Because reading the news shouldn't feel like a chore; it should feel like having a brilliant analyst briefing you.
 
-- **My ET**: Personalized newsroom based on user interests
-- **News Navigator**: Interactive AI-powered intelligence briefings  
-- **News Assistant**: AI chatbot for answering finance and investment queries powered by Groq
+---
 
-## ✨ Features
+## 🌟 The Vision
 
-### Dashboard
-- Personalized news based on your interests (Markets, Economy, Tech, Startups, Banking)
-- Real news from NewsAPI with images
-- Quick filters (Portfolio, Liked, Saved, Interest-based)
-- Cached news for instant loading
+Business news currently suffers from noise, irrelevance, and high cognitive load. **My ET** solves this triad by introducing three revolutionary pillars:
 
-### Topics
-- Browse news by category
-- Add custom interests
-- Interest verification
-- Infinite scroll with "View more"
+1. **The Personalized Newsroom:** A dynamic dashboard that reads the user's investment profile and automatically filters out the noise, presenting only what moves the needle for them.
+2. **The "Story Arc" Briefings:** We don't just show an article. My ET runs an AI inference pipeline that generates a multi-dimensional briefing, uncovering hidden triggers, timeline outlooks, and multi-perspective contrarian debates—complete with likelihood percentages and key momentum indicators.
+3. **The Embedded News Assistant:** A context-aware financial chatbot that lives natively within every briefing, instantly answering complex questions like *"How will this RBI decision impact my specific HDFC stock holding?"*
 
-### Briefing
-- AI-generated summaries for articles
-- Story Arc: Timeline, Updates, Players, Sentiment
-- Personal Impact: "Why it matters to you"
-- Portfolio relevance
+## 💡 Core Functionalities
 
-### Notifications
-- Interest-based news alerts
-- Breaking news notifications
-- Category filters
+### 1. Intelligent Dashboard & Radar
+- **Live Event Ingestion:** Connects to live RSS pipelines ensuring real-time discovery of critical market events.
+- **Portfolio Radar Strategy:** Our bespoke algorithm semantically cross-references live news with the user's declared portfolio assets (e.g. tracking "RELIANCE" or "HDFC"), highlighting *where their holdings intersect with the news.*
+- **Contrarian Views Visualization:** Instantly see Bull vs Bear vs Base scenario probabilities modeled securely by our backend AI logic.
 
-### AI Chatbot
-- Powered by Groq (free tier)
-- Context-aware responses
-- Article context sharing
-- Floating widget on every page
+### 2. High-Speed, Zero-Cost Inference via Groq
+To ensure enterprise-grade reliability and latency, the entire AI pipeline is wired to **Groq**. By utilizing `llama-3.3-70b-versatile`, the AI synthesizes complex macroeconomic events in milliseconds without hitting extreme rate limits or costing a fortune.
+- **Double Fallback Architecture:** Our backend gracefully degrades to cached or deterministic mock algorithms if live inference fails, ensuring 100% uptime for end users.
 
-## 🛠 Tech Stack
+### 3. Serverless Edge & Persistent DB
+- **Framework:** Next.js 14 App Router (React).
+- **Backend Persistence:** Supabase PostgreSQL acting as the central nervous system, persisting encrypted JWT-based auth tokens, user portfolios, and saved briefings.
+- **Cache Layers:** We implemented `unstable_cache` effectively across external data endpoints to respect rigid Vercel serverless bounds and eliminate unnecessary cross-region hops.
 
-- **Frontend**: Next.js 14 + Tailwind CSS + Framer Motion
-- **Backend**: Next.js API Routes
-- **Database**: Prisma + PostgreSQL (Supabase)
-- **AI**: Groq API (free tier for chat)
-- **News Data**: NewsAPI
+---
 
-## 📁 Project Structure
+## 🚀 Local Development Setup
 
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── news/          # News API endpoint
-│   │   ├── generate-briefing/  # Briefing generation
-│   │   └── ai/            # AI chat endpoints
-│   ├── dashboard/         # Main dashboard
-│   ├── topics/            # Topics browser
-│   ├── briefing/[id]/    # Article briefing
-│   ├── notifications/     # Notifications page
-│   └── chat/             # Full chat page
-├── components/
-│   ├── layout/           # Sidebar, Navigation
-│   ├── nav/              # BottomNav
-│   └── cards/            # TopicVisual, etc.
-├── context/
-│   ├── UserContext.tsx
-│   ├── NotificationContext.tsx
-│   ├── BriefingContext.tsx
-│   └── ChatContext.tsx
-└── lib/
-    ├── data.ts           # Static data
-    ├── api.ts            # API utilities
-    └── types.ts          # TypeScript types
-```
-
-## 🚀 Getting Started
+To run this platform on your local machine, strictly follow the steps below.
 
 ### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Groq API key (free at https://console.groq.com)
-- NewsAPI key (free at https://newsapi.org)
+- Node.js (v18 or higher)
+- A highly capable package manager (npm or yarn will do)
 
 ### Installation
+1. **Clone the Source**
+   ```bash
+   git clone https://github.com/LakshyaKGupta/Team_Rebel_ET_GEN_AI.git
+   cd Team_Rebel_ET_GEN_AI
+   ```
 
-```bash
-# Clone the repository
-git clone https://github.com/LakshyaKGupta/Team_Rebel_ET_GEN_AI.git
-cd Team_Rebel_ET_GEN_AI
+2. **Install Packages**
+   ```bash
+   npm install
+   ```
 
-# Install dependencies
-npm install
+3. **Establish Environment Variables**
+   Create a `.env` file at the root. You will need:
+   ```env
+   # Database keys (Supabase Postgres)
+   DATABASE_URL="your-postgres-uri"
+   
+   # JWT
+   JWT_SECRET="generate-a-secure-secret"
+   
+   # AI 
+   GROQ_API_KEY="gsk_your_groq_key_here"
+   ```
 
-# Create environment file
-cp .env.example .env.local
+4. **Spin Up The World**
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:3000` to interact with My ET instantly.
+
+---
+
+## 🏛 Technical Architecture
+
+```text
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/              # JWT issuance logic
+│   │   │   ├── generate-briefing/ # The Groq multi-perspective generator
+│   │   │   └── ai/                # Context-aware chat pipeline
+│   │   ├── dashboard/             # The intelligent user hub
+│   │   ├── briefing/[id]/         # Dynamic SSR pages rendering AI insights
+│   ├── components/                # Modular UI primitives (Tailwind & Framer)
+│   ├── context/                   # Global state (User, Notifications, etc.)
+│   └── lib/                       # Heavy lifting: Types, Prismas, and DB optimization
 ```
 
-### Environment Variables
+## 🛡️ Validation & Compilation
 
-Create a `.env.local` file with:
-
-```env
-# Database (Supabase PostgreSQL)
-DATABASE_URL="postgresql://..."
-
-# Authentication
-JWT_SECRET="your-super-secret-jwt-key"
-
-# Groq AI API (free, fast)
-GROQ_API_KEY="gsk_..."
-GROQ_MODEL="llama-3.1-8b-instant"
-
-# News APIs
-NEWSAPI_KEY="your-newsapi-key"
-
-# Frontend
-FRONTEND_ORIGIN="http://localhost:3000"
-```
-
-### Run Development Server
-
+We take type safety seriously. The platform is entirely TypeScript enforced.
+Before committing, ensure standard checks pass flawlessly:
 ```bash
-npm run dev
-```
-
-Visit http://localhost:3000
-
-### Build for Production
-
-```bash
+npx tsc --noEmit
+npm run lint
 npm run build
-npm start
 ```
 
-## 📋 Environment Setup
+## 🤝 Project Constraints & Acknowledgements
 
-### Required APIs
+*Built passionately by Team Rebel over the course of the ET Gen AI hackathon.* 
+We extend our thanks to the Economic Times for inspiring the challenge, Next.js for the robust infrastructure, and Groq for redefining sequence processing speed limits.
 
-1. **Groq API** (for AI Chatbot)
-   - Get free key at https://console.groq.com
-   - No credit card required
-   - Free tier: 30 requests/minute
-
-2. **NewsAPI** (for news articles)
-   - Get free key at https://newsapi.org
-   - 100 requests/day on free tier
-   - Limited to 100 results
-
-3. **Database** (optional for full features)
-   - Supabase PostgreSQL recommended
-   - Prisma ORM for database access
-
-## 🎯 User Types
-
-The app supports different personas:
-
-- **Investor**: Focus on markets, portfolio, financial news
-- **Founder**: Startup ecosystem, funding, tech trends
-- **Student**: Learning about business and finance
-- **Professional**: Industry-specific insights
-- **Explorer**: General news discovery
-
-## 📱 Responsive Design
-
-- Desktop: Full sidebar navigation
-- Mobile: Bottom navigation bar
-- Touch-friendly UI elements
-- Optimized for all screen sizes
-
-## 🔒 Security
-
-- JWT-based authentication
-- HTTP-only cookies
-- Server-side validation
-- Protected API routes
-
-## 📄 License
-
-MIT License - See LICENSE file for details
-
-## 👥 Team
-
-Team Rebel - ET_GEN_AI Hackathon Project
-
-## 🙏 Acknowledgments
-
-- Next.js team for the amazing framework
-- Groq for providing free AI inference
-- NewsAPI for news data
-- Vercel for deployment
+**License:** MIT

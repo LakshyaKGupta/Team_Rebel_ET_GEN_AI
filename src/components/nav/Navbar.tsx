@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Menu, Search, Bell, Sparkles, TrendingUp, User, X } from "lucide-react";
 import { useBriefing } from "@/context/BriefingContext";
 import { useUser } from "@/context/UserContext";
+import { useNotifications } from "@/context/NotificationContext";
+import { useRouter } from "next/navigation";
 
 interface NavbarProps {
   onMenuClick?: () => void;
@@ -13,6 +15,8 @@ interface NavbarProps {
 
 export default function Navbar({ onMenuClick, showGreeting = false }: NavbarProps) {
   const { preferences } = useUser();
+  const { unreadCount } = useNotifications();
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   
   const userType = preferences.userType || "exploring";
@@ -68,8 +72,16 @@ export default function Navbar({ onMenuClick, showGreeting = false }: NavbarProp
           >
             <Search size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg">
+          <button 
+            onClick={() => router.push('/notifications')}
+            className="p-2 hover:bg-gray-100 rounded-lg relative"
+          >
             <Bell size={20} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
         </div>
       </div>

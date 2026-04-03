@@ -180,7 +180,7 @@ export default function UseCasesSection() {
                     {useCase.badge}
                   </span>
                   <p className="mt-3 font-serif text-sm italic" style={{ color: newspaperColors.ink }}>
-                    "{useCase.output}"
+                    &quot;{useCase.output}&quot;
                   </p>
                 </motion.div>
               </div>

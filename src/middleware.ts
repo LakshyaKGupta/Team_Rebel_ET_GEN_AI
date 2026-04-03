@@ -9,6 +9,9 @@ const publicRoutes = [
   "/api/auth/logout",
   "/api/auth/me",
   "/api/auth/preferences",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/google",
   "/api/profile",
   "/api/preferences",
   "/api/market/search",
@@ -32,6 +35,9 @@ export function middleware(request: NextRequest) {
   }
   
   const isProtectedRoute = protectedRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
+  if (isProtectedRoute && !isAuthenticated) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   return NextResponse.next();
 }

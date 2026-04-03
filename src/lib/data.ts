@@ -816,21 +816,32 @@ export const defaultQuickInsights: Record<string, QuickInsight[]> = {
   ],
 };
 
-export const starterPortfolioAssets: PortfolioAsset[] = [
-  { id: "asset-hdfc", name: "HDFC Bank", symbol: "HDFCBANK", type: "stock", exchange: "NSE", source: "Demo" },
-  { id: "asset-nifty", name: "Nifty Large Cap Fund", symbol: "NIFTYFUND", type: "mutual_fund", exchange: "Fund", source: "Demo" },
-  { id: "asset-infy", name: "Infosys", symbol: "INFY", type: "stock", exchange: "NSE", source: "Demo" },
-];
+export const starterPortfolioAssets: PortfolioAsset[] = [];
 
 export const fallbackMarketSearchResults: MarketSearchResult[] = [
+  // US Stocks
   { id: "fallback-aapl", name: "Apple Inc.", symbol: "AAPL", type: "stock", exchange: "NASDAQ", source: "Fallback catalog" },
   { id: "fallback-msft", name: "Microsoft Corporation", symbol: "MSFT", type: "stock", exchange: "NASDAQ", source: "Fallback catalog" },
   { id: "fallback-googl", name: "Alphabet Inc.", symbol: "GOOGL", type: "stock", exchange: "NASDAQ", source: "Fallback catalog" },
   { id: "fallback-amzn", name: "Amazon.com, Inc.", symbol: "AMZN", type: "stock", exchange: "NASDAQ", source: "Fallback catalog" },
   { id: "fallback-tsla", name: "Tesla, Inc.", symbol: "TSLA", type: "stock", exchange: "NASDAQ", source: "Fallback catalog" },
+  
+  // Indian Stocks (ET Focus)
+  { id: "fallback-adanient", name: "Adani Enterprises Limited", symbol: "ADANIENT.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-adaniports", name: "Adani Ports and Special Economic Zone", symbol: "ADANIPORTS.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-adanigreen", name: "Adani Green Energy Limited", symbol: "ADANIGREEN.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-reliance", name: "Reliance Industries Limited", symbol: "RELIANCE.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-tcs", name: "Tata Consultancy Services Limited", symbol: "TCS.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-hdfcbank", name: "HDFC Bank Limited", symbol: "HDFCBANK.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-infy", name: "Infosys Limited", symbol: "INFY.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-icicibank", name: "ICICI Bank Limited", symbol: "ICICIBANK.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+  { id: "fallback-sbi", name: "State Bank of India", symbol: "SBIN.NS", type: "stock", exchange: "NSE", source: "Fallback catalog" },
+
+  // Funds
   { id: "fallback-vti", name: "Vanguard Total Stock Market ETF", symbol: "VTI", type: "etf", exchange: "NYSE Arca", source: "Fallback catalog" },
   { id: "fallback-qqq", name: "Invesco QQQ Trust", symbol: "QQQ", type: "etf", exchange: "NASDAQ", source: "Fallback catalog" },
   { id: "fallback-spy", name: "SPDR S&P 500 ETF Trust", symbol: "SPY", type: "etf", exchange: "NYSE Arca", source: "Fallback catalog" },
+  { id: "fallback-niftybees", name: "Nippon India ETF Nifty 50 BeES", symbol: "NIFTYBEES.NS", type: "etf", exchange: "NSE", source: "Fallback catalog" },
   { id: "fallback-vfiax", name: "Vanguard 500 Index Fund Admiral Shares", symbol: "VFIAX", type: "mutual_fund", source: "Fallback catalog" },
   { id: "fallback-fxaix", name: "Fidelity 500 Index Fund", symbol: "FXAIX", type: "mutual_fund", source: "Fallback catalog" },
 ];

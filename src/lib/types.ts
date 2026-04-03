@@ -90,6 +90,9 @@ export interface StoryArcSentimentDriver {
 export interface StoryArcContrarian {
   title: string;
   body: string;
+  angle?: "bull_trap" | "structural_risk" | "regulatory" | "macro" | "valuation" | "generic";
+  strength?: number;  // 0–100, how strong this contra argument is
+  counterpoint?: string; // the mainstream counter to this contrarian view
 }
 
 export interface StoryArcPrediction {
@@ -101,14 +104,20 @@ export interface StoryArcPrediction {
 export interface StoryArcScenario {
   title: string;
   probability: number;
-  outlook: "bullish" | "base" | "bearish";
+  outlook: "Positive" | "Neutral" | "Negative" | "bullish" | "base" | "bearish";
   detail: string;
+  trigger?: string;
+  keyIndicator?: string;
+  timeframe?: string;
 }
 
 export interface StoryArcUpdate {
   time: string;
   title: string;
   detail: string;
+  watchpoint?: string;  // what specifically to track
+  status?: "completed" | "upcoming" | "watch";  // timeline status
+  category?: string;   // e.g. "Market" | "Policy" | "Earnings"
 }
 
 export interface StoryArc {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Sidebar from '@/components/layout/Sidebar';
-import BottomNav from '@/components/nav/BottomNav';
+
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import { useUser } from '@/context/UserContext';
 
@@ -31,7 +31,7 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-[#F3EFE7] text-[#1A1A1A] lg:flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
 
-      <main className="flex-1 pb-40 lg:pb-10">
+      <main className="flex-1 pb-40 pt-16 lg:pt-0 lg:pb-10">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-4 lg:px-6 lg:py-6">
           {/* Header */}
           <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6">
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
         </div>
       </main>
 
-      <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
+
     </div>
   );
 }

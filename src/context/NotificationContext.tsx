@@ -47,13 +47,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setNotifications(parsed.map((n: any) => ({
-          ...n,
-          timestamp: new Date(n.timestamp),
-        })));
+        if (parsed && parsed.length > 0) {
+          setNotifications(parsed.map((n: any) => ({
+            ...n,
+            timestamp: new Date(n.timestamp),
+          })));
+        } else {
+          setNotifications(getDefaultNotifications());
+        }
       } catch (e) {
         console.error("Failed to parse notifications", e);
+        setNotifications(getDefaultNotifications());
       }
+    } else {
+      setNotifications(getDefaultNotifications());
     }
 
     const savedSeen = localStorage.getItem("et_seen_articles");
@@ -64,6 +71,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         console.error("Failed to parse seen articles", e);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -119,7 +127,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (preferences.notificationPref === "none") return;
 
     articles.forEach(article => {
-      const articleId = `${article.title.substring(0, 50)}-${Date.now()}`;
+      // Use the raw title as the unique identifier so it persists correctly across fetches
+      const articleId = `news-${btoa(encodeURIComponent(article.title)).substring(0, 50)}`;
       
       if (seenArticleIds.has(articleId)) return;
       if (!isArticleRelevant(article)) return;
@@ -127,7 +136,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setSeenArticleIds(prev => new Set([...Array.from(prev), articleId]));
 
       const newNotification: Notification = {
-        id: `news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `notif-news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: "news",
         title: article.source || "News Update",
         message: article.title,
@@ -174,7 +183,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         type: "system",
         title: "Welcome to ET News!",
         message: "Your personalized news briefing is ready. Start exploring to get AI-powered insights.",
-        timestamp: new Date(Date.now() - 3600000),
+        timestamp: new Date(),
         read: false,
       },
     ];
@@ -186,7 +195,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         type: "system",
         title: "Notifications Set Up",
         message: `You'll receive updates on ${userCategories.join(", ")} news based on your interests.`,
-        timestamp: new Date(Date.now() - 1800000),
+        timestamp: new Date(Date.now() + 1000), // Slightly offset so it's most recent
         read: false,
       });
     }

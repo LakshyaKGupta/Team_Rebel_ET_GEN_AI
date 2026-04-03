@@ -391,7 +391,7 @@ export async function getDatabaseMetrics() {
   }
 }
 
-export default {
+const dbOptimizations = {
   getUserPreferencesOptimized,
   getUserWithPreferences,
   getArticlesOptimized,
@@ -403,3 +403,5 @@ export default {
   cleanupExpiredCache,
   getDatabaseMetrics,
 };
+
+export default dbOptimizations;

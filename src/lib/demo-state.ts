@@ -1,5 +1,17 @@
 import { BriefingMode, InteractionType, PortfolioAsset, TopicAnalytics, TopicInteractionEvent } from "./types";
 
+// ─── Live article metadata (for recent / saved panels) ───────────────────────
+export interface LiveArticleMeta {
+  id: string;
+  title: string;
+  summary?: string;
+  source?: string;
+  date?: string;
+  image?: string;
+  category?: string;
+  url?: string;
+}
+
 export interface DemoEngagementState {
   savedIds: string[];
   likedIds: string[];
@@ -11,9 +23,14 @@ export interface DemoEngagementState {
   interactions: TopicInteractionEvent[];
 }
 
-const ENGAGEMENT_KEY = "et-demo-engagement";
-const PORTFOLIO_KEY = "et-demo-portfolio";
-const BRIEFING_CACHE_KEY = "et-demo-briefing-cache";
+function getUserId() {
+  if (!hasWindow()) return "guest";
+  return window.localStorage.getItem("currentUserId") || "guest";
+}
+
+function getEngagementKey() { return `et-demo-engagement-${getUserId()}`; }
+function getPortfolioKey() { return `et-demo-portfolio-${getUserId()}`; }
+function getBriefingCacheKey() { return `et-demo-briefing-cache-${getUserId()}`; }
 
 const defaultEngagementState: DemoEngagementState = {
   savedIds: [],
@@ -44,7 +61,7 @@ export function readDemoEngagementState(): DemoEngagementState {
   }
 
   try {
-    const raw = window.localStorage.getItem(ENGAGEMENT_KEY);
+    const raw = window.localStorage.getItem(getEngagementKey());
     if (!raw) {
       return defaultEngagementState;
     }
@@ -60,7 +77,7 @@ export function writeDemoEngagementState(state: DemoEngagementState) {
     return;
   }
 
-  window.localStorage.setItem(ENGAGEMENT_KEY, JSON.stringify(state));
+  window.localStorage.setItem(getEngagementKey(), JSON.stringify(state));
 }
 
 function updateAnalyticsForInteraction(
@@ -149,7 +166,7 @@ export function readPortfolioAssets(defaultAssets: PortfolioAsset[] = []) {
   }
 
   try {
-    const raw = window.localStorage.getItem(PORTFOLIO_KEY);
+    const raw = window.localStorage.getItem(getPortfolioKey());
     if (!raw) {
       return defaultAssets;
     }
@@ -166,7 +183,7 @@ export function writePortfolioAssets(assets: PortfolioAsset[]) {
     return;
   }
 
-  window.localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(assets));
+  window.localStorage.setItem(getPortfolioKey(), JSON.stringify(assets));
 }
 
 export function markTopicsUnread(topicIds: string[]) {
@@ -183,7 +200,7 @@ export function readBriefingCache(): BriefingCache {
   }
 
   try {
-    const raw = window.localStorage.getItem(BRIEFING_CACHE_KEY);
+    const raw = window.localStorage.getItem(getBriefingCacheKey());
     if (!raw) {
       return {};
     }
@@ -216,5 +233,31 @@ export function writeCachedBriefing(topicId: string, mode: BriefingMode, content
     },
   };
 
-  window.localStorage.setItem(BRIEFING_CACHE_KEY, JSON.stringify(next));
+  window.localStorage.setItem(getBriefingCacheKey(), JSON.stringify(next));
+}
+
+// ─── Live article metadata helpers ───────────────────────────────────────────
+function getLiveArticleMetaKey() { return `et-live-article-meta-${getUserId()}`; }
+
+export function readLiveArticleMeta(): Record<string, LiveArticleMeta> {
+  if (!hasWindow()) return {};
+  try {
+    const raw = window.localStorage.getItem(getLiveArticleMetaKey());
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeLiveArticleMeta(article: LiveArticleMeta) {
+  if (!hasWindow()) return;
+  const current = readLiveArticleMeta();
+  const next = { ...current, [article.id]: article };
+  window.localStorage.setItem(getLiveArticleMetaKey(), JSON.stringify(next));
+}
+
+export function getLiveArticleById(id: string): LiveArticleMeta | null {
+  return readLiveArticleMeta()[id] || null;
 }

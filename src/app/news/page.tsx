@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, RefreshCw, MessageCircle } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
-import BottomNav from "@/components/nav/BottomNav";
+
 import { newsCategories } from "@/lib/data";
 
 interface LiveNewsArticle {
@@ -130,7 +130,7 @@ function NewsContent() {
     <div className="min-h-screen bg-[#F3EFE7] text-[#1A1A1A] lg:flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
 
-      <main className="flex-1 pb-40 lg:pb-10">
+      <main className="flex-1 pb-40 pt-16 lg:pt-0 lg:pb-10">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-4 lg:px-6 lg:py-6">
           <section className="rounded-[32px] border border-[#DDD4C4] bg-[#FCFAF5] p-4 shadow-sm lg:p-6">
             <div className="flex flex-col gap-4 border-b border-[#E8E1D3] pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -331,7 +331,7 @@ function NewsContent() {
         </div>
       </main>
 
-      <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
+
     </div>
   );
 }

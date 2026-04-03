@@ -88,6 +88,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (res.status === 401) {
           setUser(null);
           setPreferences(defaultPreferences);
+          localStorage.removeItem("currentUserId");
           return;
         }
         
@@ -97,6 +98,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const data = await res.json();
         setUser(data.user);
+        if (data.user?.id) {
+          localStorage.setItem("currentUserId", data.user.id);
+        } else {
+          localStorage.removeItem("currentUserId");
+        }
         setPreferences({
           userType: data.preferences.userType as UserType,
           selectedInterests: data.preferences.selectedInterests as Interest[],
@@ -164,12 +170,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await apilogout();
     setUser(null);
     setPreferences(defaultPreferences);
+    localStorage.removeItem("currentUserId");
   };
 
   const logout = async () => {
     await apilogout();
     setUser(null);
     setPreferences(defaultPreferences);
+    localStorage.removeItem("currentUserId");
   };
 
   const updateProfile = async (data: { name?: string; avatarUrl?: string }) => {

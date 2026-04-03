@@ -26,6 +26,40 @@ export async function apilogin(email: string, password: string) {
   return data;
 }
 
+export async function apiGoogleLogin(credential: string) {
+  const res = await fetch(`${API_BASE}/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ credential }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Google login failed");
+  return data;
+}
+
+export async function apiForgotPassword(email: string) {
+  const res = await fetch(`${API_BASE}/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to send reset link");
+  return data;
+}
+
+export async function apiResetPassword(token: string, newPassword: string) {
+  const res = await fetch(`${API_BASE}/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to reset password");
+  return data;
+}
+
 export async function apilogout() {
   await fetch(`${API_BASE}/logout`, { method: "POST" });
 }

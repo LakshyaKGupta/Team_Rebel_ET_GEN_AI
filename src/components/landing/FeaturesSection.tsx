@@ -95,7 +95,7 @@ export default function FeaturesSection() {
           />
           
           <p className="font-serif text-lg max-w-xl mx-auto" style={{ color: newspaperColors.muted }}>
-            Because reading news shouldn't feel like homework.
+            Because reading news shouldn&apos;t feel like homework.
           </p>
         </motion.div>
 

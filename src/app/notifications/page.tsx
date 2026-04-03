@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, Check, CheckCheck, Trash2, TrendingUp, Star, AlertCircle, ExternalLink, Newspaper } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
-import BottomNav from "@/components/nav/BottomNav";
+
 import { useNotifications, Notification } from "@/context/NotificationContext";
 import { useUser } from "@/context/UserContext";
 
@@ -63,7 +63,7 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-[#F3EFE7] text-[#1A1A1A] lg:flex">
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
 
-      <main className="flex-1 pb-40 lg:pb-10">
+      <main className="flex-1 pb-40 pt-16 lg:pt-0 lg:pb-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-4 lg:px-6 lg:py-6">
           <div className="flex items-center gap-4">
             <button
@@ -234,7 +234,7 @@ export default function NotificationsPage() {
         </div>
       </main>
 
-      <BottomNav activeNav={activeNav} onNavChange={setActiveNav} />
+
     </div>
   );
 }

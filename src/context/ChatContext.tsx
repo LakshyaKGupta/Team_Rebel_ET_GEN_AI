@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useUser } from './UserContext';
 
 export interface ChatMessage {
@@ -29,6 +29,7 @@ interface ChatContextType {
   sendMessage: (content: string) => Promise<void>;
   clearChat: () => void;
   initWithArticleContext: () => void;
+  setArticleContext: (ctx: ArticleContext | null) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -39,7 +40,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [articleContext, setArticleContext] = useState<ArticleContext | null>(null);
   const { preferences } = useUser();
+  // Track whether we've auto-sent the init message for a given article
+  const autoSentFor = useRef<string | null>(null);
 
+  // On mount: pick up any context stored by briefing page via localStorage (for "Ask AI" button navigation)
   useEffect(() => {
     const stored = localStorage.getItem('articleContext');
     if (stored) {
@@ -102,9 +106,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       const errorMessage =
-        err instanceof Error 
-          ? (err.message.includes('high demand') || err.message.includes('busy') 
-              ? 'AI is temporarily busy. Please try again.' 
+        err instanceof Error
+          ? (err.message.includes('high demand') || err.message.includes('busy')
+              ? 'AI is temporarily busy. Please try again.'
               : err.message)
           : 'Unknown error occurred';
       setError(errorMessage);
@@ -115,29 +119,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [messages, preferences, articleContext]);
 
   const initWithArticleContext = useCallback(() => {
-    if (articleContext && messages.length === 0) {
-      let introMessage = '';
-      
-      if (articleContext.generalView) {
-        introMessage = `Please explain this article to me:\n\n"${articleContext.title}"\n\n${articleContext.generalView}`;
-      } else if (articleContext.summary) {
-        introMessage = `Please explain this article to me:\n\n"${articleContext.title}"\n\n${articleContext.summary}`;
-      } else {
-        introMessage = `Please explain this article to me: "${articleContext.title}"`;
-      }
-      
-      sendMessage(introMessage);
-    }
-  }, [articleContext, messages.length, sendMessage]);
+    if (!articleContext) return;
+    // Prevent sending twice for the same article
+    if (autoSentFor.current === articleContext.title) return;
+
+    autoSentFor.current = articleContext.title;
+
+    const introMessage = articleContext.generalView
+      ? `Can you explain this article for me?\n\n"${articleContext.title}"\n\n${articleContext.generalView}`
+      : articleContext.summary
+        ? `Can you explain this article for me?\n\n"${articleContext.title}"\n\n${articleContext.summary}`
+        : `Can you explain this article for me: "${articleContext.title}"`;
+
+    sendMessage(introMessage);
+  }, [articleContext, sendMessage]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
     setArticleContext(null);
     setError(null);
+    autoSentFor.current = null;
   }, []);
 
   return (
-    <ChatContext.Provider value={{ messages, loading, error, articleContext, sendMessage, clearChat, initWithArticleContext }}>
+    <ChatContext.Provider value={{ messages, loading, error, articleContext, sendMessage, clearChat, initWithArticleContext, setArticleContext }}>
       {children}
     </ChatContext.Provider>
   );

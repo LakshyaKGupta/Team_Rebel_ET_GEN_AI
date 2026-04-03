@@ -14,7 +14,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 });
+      const responsePayload = {
+        topic,
+        mode,
+        aiResponse: `[AI Demonstration Mode]\n\nThis is a simulated ${mode} briefing regarding "${topic}".\n\nIf you were connected to the external AI model, you would receive a highly detailed, personalized breakdown here analyzing the specific impact of this news on your sector. Your personalization matrix and article context have been successfully routed to the backend!`,
+        source: "demo",
+        timestamp: new Date().toISOString(),
+      };
+      
+      if (mode === "general_view") {
+        generalViewCache.set(JSON.stringify({topic, mode}), responsePayload);
+      }
+      return NextResponse.json(responsePayload);
     }
 
     const cacheKey = JSON.stringify({
