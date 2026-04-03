@@ -177,30 +177,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [seenArticleIds]);
 
   const getDefaultNotifications = (): Notification[] => {
-    const defaults: Notification[] = [
-      {
-        id: "welcome",
-        type: "system",
-        title: "Welcome to ET News!",
-        message: "Your personalized news briefing is ready. Start exploring to get AI-powered insights.",
-        timestamp: new Date(),
-        read: false,
-      },
-    ];
-
-    const userCategories = getUserInterestCategories();
-    if (userCategories.length > 0 && !userCategories.includes("general")) {
-      defaults.push({
-        id: "preferences-set",
-        type: "system",
-        title: "Notifications Set Up",
-        message: `You'll receive updates on ${userCategories.join(", ")} news based on your interests.`,
-        timestamp: new Date(Date.now() + 1000), // Slightly offset so it's most recent
-        read: false,
-      });
-    }
-
-    return defaults;
+    return [];
   };
 
   const addNotification = (notification: Omit<Notification, "id" | "timestamp" | "read">) => {
