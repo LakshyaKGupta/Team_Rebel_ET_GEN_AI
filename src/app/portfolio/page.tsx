@@ -7,8 +7,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check, Loader2, Plus, Search, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { assessPortfolioImpact, getTopicsForUser, starterPortfolioAssets } from "@/lib/data";
-import { readPortfolioAssets, writePortfolioAssets } from "@/lib/demo-state";
-import { apiSearchListedSecurities } from "@/lib/api";
+import { apiAddPortfolioAsset, apiGetPortfolioAssets, apiRemovePortfolioAsset, apiSearchListedSecurities } from "@/lib/api";
 import { AssetType, MarketSearchResult, PortfolioAsset } from "@/lib/types";
 
 const assetTypeOptions: { value: AssetType; label: string }[] = [
@@ -21,22 +20,58 @@ const assetTypeOptions: { value: AssetType; label: string }[] = [
 
 export default function PortfolioPage() {
   const router = useRouter();
-  const { preferences } = useUser();
+  const { user, preferences } = useUser();
   const userType = preferences.userType || "exploring";
   const topics = useMemo(() => getTopicsForUser(userType), [userType]);
 
-  const [assets, setAssets] = useState<PortfolioAsset[]>(starterPortfolioAssets);
+  const [assets, setAssets] = useState<PortfolioAsset[]>([]);
   const [draftType, setDraftType] = useState<AssetType>("stock");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSavingAsset, setIsSavingAsset] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(true);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const [selectedSecurity, setSelectedSecurity] = useState<MarketSearchResult | null>(null);
   const [manualName, setManualName] = useState("");
   const [manualSymbol, setManualSymbol] = useState("");
 
   useEffect(() => {
-    setAssets(readPortfolioAssets(starterPortfolioAssets));
-  }, []);
+    let cancelled = false;
+
+    const loadAssets = async () => {
+      if (!user?.id) {
+        setAssets([]);
+        setIsLoadingAssets(false);
+        return;
+      }
+
+      setIsLoadingAssets(true);
+      setPortfolioError(null);
+
+      try {
+        const data = await apiGetPortfolioAssets();
+        if (!cancelled) {
+          setAssets(data.assets || []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAssets([]);
+          setPortfolioError(error instanceof Error ? error.message : "Failed to load portfolio");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAssets(false);
+        }
+      }
+    };
+
+    void loadAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     assets.forEach((asset) => {
@@ -82,34 +117,51 @@ export default function PortfolioPage() {
     setDraftType("stock");
   };
 
-  const addAsset = () => {
+  const addAsset = async () => {
     const catalogBackedType = draftType === "stock" || draftType === "mutual_fund" || draftType === "etf";
     const name = catalogBackedType ? selectedSecurity?.name?.trim() || "" : manualName.trim();
     const symbol = catalogBackedType ? selectedSecurity?.symbol?.trim().toUpperCase() || "" : manualSymbol.trim().toUpperCase();
 
-    if (!name || !symbol) return;
+    if (!user?.id || !name || !symbol || isSavingAsset) return;
 
-    const nextAssets = [
-      {
-        id: `${symbol}-${Date.now()}`,
+    setIsSavingAsset(true);
+    setPortfolioError(null);
+
+    try {
+      const response = await apiAddPortfolioAsset({
+        id: "",
         name,
         symbol,
         type: catalogBackedType ? selectedSecurity?.type || draftType : draftType,
         exchange: selectedSecurity?.exchange,
         source: selectedSecurity?.source || (catalogBackedType ? "Catalog" : "Manual"),
-      },
-      ...assets,
-    ];
+      });
 
-    setAssets(nextAssets);
-    writePortfolioAssets(nextAssets);
-    resetDraft();
+      setAssets((prev) => {
+        const next = prev.filter((asset) => asset.symbol !== response.asset.symbol);
+        return [response.asset, ...next];
+      });
+      resetDraft();
+    } catch (error) {
+      setPortfolioError(error instanceof Error ? error.message : "Failed to add asset");
+    } finally {
+      setIsSavingAsset(false);
+    }
   };
 
-  const removeAsset = (assetId: string) => {
-    const nextAssets = assets.filter((asset) => asset.id !== assetId);
-    setAssets(nextAssets);
-    writePortfolioAssets(nextAssets);
+  const removeAsset = async (assetId: string) => {
+    if (isSavingAsset) return;
+
+    setIsSavingAsset(true);
+    setPortfolioError(null);
+    try {
+      await apiRemovePortfolioAsset(assetId);
+      setAssets((prev) => prev.filter((asset) => asset.id !== assetId));
+    } catch (error) {
+      setPortfolioError(error instanceof Error ? error.message : "Failed to remove asset");
+    } finally {
+      setIsSavingAsset(false);
+    }
   };
 
   const catalogBackedType = draftType === "stock" || draftType === "mutual_fund" || draftType === "etf";
@@ -241,13 +293,19 @@ export default function PortfolioPage() {
                   : "Manual entry stays available for assets that are outside the listed-security catalog."}
               </div>
 
+              {portfolioError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {portfolioError}
+                </div>
+              ) : null}
+
               <button
-                onClick={addAsset}
-                disabled={catalogBackedType ? !selectedSecurity : !manualName.trim() || !manualSymbol.trim()}
+                onClick={() => void addAsset()}
+                disabled={isSavingAsset || (catalogBackedType ? !selectedSecurity : !manualName.trim() || !manualSymbol.trim())}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1A1A1A] px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
               >
-                <Plus size={16} />
-                Add to portfolio
+                {isSavingAsset ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                {isSavingAsset ? "Saving..." : "Add to portfolio"}
               </button>
             </div>
           </div>
@@ -266,6 +324,18 @@ export default function PortfolioPage() {
             </div>
 
             <div className="space-y-3">
+              {isLoadingAssets ? (
+                <div className="rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-sm text-[#5C5C5C]">
+                  Loading your saved portfolio...
+                </div>
+              ) : null}
+
+              {!isLoadingAssets && assets.length === 0 ? (
+                <div className="rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4 text-sm text-[#5C5C5C]">
+                  Your portfolio is empty. Add a listed security and it will stay linked to this account.
+                </div>
+              ) : null}
+
               {assets.map((asset) => (
                 <div key={asset.id} className="flex items-center justify-between rounded-2xl border border-[#ECE5D8] bg-[#FCFAF6] p-4">
                   <div>
@@ -276,7 +346,7 @@ export default function PortfolioPage() {
                     </p>
                     {asset.source ? <p className="mt-1 text-[11px] text-[#8B4513]">{asset.source}</p> : null}
                   </div>
-                  <button onClick={() => removeAsset(asset.id)} className="rounded-full bg-white p-2 text-[#5C5C5C]">
+                  <button onClick={() => void removeAsset(asset.id)} className="rounded-full bg-white p-2 text-[#5C5C5C]">
                     <Trash2 size={15} />
                   </button>
                 </div>

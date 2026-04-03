@@ -1,4 +1,4 @@
-import { AssetType, InterestVerificationResult, MarketSearchResult } from "@/lib/types";
+import { AssetType, InterestVerificationResult, MarketSearchResult, PortfolioAsset } from "@/lib/types";
 
 const API_BASE = "/api/auth";
 
@@ -188,4 +188,37 @@ export async function apiVerifyCustomInterest(interest: string) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Failed to verify interest");
   return data as InterestVerificationResult;
+}
+
+export async function apiGetPortfolioAssets() {
+  const res = await fetch("/api/portfolio/analytics", {
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to fetch portfolio");
+  return data as { success: true; portfolioId: string; assets: PortfolioAsset[] };
+}
+
+export async function apiAddPortfolioAsset(asset: PortfolioAsset) {
+  const res = await fetch("/api/portfolio/analytics", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(asset),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to add asset");
+  return data as { success: true; asset: PortfolioAsset };
+}
+
+export async function apiRemovePortfolioAsset(holdingId: string) {
+  const res = await fetch("/api/portfolio/analytics", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ holdingId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to remove asset");
+  return data as { success: true; deleted: true };
 }

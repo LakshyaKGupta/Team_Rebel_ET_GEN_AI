@@ -18,8 +18,9 @@ import Sidebar from "@/components/layout/Sidebar";
 import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
 import { useNotifications } from "@/context/NotificationContext";
-import { assessPortfolioImpact, getRecentTopicCards, getTopicsForCategory, getTopicsForUser, newsCategories, starterPortfolioAssets } from "@/lib/data";
-import { readPortfolioAssets, writePortfolioAssets } from "@/lib/demo-state";
+import { assessPortfolioImpact, getRecentTopicCards, getTopicsForCategory, getTopicsForUser, newsCategories } from "@/lib/data";
+import { apiGetPortfolioAssets } from "@/lib/api";
+import { PortfolioAsset } from "@/lib/types";
 
 type ReadingListFilter = "saved" | "liked" | "portfolio" | "interest";
 
@@ -72,7 +73,7 @@ export default function DashboardPage() {
   const [articleMeta, setArticleMeta] = useState<Record<string, ArticleMeta>>({});
   const [engagementLoading, setEngagementLoading] = useState(true);
 
-  const [portfolioAssets, setPortfolioAssets] = useState<typeof starterPortfolioAssets>([]);
+  const [portfolioAssets, setPortfolioAssets] = useState<PortfolioAsset[]>([]);
 
   const userType = preferences.userType || "exploring";
   const topics = useMemo(() => getTopicsForUser(userType), [userType]);
@@ -192,8 +193,36 @@ export default function DashboardPage() {
       }
     };
     loadEngagement();
-    setPortfolioAssets(readPortfolioAssets([]));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPortfolioAssets = async () => {
+      if (!user?.id) {
+        setPortfolioAssets([]);
+        return;
+      }
+
+      try {
+        const data = await apiGetPortfolioAssets();
+        if (!cancelled) {
+          setPortfolioAssets(data.assets || []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPortfolioAssets([]);
+          console.error("Failed to load portfolio assets", error);
+        }
+      }
+    };
+
+    void loadPortfolioAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // ── Helper: record action to server ─────────────────────────────────────
   const recordEngagement = async (

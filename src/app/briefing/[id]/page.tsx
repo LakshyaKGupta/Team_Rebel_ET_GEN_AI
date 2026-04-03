@@ -22,17 +22,16 @@ import TopicVisual from "@/components/cards/TopicVisual";
 import { useUser } from "@/context/UserContext";
 import { useBriefing } from "@/context/BriefingContext";
 import { useChat } from "@/context/ChatContext";
-import { assessPortfolioImpact, getRecentTopicCards, getTopicById, getTopicsForUser, starterPortfolioAssets } from "@/lib/data";
-import { apiGetPersonalizedBriefing } from "@/lib/api";
+import { assessPortfolioImpact, getRecentTopicCards, getTopicById, getTopicsForUser } from "@/lib/data";
+import { apiGetPersonalizedBriefing, apiGetPortfolioAssets } from "@/lib/api";
 import {
   getCachedBriefing,
   pushRecentTopic,
   readDemoEngagementState,
-  readPortfolioAssets,
   writeCachedBriefing,
   writeDemoEngagementState,
 } from "@/lib/demo-state";
-import { BriefingMode, StoryArcPhase, StoryArcPlayer, StoryArcUpdate, StoryArcEntity, StoryArcPrediction, StoryArcSentimentDriver, StoryArcSentimentPoint, StoryArcScenario, StoryArcContrarian } from "@/lib/types";
+import { BriefingMode, StoryArcPhase, StoryArcPlayer, StoryArcUpdate, StoryArcEntity, StoryArcPrediction, StoryArcSentimentDriver, StoryArcSentimentPoint, StoryArcScenario, StoryArcContrarian, PortfolioAsset } from "@/lib/types";
 
 type WorkspaceTab = "overview" | "personal" | "story_arc" | "sources";
 
@@ -148,7 +147,7 @@ function buildFallbackBriefing(params: {
 export default function BriefingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { preferences } = useUser();
+  const { user, preferences } = useUser();
   const { state, setCurrentArticle } = useBriefing();
 
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -161,7 +160,7 @@ export default function BriefingDetailPage() {
   const [personalNarrative, setPersonalNarrative] = useState<string | null>(null);
   const [isPersonalLoading, setIsPersonalLoading] = useState(false);
   const [personalError, setPersonalError] = useState<string | null>(null);
-  const [portfolioAssets, setPortfolioAssets] = useState(starterPortfolioAssets);
+  const [portfolioAssets, setPortfolioAssets] = useState<PortfolioAsset[]>([]);
   const [liveBriefing, setLiveBriefing] = useState<any>(null);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -408,8 +407,33 @@ export default function BriefingDetailPage() {
   }, [topicId]);
 
   useEffect(() => {
-    setPortfolioAssets(readPortfolioAssets(starterPortfolioAssets));
-  }, []);
+    let cancelled = false;
+
+    const loadPortfolioAssets = async () => {
+      if (!user?.id) {
+        setPortfolioAssets([]);
+        return;
+      }
+
+      try {
+        const data = await apiGetPortfolioAssets();
+        if (!cancelled) {
+          setPortfolioAssets(data.assets || []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPortfolioAssets([]);
+          console.error("Failed to load portfolio assets", error);
+        }
+      }
+    };
+
+    void loadPortfolioAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!topic) return;

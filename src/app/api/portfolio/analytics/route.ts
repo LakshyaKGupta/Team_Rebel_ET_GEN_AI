@@ -1,48 +1,97 @@
-// Portfolio Analytics API
-// GET, POST handlers for portfolio and holdings
+import { NextRequest, NextResponse } from "next/server";
+import { verifyToken } from "@/lib/auth";
 
-import { NextRequest, NextResponse } from 'next/server';
-import { calculateHoldingPerformance, calculatePortfolioSummary, HoldingPerformance } from '@/lib/portfolio-utils';
+export const dynamic = "force-dynamic";
 
-export const dynamic = 'force-dynamic';
+type PortfolioAssetType = "stock" | "mutual_fund" | "etf" | "commodity" | "other";
 
-interface Holding {
-  id: string;
-  portfolioId: string;
-  symbol: string;
-  name: string;
-  quantity: number;
-  purchasePrice: number;
-  currentPrice: number;
-  purchaseDate: Date;
-  sector?: string;
-  notes?: string;
+interface PortfolioAssetMeta {
+  type?: PortfolioAssetType;
+  exchange?: string;
+  source?: string;
 }
 
-/**
- * GET - Fetch portfolio analytics and holdings
- */
+function parseHoldingMeta(notes?: string | null): PortfolioAssetMeta {
+  if (!notes) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(notes);
+    return parsed && typeof parsed === "object" ? parsed as PortfolioAssetMeta : {};
+  } catch {
+    return {};
+  }
+}
+
+function serializeHoldingMeta(meta: PortfolioAssetMeta) {
+  return JSON.stringify(meta);
+}
+
+async function getAuthenticatedUserId(request: NextRequest) {
+  const token = request.cookies.get("auth-token")?.value;
+  if (!token) {
+    return null;
+  }
+
+  return verifyToken(token)?.userId || null;
+}
+
+async function getOrCreatePortfolio(userId: string) {
+  const { prisma } = await import("@/lib/prisma");
+
+  const existing = await prisma.portfolio.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return prisma.portfolio.create({
+    data: {
+      userId,
+      name: "My Portfolio",
+      description: "Default portfolio for tracked securities.",
+    },
+  });
+}
+
+function mapHoldingToAsset(
+  holding: {
+    id: string;
+    symbol: string;
+    name: string;
+    notes?: string | null;
+    sector?: string | null;
+  }
+) {
+  const meta = parseHoldingMeta(holding.notes);
+
+  return {
+    id: holding.id,
+    symbol: holding.symbol,
+    name: holding.name,
+    type: meta.type || "stock",
+    exchange: meta.exchange,
+    source: meta.source || holding.sector || "Portfolio",
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const { prisma } = await import('@/lib/prisma');
-    
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const portfolioId = searchParams.get('portfolioId');
-
+    const userId = await getAuthenticatedUserId(request);
     if (!userId) {
-      return NextResponse.json(
-        { error: 'userId parameter required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const query = portfolioId
-      ? { portfolio: { id: portfolioId, userId } }
-      : { portfolio: { userId } };
+    const { prisma } = await import("@/lib/prisma");
+    const portfolio = await getOrCreatePortfolio(userId);
 
-    const holdingsData = await prisma.holding.findMany({
-      where: query,
+    const holdings = await prisma.holding.findMany({
+      where: { portfolioId: portfolio.id },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         symbol: true,
@@ -56,102 +105,185 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const holdings: HoldingPerformance[] = holdingsData.map((h) => ({
-      holding: h,
-      currentValue: h.quantity * h.currentPrice,
-      purchaseValue: h.quantity * h.purchasePrice,
-      gainLoss: h.quantity * h.currentPrice - h.quantity * h.purchasePrice,
-      gainLossPercent:
-        h.quantity * h.purchasePrice > 0
-          ? ((h.quantity * h.currentPrice - h.quantity * h.purchasePrice) /
-              (h.quantity * h.purchasePrice)) *
-            100
-          : 0,
-      dayChangePercent: 0,
-      dayChange: 0,
-    }));
-
-    const summary =
-      holdings.length > 0 ? calculatePortfolioSummary(holdings) : null;
-
     return NextResponse.json({
       success: true,
-      portfolio: { holdings, summary },
+      portfolioId: portfolio.id,
+      assets: holdings.map(mapHoldingToAsset),
+      portfolio: {
+        holdings,
+      },
     });
   } catch (error) {
-    console.error('Error fetching portfolio:', error);
+    console.error("Error fetching portfolio:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch portfolio' },
+      { error: "Failed to fetch portfolio" },
       { status: 500 }
     );
   }
 }
 
-/**
- * POST - Add or update holding in portfolio
- */
 export async function POST(request: NextRequest) {
   try {
-    const { prisma } = await import('@/lib/prisma');
-    
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { prisma } = await import("@/lib/prisma");
     const body = await request.json();
-    const { userId, portfolioId, symbol, name, quantity, purchasePrice, currentPrice, sector } = body;
+    const {
+      symbol,
+      name,
+      type,
+      exchange,
+      source,
+    }: {
+      symbol?: string;
+      name?: string;
+      type?: PortfolioAssetType;
+      exchange?: string;
+      source?: string;
+    } = body;
 
-    if (!userId || !portfolioId || !symbol || !quantity || !purchasePrice) {
+    const normalizedSymbol = symbol?.trim().toUpperCase();
+    const normalizedName = name?.trim();
+
+    if (!normalizedSymbol || !normalizedName) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    if (quantity <= 0 || purchasePrice <= 0) {
-      return NextResponse.json(
-        { error: 'Quantity and price must be positive' },
-        { status: 400 }
-      );
-    }
+    const portfolio = await getOrCreatePortfolio(userId);
 
-    const portfolio = await prisma.portfolio.findUnique({
-      where: { id: portfolioId },
-    });
-
-    if (!portfolio || portfolio.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Portfolio not found or unauthorized' },
-        { status: 404 }
-      );
-    }
-
-    const holding = await prisma.holding.create({
-      data: {
-        portfolioId,
-        symbol,
-        name,
-        quantity: parseFloat(quantity.toString()),
-        purchasePrice: parseFloat(purchasePrice.toString()),
-        currentPrice: currentPrice
-          ? parseFloat(currentPrice.toString())
-          : parseFloat(purchasePrice.toString()),
-        purchaseDate: new Date(),
-        sector: sector || null,
+    const existing = await prisma.holding.findFirst({
+      where: {
+        portfolioId: portfolio.id,
+        symbol: normalizedSymbol,
       },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
-        portfolioId: true,
         symbol: true,
         name: true,
-        quantity: true,
-        purchasePrice: true,
-        currentPrice: true,
+        notes: true,
         sector: true,
       },
     });
 
-    return NextResponse.json({ success: true, holding });
+    const meta = serializeHoldingMeta({
+      type: type || "stock",
+      exchange,
+      source,
+    });
+
+    if (existing) {
+      const updated = await prisma.holding.update({
+        where: { id: existing.id },
+        data: {
+          name: normalizedName,
+          notes: meta,
+          sector: source || null,
+        },
+        select: {
+          id: true,
+          symbol: true,
+          name: true,
+          notes: true,
+          sector: true,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        asset: mapHoldingToAsset(updated),
+      });
+    }
+
+    const holding = await prisma.holding.create({
+      data: {
+        portfolioId: portfolio.id,
+        symbol: normalizedSymbol,
+        name: normalizedName,
+        quantity: 1,
+        purchasePrice: 1,
+        currentPrice: 1,
+        purchaseDate: new Date(),
+        sector: source || null,
+        notes: meta,
+      },
+      select: {
+        id: true,
+        symbol: true,
+        name: true,
+        notes: true,
+        sector: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      asset: mapHoldingToAsset(holding),
+    });
   } catch (error) {
-    console.error('Error creating holding:', error);
+    console.error("Error creating holding:", error);
     return NextResponse.json(
-      { error: 'Failed to create holding' },
+      { error: "Failed to create holding" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { prisma } = await import("@/lib/prisma");
+    const body = await request.json();
+    const holdingId = body?.holdingId;
+
+    if (!holdingId || typeof holdingId !== "string") {
+      return NextResponse.json(
+        { error: "Missing holdingId" },
+        { status: 400 }
+      );
+    }
+
+    const holding = await prisma.holding.findUnique({
+      where: { id: holdingId },
+      select: {
+        id: true,
+        portfolio: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!holding || holding.portfolio.userId !== userId) {
+      return NextResponse.json(
+        { error: "Holding not found" },
+        { status: 404 }
+      );
+    }
+
+    await prisma.holding.delete({
+      where: { id: holdingId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      deleted: true,
+    });
+  } catch (error) {
+    console.error("Error deleting holding:", error);
+    return NextResponse.json(
+      { error: "Failed to delete holding" },
       { status: 500 }
     );
   }
