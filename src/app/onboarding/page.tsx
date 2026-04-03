@@ -596,7 +596,7 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight text-white">What's your experience level?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What&apos;s your experience level?</h1>
                 <p className="text-[#7E8BA3] text-lg">This helps us tailor the complexity</p>
               </div>
 
@@ -631,7 +631,7 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight text-white">What's your risk appetite?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What&apos;s your risk appetite?</h1>
                 <p className="text-[#7E8BA3] text-lg">This helps us recommend appropriate content</p>
               </div>
 
@@ -666,7 +666,7 @@ export default function Onboarding() {
               className="space-y-8"
             >
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight text-white">What's your time horizon?</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">What&apos;s your time horizon?</h1>
                 <p className="text-[#7E8BA3] text-lg">How long do you typically invest for?</p>
               </div>
 

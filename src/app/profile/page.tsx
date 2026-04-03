@@ -305,7 +305,7 @@ export default function ProfilePage() {
 
           {editMode === 'experienceLevel' && (
             <div className="bg-white border-2 mb-6 p-6" style={{ borderColor: newspaperColors.accent, boxShadow: `4px 4px 0px ${newspaperColors.accent}40` }}>
-              <h2 className="font-serif text-xl font-bold mb-4" style={{ color: newspaperColors.ink }}>What's your experience level?</h2>
+              <h2 className="font-serif text-xl font-bold mb-4" style={{ color: newspaperColors.ink }}>What&apos;s your experience level?</h2>
               <div className="space-y-3">
                 {experienceLevels.map(({ id, label, desc }) => (
                   <button
@@ -334,7 +334,7 @@ export default function ProfilePage() {
 
           {editMode === 'riskAppetite' && (
             <div className="bg-white border-2 mb-6 p-6" style={{ borderColor: newspaperColors.accent, boxShadow: `4px 4px 0px ${newspaperColors.accent}40` }}>
-              <h2 className="font-serif text-xl font-bold mb-4" style={{ color: newspaperColors.ink }}>What's your risk appetite?</h2>
+              <h2 className="font-serif text-xl font-bold mb-4" style={{ color: newspaperColors.ink }}>What&apos;s your risk appetite?</h2>
               <div className="space-y-3">
                 {riskAppetites.map(({ id, label, desc }) => (
                   <button
@@ -363,7 +363,7 @@ export default function ProfilePage() {
 
           {editMode === 'timeHorizon' && (
             <div className="bg-white border-2 mb-6 p-6" style={{ borderColor: newspaperColors.accent, boxShadow: `4px 4px 0px ${newspaperColors.accent}40` }}>
-              <h2 className="font-serif text-xl font-bold mb-4" style={{ color: newspaperColors.ink }}>What's your time horizon?</h2>
+              <h2 className="font-serif text-xl font-bold mb-4" style={{ color: newspaperColors.ink }}>What&apos;s your time horizon?</h2>
               <div className="space-y-3">
                 {timeHorizons.map(({ id, label, desc }) => (
                   <button

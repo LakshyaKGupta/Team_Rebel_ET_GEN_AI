@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
                 recommend more relevant articles
               </li>
               <li>
-                • <strong>Time Optimization:</strong> We track when you're most active to
+                • <strong>Time Optimization:</strong> We track when you&apos;re most active to
                 send briefings at the best time
               </li>
               <li>

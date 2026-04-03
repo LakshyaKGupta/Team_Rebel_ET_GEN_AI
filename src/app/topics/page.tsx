@@ -397,7 +397,7 @@ export default function TopicsPage() {
             <div className="mt-6 rounded-[24px] border border-[#E8E1D3] bg-[#FCFAF6] p-4">
               <p className="text-sm font-semibold">Custom interest with media verification</p>
               <p className="mt-1 text-sm text-[#5C5C5C]">
-                Add a phrase like "productivity", "renewable energy", or "defence". We will normalize it and try to link it to current online media coverage automatically.
+                Add a phrase like &quot;productivity&quot;, &quot;renewable energy&quot;, or &quot;defence&quot;. We will normalize it and try to link it to current online media coverage automatically.
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2">
