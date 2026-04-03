@@ -2,7 +2,7 @@
 
 > **Built by Team Rebel for the ET Gen AI Hackathon**
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-team--rebel--et--gen--ai.vercel.app-000000?style=for-the-badge&logo=vercel)](https://team-rebel-et-gen-ai.vercel.app/) [![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/) [![Groq](https://img.shields.io/badge/Powered_by-Groq_AI-f55036?style=for-the-badge)](https://groq.com)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-myetnews.vercel.app-emerald?style=for-the-badge)](https://myetnews.vercel.app/) [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/) [![Groq](https://img.shields.io/badge/Powered_by-Groq_AI-f55036?style=for-the-badge)](https://groq.com)
 
 Welcome to **My ET**, an entirely reimagined business news ecosystem built from the ground up for the AI era. Instead of overwhelming users with a static wall of generic headlines, My ET leverages advanced LLMs (via Groq) to intelligently curate, summarize, and synthesize macroeconomic events natively around the user’s personal portfolio, goals, and risk appetite.
 
