@@ -31,19 +31,6 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, userProfile, articleContext } = await req.json();
 
-    if (!process.env.GROQ_API_KEY) {
-      const userType = userProfile?.userType || 'exploring';
-      const interests = userProfile?.selectedInterests?.join(', ') || 'general news';
-      const contextTitle = articleContext?.title ? `"${articleContext.title}"` : "this topic";
-      
-      const userQueryRaw = messages && messages.length > 0 ? messages[messages.length - 1].content : '';
-      
-      return NextResponse.json({
-        success: true,
-        message: `[AI Demonstration Mode]\n\nBased on your profile as a **${userType}** interested in **${interests}**, here is my analysis regarding ${contextTitle}:\n\nYou asked: "${userQueryRaw}"\n\nThis article highlights key events that could influence your selected sectors. Since my external API key is not configured, this is an offline demonstration response. However, I have successfully received your exact article context and personalized profile!`
-      });
-    }
-
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: 'Please ask a question' },
@@ -52,6 +39,13 @@ export async function POST(req: NextRequest) {
     }
 
     const userQuery = messages[messages.length - 1]?.content || '';
+
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({
+        success: true,
+        message: buildFallbackChatResponse(userQuery, userProfile, articleContext),
+      });
+    }
     const systemPrompt = buildSystemPrompt(userProfile, articleContext);
 
     const groqMessages = [
@@ -77,16 +71,33 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      const errorMsg = error?.error?.message || 'AI service unavailable';
-      if (errorMsg.includes('high demand') || errorMsg.includes('rate limit')) {
-        throw new Error('AI is busy. Please wait a moment and try again.');
-      }
-      throw new Error(errorMsg);
+      const errorText = await response.text();
+      const errorMsg = extractGroqErrorMessage(errorText);
+
+      console.error('Chat API upstream error:', {
+        status: response.status,
+        error: errorMsg,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: buildFallbackChatResponse(userQuery, userProfile, articleContext, {
+          unavailable: true,
+        }),
+      });
     }
 
     const data = await response.json();
     const assistantMessage = data.choices?.[0]?.message?.content || '';
+
+    if (!assistantMessage) {
+      return NextResponse.json({
+        success: true,
+        message: buildFallbackChatResponse(userQuery, userProfile, articleContext, {
+          unavailable: true,
+        }),
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -98,6 +109,15 @@ export async function POST(req: NextRequest) {
       { error: error instanceof Error ? error.message : 'Something went wrong. Please try again.' },
       { status: 500 }
     );
+  }
+}
+
+function extractGroqErrorMessage(errorText: string) {
+  try {
+    const parsed = JSON.parse(errorText);
+    return parsed?.error?.message || 'AI service unavailable';
+  } catch {
+    return errorText || 'AI service unavailable';
   }
 }
 
@@ -156,4 +176,26 @@ YOUR CONVERSATION RULES:
 - Do NOT output numbered lists or complex sections.
 - Just answer their question directly natively in no more than 1 or 2 paragraphs.
 - Drop all financial jargon immediately and explain the concepts plainly.`;
+}
+
+function buildFallbackChatResponse(
+  userQuery: string,
+  userProfile?: UserProfile,
+  articleContext?: ArticleContext | null,
+  options?: { unavailable?: boolean }
+) {
+  const userType = userProfile?.userType || 'exploring';
+  const interests = userProfile?.selectedInterests?.join(', ') || 'general news';
+  const contextTitle = articleContext?.title ? `"${articleContext.title}"` : 'this topic';
+  const articleSummary = articleContext?.summary?.trim();
+
+  const intro = options?.unavailable
+    ? 'The live AI service is unavailable right now, so I am using the article context and your profile directly.'
+    : 'The AI service is not configured right now, so I am using the article context and your profile directly.';
+
+  if (articleSummary) {
+    return `${intro} You are looking at ${contextTitle}. In simple terms, ${articleSummary} Your question was: "${userQuery}". Based on your ${userType} profile and interest in ${interests}, focus on what changes next, who is affected, and whether this matters now or later.`;
+  }
+
+  return `${intro} You asked: "${userQuery}". Since you are browsing as a ${userType} interested in ${interests}, the practical way to read this is to ask what changed, who gains or loses, and what action or trend matters most over the next few weeks.`;
 }
